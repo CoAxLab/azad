@@ -22,11 +22,11 @@ class DQN(nn.Module):
         self.bn3 = nn.BatchNorm2d(32)
         self.head = nn.Linear(448, N_action)
 
-    def forward(self, x, bias):
+    def forward(self, x, action_bias):
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
-        return self.head(x.view(x.size(0), -1)) + bias
+        return self.head(x.view(x.size(0), -1)) + action_bias
 
 
 class LQN(th.nn.Module):
@@ -39,6 +39,6 @@ class LQN(th.nn.Module):
     def __init__(self, N_state, N_action):
         self.lin = nn.Linear(N_state, N_action)
 
-    def forward(self, x, bias):
+    def forward(self, x, action_bias):
         x = self.lin(x)
-        return x + bias
+        return x + action_bias
