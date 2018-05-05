@@ -8,7 +8,7 @@ import torchvision.transforms as T
 class DQN(nn.Module):
     """A layer model for a Deep Q Network
 
-    Code taken from:
+    Code modified from:
     https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
     """
 
