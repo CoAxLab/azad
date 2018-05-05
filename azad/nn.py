@@ -30,7 +30,7 @@ class DQN(nn.Module):
 
 
 class LQN(th.nn.Module):
-    """A layer model for a Q Lookup model.
+    """A layer model for a Q 'Lookup Network'.
     
     NOTE: this assumes states are defined in the input. Use
     DQN if you are working with raw pixels, or similar some such.
