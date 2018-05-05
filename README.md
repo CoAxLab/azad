@@ -27,4 +27,4 @@ We come at ANN desgin as scientists, and humanists. This leads to three strong p
 
 1. To win in the long-term science--psychology, neuroscience, and biology--must directly inform ANN desgin.
 2. ANNs should help people, not replace them.
-3. An ANN must always be able to explain itself to a person, but of course it doesn't need to solve the problem the same way a person might. Put another way, to win in the long-term ANNs must help us understand our problems. They must serve science.
+3. An ANN must always be able to explain itself to a person, but of course it doesn't need to solve the problem the same way a person might. Put another way, to win in the long-term ANNs must help us understand our problems better. They must serve science.
