@@ -6,7 +6,7 @@ import torchvision.transforms as T
 
 
 class DQN(nn.Module):
-    """A layer model for a Deep Q Network
+    """Layers for a Deep Q Network
 
     Code modified from:
     https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
@@ -30,7 +30,7 @@ class DQN(nn.Module):
 
 
 class LQN(th.nn.Module):
-    """A layer model for a Q 'Lookup Network'.
+    """Layers for a Q 'Lookup Network'.
     
     NOTE: this assumes states are defined in the input. Use
     DQN if you are working with raw pixels, or similar some such.
