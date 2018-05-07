@@ -9,7 +9,7 @@ Based ideas from: Muyesser, N.A., Dunovan, K. & Verstynen, T., 2018. Learning mo
 
 # Values
 
-We come at ANN desgin as scientists, and humanists. Meaning we take three strong philosophical stances:
+We come at ANN desgin as scientists and humanists. Meaning we take three strong philosophical stances:
 
 1. ANNs should help people, not replace them.
 2. To win in the long-term science--psychology, neuroscience, and biology--must directly inform ANN desgin.
