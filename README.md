@@ -2,7 +2,7 @@
 
 Game-playing ANNs that use a stumbler-strategist architecture. 
 
-We focus on co-operative AI. Our ANNs try and help people, not outcompete them.
+We focus on co-operative AI. Our ANNs try and help people, not replace them. 
 
 Based ideas from: Muyesser, N.A., Dunovan, K. & Verstynen, T., 2018. Learning model-based strategies in simple environments with hierarchical q-networks. , pp.1–29. Available at: http://arxiv.org/abs/1801.06689.
 
