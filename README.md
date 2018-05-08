@@ -12,7 +12,7 @@ Based ideas from: Muyesser, N.A., Dunovan, K. & Verstynen, T., 2018. Learning mo
 We come at ANN design as scientists and humanists. Meaning we take three strong philosophical stances:
 
 1. ANNs should help people, not replace them. 
-2. To win in the long-term ANNs and science must create a close virtuous cycle of improvement. Principled science--psychology, biology, neuroscience--should directly inform ANN design. ANN results should directly inform science outcomes.
+2. To win in the long-term ANNs and science must create a close virtuous cycle of improvement. Principled science--psychology, biology, neuroscience--should directly inform ANN design. ANN results should directly inform science.
 3. ANNs must help us understand our problems better. This means an ANN must always be able to explain itself to a person. 
 
 # Dependencies
