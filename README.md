@@ -2,6 +2,9 @@
 
 Game-playing ANNs that use a stumbler-strategist architecture. 
 
+Stumblers learn to map states to actions. Strategists study stumblers, learning to find the structure within the states.
+
+
 We focus on co-operative AI. Our ANNs try and help people, not replace them. 
 
 Based on ideas from: Muyesser, N.A., Dunovan, K. & Verstynen, T., 2018. Learning model-based strategies in simple environments with hierarchical q-networks. , pp.1–29. Available at: http://arxiv.org/abs/1801.06689.
@@ -14,6 +17,7 @@ We come at ANN design as scientists and humanists. Meaning we take three strong 
 1. ANNs should help people, not replace them. 
 2. To win in the long-term ANNs and science must create a close virtuous cycle of improvement. Principled science--psychology, biology, neuroscience--should directly inform ANN design. ANN results should directly inform science.
 3. ANNs must help us understand our problems better. This means an ANN must always be able to explain itself to a person. 
+
 
 # Dependencies
 
