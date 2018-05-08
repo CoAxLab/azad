@@ -1,8 +1,6 @@
 # Azad
 
-Game-playing ANNs that use a stumbler-strategist architecture. 
-
-Stumblers learn to map states to actions. Strategists study stumblers, learning to find the structure within the states.
+Game-playing ANNs that use a stumbler-strategist architecture.  Stumblers learn to map states to actions. Strategists study stumblers, learning to find the structure within the states.
 
 
 We focus on co-operative AI. Our ANNs try and help people, not replace them. 
