@@ -2,8 +2,7 @@
 
 Game-playing ANNs that use a stumbler-strategist architecture.  Stumblers learn to map states to actions. Strategists study stumblers, learning to find the structure within the states.
 
-
-We focus on co-operative AI. Our ANNs try and help people, not replace them. 
+We focus on co-operative AI. By sharing strategies our ANNs try and help people, not replace them. 
 
 Based on ideas from: Muyesser, N.A., Dunovan, K. & Verstynen, T., 2018. Learning model-based strategies in simple environments with hierarchical q-networks. , pp.1–29. Available at: http://arxiv.org/abs/1801.06689.
 
