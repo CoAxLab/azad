@@ -12,8 +12,8 @@ def estimate_expected_value(x, dim):
 def estimate_alp_value(x, dim):
     """Estimate the expected value using the Muyesser method
     
-    Citation
-    --------
+    As described in:
+    
     Muyesser, N.A., Dunovan, K. & Verstynen, T., 2018. Learning model-based 
     strategies in simple environments with hierarchical q-networks. , pp.1–29. A
     vailable at: http://arxiv.org/abs/1801.06689.
