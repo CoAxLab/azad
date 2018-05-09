@@ -9,4 +9,5 @@ setup(
     author_email='erik.exists@gmail.com',
     license='MIT',
     packages=['azad'],
+    scripts=['azad/exp/run_azad.py'],
     zip_safe=False)
