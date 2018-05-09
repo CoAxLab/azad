@@ -1,13 +1,13 @@
 import random
 import torch
-import torch.nn as tnn
+import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
 from azad.util import ReplayMemory
 
 
-class DQN(tnn.Module):
+class DQN(nn.Module):
     def __init__(self, in_channels=4, num_actions=2):
         """Layers for a Deep Q Network
 
@@ -38,13 +38,17 @@ class DQN(tnn.Module):
         return self.fc5(x)
 
 
-class QN(tnn.Module):
+class QN(object):
     def __init__(self, in_channels=4, num_actions=2):
-        """Layers for a Q Network"""
+        """One layer linear Q model.
+        
+        Note: this functions as a Q-agent in the Sutton and 
+        Barto sense, wanted a torch optim compatible implementation.
+        ...We waste some electrons to simplify the code...
+        """
 
-        super(DQN, self).__init__()
-        self.lin(in_channels, num_actions)
+        super(QN, self).__init__()
+        self.fc1 = nn.Linear(in_channels, num_actions)
 
     def forward(self, x):
-        x = self.lin(x)
-        return x
+        return self.fc1(x)
