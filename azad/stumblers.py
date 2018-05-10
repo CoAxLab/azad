@@ -3,7 +3,7 @@ import torch.nn.functional as F
 
 
 class DQN(nn.Module):
-    def __init__(self, in_channels=4, num_actions=2):
+    def __init__(self, in_channels, num_actions):
         """Layers for a Deep Q Network
 
         Based on:
@@ -49,6 +49,25 @@ class TwoQN(nn.Module):
     def forward(self, x):
         x = F.relu(self.fc1(x))
         return F.relu(self.fc2(x))
+
+
+class ThreeQN(nn.Module):
+    """Simple 1-layer Q Network"""
+
+    def __init__(self,
+                 in_channels,
+                 num_actions,
+                 num_hidden1=200,
+                 num_hidden2=100):
+        super(ThreeQN, self).__init__()
+        self.fc1 = nn.Linear(in_channels, num_hidden1)
+        self.fc2 = nn.Linear(num_hidden1, num_hidden2)
+        self.fc3 = nn.Linear(num_hidden2, num_actions)
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        return F.relu(self.fc3(x))
 
 
 class QN(object):
