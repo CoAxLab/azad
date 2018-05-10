@@ -2,6 +2,9 @@
 """Run azad experiments"""
 import fire
 import torch
+
+from math import exp
+
 import numpy as np
 
 import gym
@@ -16,6 +19,7 @@ from azad.stumblers import ThreeQN
 from azad.stumblers import DQN
 from azad.policy import ep_greedy
 from azad.util import ReplayMemory
+from azad.util import plot_cart_durations
 
 import matplotlib.pyplot as plt
 
@@ -26,6 +30,8 @@ FloatTensor = torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor
 LongTensor = torch.cuda.LongTensor if USE_CUDA else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if USE_CUDA else torch.ByteTensor
 Tensor = FloatTensor
+
+# ---------------------------------------------------------------
 
 
 def exp_build():
@@ -40,28 +46,14 @@ def exp_list():
     raise NotImplementedError("TODO.")
 
 
-def plot_cart_durations(episode_durations):
-    plt.figure(2)
-    plt.clf()
-    durations_t = Tensor(episode_durations)
-    plt.title('Training...')
-    plt.xlabel('Episode')
-    plt.ylabel('Duration')
-    plt.plot(durations_t.numpy())
-
-    # take 100 episode averages and plot them too
-    if len(durations_t) >= 100:
-        means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
-        means = torch.cat((torch.zeros(99), means))
-        plt.plot(means.numpy())
-
-    plt.pause(0.001)  # pause a bit so that plots are updated
-
-
-def exp_1(num_episodes=500,
-          epsilon=0.2,
+def exp_1(name,
+          num_episodes=500,
+          epsilon_max=0.9,
+          epsilon_min=0.05,
+          epsilon_tau=200,
           gamma=1,
           learning_rate=0.001,
+          num_hidden=200,
           batch_size=64):
     """Train DQN on a pole cart"""
 
@@ -73,7 +65,7 @@ def exp_1(num_episodes=500,
     # -------------------------------------------
     # Init the DQN, it's memory, and its optim
     # model = ThreeQN(4, 2, num_hidden1=1000, num_hidden2=200)
-    model = TwoQN(4, 2, num_hidden=200)
+    model = TwoQN(4, 2, num_hidden=num_hidden)
     memory = ReplayMemory(10000)
     optimizer = optim.Adam(model.parameters(), learning_rate)
 
@@ -93,6 +85,8 @@ def exp_1(num_episodes=500,
             Q = model(state)
 
             # Make a decision.
+            epsilon = epsilon_min + (epsilon_max - epsilon_min) * exp(
+                -1.0 * steps / epsilon_tau)
             action = ep_greedy(Q, epsilon)
             next_state, reward, done, _ = env.step(int(action))
 
@@ -167,6 +161,7 @@ def exp_1(num_episodes=500,
     # Clean up
     env.env.close()
     plt.ioff()
+    plt.savefig("{}.png".format(name))
     plt.close()
 
     return episode_durations
