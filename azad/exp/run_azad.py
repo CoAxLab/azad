@@ -11,6 +11,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
 
+from azad.stumblers import TwoQN
 from azad.stumblers import DQN
 from azad.policy import ep_greedy
 from azad.util import ReplayMemory
@@ -41,7 +42,7 @@ def exp_list():
 def plot_durations(episode_durations):
     plt.figure(2)
     plt.clf()
-    durations_t = torch.FloatTensor(episode_durations)
+    durations_t = Tensor(episode_durations)
     plt.title('Training...')
     plt.xlabel('Episode')
     plt.ylabel('Duration')
@@ -60,7 +61,7 @@ def _exp_1_learn(model, optimizer, memory, gamma, batch_size=64):
     # If there is not enough in memory, 
     # don't try and learn anything.
     if len(memory) < batch_size:
-        return None
+        return model, optimizer, memory
 
     # Grab some examples from memory
     # and repackage them.
@@ -90,18 +91,20 @@ def _exp_1_learn(model, optimizer, memory, gamma, batch_size=64):
     loss.backward()
     optimizer.step()
 
+    return model, optimizer, memory
 
-def exp_1(n_episodes=10, epsilon=0.2, gamma=1, alpha=0.001):
+
+def exp_1(n_episodes=500, epsilon=0.2, gamma=1, alpha=0.001):
     """Train DQN on a pole cart"""
 
     # -------------------------------------------
     # The world is a cart....
     env = gym.make('CartPole-v0')
-    env = wrappers.Monitor(env, './tmp/cartpole-v0-1')
+    env = wrappers.Monitor(env, './tmp/cartpole-v0-1', force=True)
 
     # -------------------------------------------
     # Init the DQN, it's memory, and its optim
-    model = DQN(4, 2)
+    model = TwoQN(4, 2)
     memory = ReplayMemory(10000)
     optimizer = optim.Adam(model.parameters(), alpha)
 
@@ -113,27 +116,35 @@ def exp_1(n_episodes=10, epsilon=0.2, gamma=1, alpha=0.001):
         state = env.reset()
         steps = 0
         while True:
+            # Look at the world and then
             env.render()
-            action = ep_greedy(FloatTensor([state]), epsilon, 0)
-            next_state, reward, done, _ = env.step(action[0, 0])
 
-            # negative reward when attempt ends
+            # value it.
+            Qs = model(Tensor(state))
+
+            # Make a decision.
+            action = ep_greedy(Qs, epsilon)
+            next_state, reward, done, _ = env.step(int(action))
+
+            # Punishment at the end of the world
             if done:
                 reward = -1
 
-            memory.push((
-                FloatTensor([state]),
+            # Always remember the past
+            memory.push(
+                Tensor([state]),
                 action,  # action is already a tensor
-                FloatTensor([next_state]),
-                FloatTensor([reward])))
+                Tensor([next_state]),
+                Tensor([reward]))
 
-            _exp_1_learn(memory, optimizer, memory, gamma)
+            model, optimizer, memory = _exp_1_learn(model, optimizer, memory,
+                                                    gamma)
 
             state = next_state
             steps += 1
 
             if done:
-                print("{2} Episode {0} finished after {1} steps".format(
+                print(">>> {2} Episode {0} finished after {1} steps".format(
                     episode, steps, '\033[92m'
                     if steps >= 195 else '\033[99m'))
 
@@ -141,6 +152,13 @@ def exp_1(n_episodes=10, epsilon=0.2, gamma=1, alpha=0.001):
                 plot_durations(episode_durations)
 
                 break
+
+        # env.render(close=True)
+        env.close()
+        # env.env.close()
+
+    plt.ioff()
+    plt.show()
 
     return None
 
