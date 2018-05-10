@@ -6,6 +6,11 @@ class DQN(nn.Module):
     def __init__(self, in_channels=4, num_actions=2):
         """Layers for a Deep Q Network
 
+        Based on:
+        Minh, V. et al, 2015. Human-level control through deep reinforcement 
+        learning. Nature, 518, pp.529–533. Available at: 
+        http://dx.doi.org/10.1038/nature14236.
+        
         Code modified from:
         https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
         
@@ -31,6 +36,19 @@ class DQN(nn.Module):
         x = F.relu(self.conv3(x))
         x = F.relu(self.fc4(x.view(x.size(0), -1)))
         return self.fc5(x)
+
+
+class TwoQN(nn.Module):
+    """Simple 1-layer Q Network"""
+
+    def __init__(self, in_channels, num_actions, num_hidden=200):
+        super(TwoQN, self).__init__()
+        self.fc1 = nn.Linear(in_channels, num_hidden)
+        self.fc2 = nn.Linear(num_hidden, num_actions)
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        return F.relu(self.fc2(x))
 
 
 class QN(object):
