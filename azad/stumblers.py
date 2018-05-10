@@ -70,7 +70,7 @@ class ThreeQN(nn.Module):
         return F.relu(self.fc3(x))
 
 
-class QN(object):
+class OneLinQN(object):
     def __init__(self, in_channels=4, num_actions=2):
         """One layer linear Q model.
         
@@ -79,7 +79,7 @@ class QN(object):
         ...We waste some electrons to simplify the code...
         """
 
-        super(QN, self).__init__()
+        super(OneLinQN, self).__init__()
         self.fc1 = nn.Linear(in_channels, num_actions)
 
     def forward(self, x):
