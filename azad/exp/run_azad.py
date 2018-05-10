@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 
 from azad.stumblers import TwoQN
+from azad.stumblers import ThreeQN
 from azad.stumblers import DQN
 from azad.policy import ep_greedy
 from azad.util import ReplayMemory
@@ -39,7 +40,7 @@ def exp_list():
     raise NotImplementedError("TODO.")
 
 
-def plot_durations(episode_durations):
+def plot_cart_durations(episode_durations):
     plt.figure(2)
     plt.clf()
     durations_t = Tensor(episode_durations)
@@ -57,44 +58,11 @@ def plot_durations(episode_durations):
     plt.pause(0.001)  # pause a bit so that plots are updated
 
 
-def _exp_1_learn(model, optimizer, memory, gamma, batch_size=64):
-    # If there is not enough in memory, 
-    # don't try and learn anything.
-    if len(memory) < batch_size:
-        return model, optimizer, memory
-
-    # Grab some examples from memory
-    # and repackage them.
-    transitions = memory.sample(batch_size)
-    states, actions, next_states, rewards = zip(*transitions)
-
-    # Conversions....
-    states = Variable(torch.cat(states))
-    actions = Variable(torch.cat(actions))
-    rewards = Variable(torch.cat(rewards))
-    next_states = Variable(torch.cat(next_states))
-
-    # Possible Qs for actions
-    Qs = model(states).gather(1, actions)
-
-    # In Q learning we use the max Q of the next state,
-    # and the reward, to estimate future Qs value
-    max_Qs = model(next_states).detach().max(1)[0]
-    future_Qs = rewards + (gamma * max_Qs)
-
-    # Want to min the loss between predicted Qs
-    # and the observed
-    loss = F.smooth_l1_loss(Qs, future_Qs)
-
-    # Grad. descent!
-    optimizer.zero_grad()
-    loss.backward()
-    optimizer.step()
-
-    return model, optimizer, memory
-
-
-def exp_1(n_episodes=500, epsilon=0.2, gamma=1, alpha=0.001):
+def exp_1(num_episodes=500,
+          epsilon=0.2,
+          gamma=1,
+          learning_rate=0.001,
+          batch_size=64):
     """Train DQN on a pole cart"""
 
     # -------------------------------------------
@@ -104,63 +72,104 @@ def exp_1(n_episodes=500, epsilon=0.2, gamma=1, alpha=0.001):
 
     # -------------------------------------------
     # Init the DQN, it's memory, and its optim
-    model = TwoQN(4, 2)
+    # model = ThreeQN(4, 2, num_hidden1=1000, num_hidden2=200)
+    model = TwoQN(4, 2, num_hidden=200)
     memory = ReplayMemory(10000)
-    optimizer = optim.Adam(model.parameters(), alpha)
+    optimizer = optim.Adam(model.parameters(), learning_rate)
 
     # -------------------------------------------
-    # Run seperate episodes
-    episode_durations = []  # Bigger is better....
+    # Run some episodes
+    episode_durations = []
 
-    for episode in range(n_episodes):
-        state = env.reset()
+    for episode in range(num_episodes):
+        state = Tensor(env.reset())
+
         steps = 0
         while True:
-            # Look at the world and then
             env.render()
 
-            # value it.
-            Qs = model(Tensor(state))
+            # -------------------------------------------
+            # Look at the world and approximate its value.
+            Q = model(state)
 
             # Make a decision.
-            action = ep_greedy(Qs, epsilon)
+            action = ep_greedy(Q, epsilon)
             next_state, reward, done, _ = env.step(int(action))
 
-            # Punishment at the end of the world
+            # Punishment, at the end of the world.
             if done:
                 reward = -1
 
             # Always remember the past
+            # (you are still doomed to repeat it).
+            next_state = Tensor(next_state)
+            reward = Tensor([reward])
+
             memory.push(
-                Tensor([state]),
-                action,  # action is already a tensor
-                Tensor([next_state]),
-                Tensor([reward]))
+                state.unsqueeze(0),
+                action.unsqueeze(0),
+                next_state.unsqueeze(0), reward.unsqueeze(0))
 
-            model, optimizer, memory = _exp_1_learn(model, optimizer, memory,
-                                                    gamma)
+            # -------------------------------------------
+            # Learn from the last result. 
 
-            state = next_state
-            steps += 1
-
+            # If there is not enough in memory, 
+            # don't try and learn anything.
             if done:
                 print(">>> {2} Episode {0} finished after {1} steps".format(
                     episode, steps, '\033[92m'
                     if steps >= 195 else '\033[99m'))
 
                 episode_durations.append(steps)
-                plot_durations(episode_durations)
+                plot_cart_durations(episode_durations)
 
                 break
+            elif len(memory) < batch_size:
+                continue
 
-        # env.render(close=True)
-        env.close()
-        # env.env.close()
+            # Grab some examples from memory
+            # and repackage them.
+            transitions = memory.sample(batch_size)
+            t_states, t_actions, t_next_states, t_rewards = zip(*transitions)
 
+            # Conversions....
+            t_states = Variable(torch.cat(t_states))
+            t_actions = Variable(torch.cat(t_actions))
+            t_rewards = Variable(torch.cat(t_rewards)).squeeze()
+            t_next_states = Variable(torch.cat(t_next_states))
+
+            # Possible Qs for actions
+            Qs = model(t_states).gather(
+                1, t_actions.type(torch.LongTensor)).squeeze()
+
+            # In Q learning we use the max Q of the next state,
+            # and the reward, to estimate future Qs value
+            max_Qs = model(t_next_states).detach().max(1)[0]
+            future_Qs = t_rewards + (gamma * max_Qs)
+
+            # Want to min the loss between predicted Qs
+            # and the observed
+            loss = F.smooth_l1_loss(Qs, future_Qs)
+
+            # Grad. descent!
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            # -------------------------------------------
+            state = next_state
+            steps += 1
+
+            if done:
+                break
+
+    # -------------------------------------------
+    # Clean up
+    env.env.close()
     plt.ioff()
-    plt.show()
+    plt.close()
 
-    return None
+    return episode_durations
 
 
 if __name__ == "__main__":
