@@ -48,9 +48,9 @@ def exp_list():
 
 def exp_1(name,
           num_episodes=500,
-          epsilon_max=0.9,
-          epsilon_min=0.05,
-          epsilon_tau=200,
+          epsilon=0.1,
+          epsilon_min=0.01,
+          epsilon_tau=500,
           gamma=1,
           learning_rate=0.001,
           num_hidden=200,
@@ -85,9 +85,9 @@ def exp_1(name,
             Q = model(state)
 
             # Make a decision.
-            epsilon = epsilon_min + (epsilon_max - epsilon_min) * exp(
+            epsilon_step = epsilon_min + (epsilon - epsilon_min) * exp(
                 -1.0 * steps / epsilon_tau)
-            action = ep_greedy(Q, epsilon)
+            action = ep_greedy(Q, epsilon_step)
             next_state, reward, done, _ = env.step(int(action))
 
             # Punishment, at the end of the world.
