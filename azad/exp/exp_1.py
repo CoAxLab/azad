@@ -40,7 +40,7 @@ def exp_1(name,
           learning_rate=0.001,
           num_hidden=200,
           batch_size=64):
-    """Train DQN on a pole cart"""
+    """Train TwoQN to use a pole cart"""
 
     # -------------------------------------------
     # The world is a cart....
