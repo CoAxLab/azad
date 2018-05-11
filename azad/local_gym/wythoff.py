@@ -5,6 +5,11 @@ from gym.utils import seeding
 
 
 class Wythoff(gym.Env):
+    """Wythoff's game.
+    
+    Note: the opponent is simulated by a perfect player
+    """
+
     def __init__(self, m, n, seed=None):
         # Board/pile size
         self.m = int(m)
@@ -15,6 +20,9 @@ class Wythoff(gym.Env):
         # on useful values
         self.x = None
         self.y = None
+
+        # Seed control
+        self.prng = np.random.RandomState(seed)
 
     def step(self, move):
         # Empty. Required for gym API
@@ -54,13 +62,16 @@ class Wythoff(gym.Env):
 
             reward = -1
             done = True
+
+        # Winning move?
         elif (self.x + dx == 0) and (self.y + dy == 0):
             self.x += dx
             self.y += dy
 
             reward = 1
             done = True
-        # Move with no outcome
+
+        # Just move....
         else:
             self.x += dx
             self.y += dy
@@ -75,8 +86,7 @@ class Wythoff(gym.Env):
             return state, reward, done, info
 
         # ------------------------------------
-        # The opponent plays...
-        # perfectly.
+        # The opponent plays... perfectly.
         opt_dx, opt_dy = self.optimal_move()
 
         if ((self.x + opt_dx) == 0) and ((self.y + opt_dy) == 0):
@@ -106,4 +116,3 @@ class Wythoff(gym.Env):
 
     def render(self, mode='human', close=False):
         raise NotImplementedError("TODO")
-        pass
