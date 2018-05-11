@@ -17,7 +17,7 @@ from torch.autograd import Variable
 from azad.stumblers import TwoQN
 from azad.stumblers import ThreeQN
 from azad.stumblers import DQN
-from azad.policy import ep_greedy
+from azad.policy import epsilon_greedy
 from azad.util import ReplayMemory
 from azad.util import plot_cart_durations
 from azad.exp import exp_1
@@ -39,7 +39,7 @@ def exp_build():
     raise NotImplementedError("TODO.")
 
 
-def exp_list():
+def exp_list(details=False):
     """List all registered experiments"""
     # Loop over all run in this submodule
     # if the fn name is exp_INT print its name

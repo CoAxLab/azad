@@ -14,7 +14,7 @@ from torch.autograd import Variable
 from azad.stumblers import TwoQN
 from azad.stumblers import ThreeQN
 from azad.stumblers import DQN
-from azad.policy import ep_greedy
+from azad.policy import epsilon_greedy
 from azad.util import ReplayMemory
 from azad.util import plot_cart_durations
 
@@ -72,7 +72,7 @@ def exp_1(name,
             # Make a decision.
             epsilon_step = epsilon_min + (epsilon - epsilon_min) * exp(
                 -1.0 * steps / epsilon_tau)
-            action = ep_greedy(Q, epsilon_step)
+            action = epsilon_greedy(Q, epsilon_step)
             next_state, reward, done, _ = env.step(int(action))
 
             # Punishment, at the end of the world.
