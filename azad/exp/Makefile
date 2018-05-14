@@ -4,7 +4,12 @@ DATA_PATH=/Users/type/Code/azad/data/
 # ---------------------------------------------------------------
 # 5-10-2018
 # Pole cart: Params that follow are the best I've found following a day or so of
-# manual hyperparam opt.
+# manual hyperparam opt. After about 100 episodes the pole balanced duration
+# should start to hover around 200; 200 is considered winning amount; defined 
+# when the problem is 'solved'. 
+#
+# This isn't a quite perfect tuning. The models hangs around 200 but does not
+# consistently peg it. Perfection is possible.
 exp0:
 	python run_azad.py cart_1 $(DATA_PATH)/exp0 --num_episodes=400 --epsilon_max=0.1 --gamma=0.8 --learning_rate=0.001 --num_hidden=256 
 
