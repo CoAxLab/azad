@@ -19,6 +19,7 @@ We come at ANN design as scientists and humanists. Meaning we take three strong 
 # Dependencies
 
 - python3
+- a standard Anaconda install
 - pytorch
 
 
