@@ -50,8 +50,6 @@ def bandit_1(name,
     # -------------------------------------------
     # Init the DQN, it's memory, and its optim
     model = OneLinQN(1, 2)
-    # memory = ReplayMemory(10000)
-    # optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     # -------------------------------------------
@@ -67,8 +65,7 @@ def bandit_1(name,
     for trial in range(num_trials):
         state = Tensor([env.reset()])
 
-        # Look at the world and approximate its value,
-        # and act.
+        # Look at the world and approximate its value then act.
         Qs = model(state)
         action = epsilon_greedy(Qs, epsilon)
 
@@ -78,7 +75,7 @@ def bandit_1(name,
         next_state = Tensor([next_state])
 
         # -------------------------------------------
-        # SGD
+        # Learn w/ SGD
         max_Q = model(next_state).detach().max()
         next_Q = reward + (gamma * max_Q)
         loss = F.smooth_l1_loss(Q, next_Q)
