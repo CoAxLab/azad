@@ -30,7 +30,7 @@ def wythoff_1(name,
               num_trials=10,
               epsilon=0.1,
               gamma=0.8,
-              learning_rate=0.01,
+              learning_rate=0.1,
               wythoff_name='Wythoff3x3',
               seed=None):
     """Train a Q-agent to play Wythoff's game, using SGD."""
@@ -44,8 +44,6 @@ def wythoff_1(name,
     env = wrappers.Monitor(
         env, './tmp/{}-v0-1'.format(wythoff_name), force=True)
 
-    board_size = (env.m, env.n)
-
     # -------------------------------------------
     # Seeding...
     env.seed(seed)
@@ -53,13 +51,14 @@ def wythoff_1(name,
 
     # -------------------------------------------
     # Build a Q agent, its memory, and its optimizer
-    model = OneLinQN(board_size, len(possible_actions))
+    model = OneLinQN(2, len(possible_actions))
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     # -------------------------------------------
     # Run some trials
     trials = []
     trial_steps = []
+    trail_states = []
     trial_rewards = []
     trial_values = []
     trial_actions = []
@@ -76,8 +75,8 @@ def wythoff_1(name,
             Qs = model(state)
 
             # Make a decision.
-            action_index = epsilon_greedy(Q, epsilon)
-            action = possible_actions[action_index]
+            action_index = epsilon_greedy(Qs, epsilon)
+            action = possible_actions[int(action_index)]
 
             Q = Qs[int(action_index)]
 
@@ -103,9 +102,10 @@ def wythoff_1(name,
             # -------------------------------------------
             # Save results
             trials.append(trial)
+            trail_states.append(state)
             trial_steps.append(steps)
             trial_rewards.append(float(reward))
-            trial_actions.append(int(action))
+            trial_actions.append(int(action_index))
             trial_values.append(float(Q))
 
             # -------------------------------------------

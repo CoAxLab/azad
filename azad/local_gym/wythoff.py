@@ -105,14 +105,14 @@ class WythoffEnv(gym.Env):
         if self.prng is None:
             self.seed(None)
 
-        self.x = int(self.prng.randint(1, self.m))
-        self.y = int(self.prng.randint(1, self.n))
+        self.x = self.m
+        self.y = self.n
 
         state = (self.x, self.y)
         return state
 
     def render(self, mode='human', close=False):
-        raise NotImplementedError("TODO")
+        pass
 
 
 class Wythoff3x3(WythoffEnv):
