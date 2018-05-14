@@ -3,6 +3,7 @@
 import fire
 
 from azad.exp import cart_1
+from azad.exp import bandit_1
 
 
 def exp_build():
@@ -17,9 +18,11 @@ def exp_list(details=False):
     raise NotImplementedError("TODO.")
 
 
+# TODO: autobuild this list for all exps.*
 if __name__ == "__main__":
     fire.Fire({
         "exp_list": exp_list,
         "exp_build": exp_build,
         "cart_1": cart_1,
+        "bandit_1": bandit_1
     })

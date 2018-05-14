@@ -70,7 +70,7 @@ class ThreeQN(nn.Module):
         return F.relu(self.fc3(x))
 
 
-class OneLinQN(object):
+class OneLinQN(nn.Module):
     def __init__(self, in_channels=4, num_actions=2):
         """One layer linear Q model.
         
