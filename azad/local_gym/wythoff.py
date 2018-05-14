@@ -4,12 +4,12 @@ from gym import spaces
 from gym.utils import seeding
 
 
-def optimal_move(state, m, n):
+def optimal_wythoff_move(state, m, n):
     # every step is followed by an optimal opponent play
     pass
 
 
-def random_move(state, m, n):
+def random_wythoff_move(state, m, n):
     pass
 
 
@@ -34,7 +34,7 @@ class Wythoff(gym.Env):
         self.prng = np.random.RandomState(seed)
 
     def step(self, move):
-        # Empty. Required for gym API
+        # Empty. Required for gym API.
         info = {}
 
         # Parse the move
@@ -43,52 +43,46 @@ class Wythoff(gym.Env):
         dy = int(dy)
 
         # ------------------------------------
-        # Check for illegal moves
+        # Check for illegal moves,
+        # return (-1, -1) for all
+
         # Can't move backward
         if (self.x + dx) <= self.x:
-            self.x += dx
-            self.y += dy
-
             reward = -1
             done = True
+            state = (-1, -1)
+
         elif (self.y + dy) <= self.y:
-            self.x += dx
-            self.y += dy
-
             reward = -1
             done = True
+            state = (-1, -1)
 
         # Out of bounds
         elif (self.x + dx) > self.m:
-            self.x += dx
-            self.y += dy
-
             reward = -1
             done = True
+            state = (-1, -1)
+
         elif (self.y + dy) > self.n:
-            self.x += dx
-            self.y += dy
-
             reward = -1
             done = True
+            state = (-1, -1)
 
         elif (self.x + dx) < 0:
-            self.x += dx
-            self.y += dy
-
             reward = -1
             done = True
+            state = (-1, -1)
+
         elif (self.y + dy) < 0:
-            self.x += dx
-            self.y += dy
-
             reward = -1
             done = True
+            state = (-1, -1)
 
         # Winning move?
         elif (self.x + dx == 0) and (self.y + dy == 0):
             self.x += dx
             self.y += dy
+            state = (self.x, self.y)
 
             reward = 1
             done = True
@@ -97,11 +91,10 @@ class Wythoff(gym.Env):
         else:
             self.x += dx
             self.y += dy
+            state = (self.x, self.y)
             reward = 0
             done = False
 
-        # -
-        state = (self.x, self.y)
         return state, reward, done, info
 
     def reset(self):
