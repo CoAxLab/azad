@@ -10,7 +10,7 @@ exp0:
 
 # ---------------------------------------------------------------
 # 5-14-2018
-# Some intial bandit exps
+# Some intial bandit exps. Hyperparams are from some light manual tuning.
 
 # 2 arm, determisitic on arm '0'
 exp1:
