@@ -1,16 +1,11 @@
 import torch
-
-from math import exp
-
-import numpy as np
-
-import gym
-import azad.local_gym
-from gym import wrappers
-
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
+
+import gym
+from gym import wrappers
+import azad.local_gym
 
 from azad.stumblers import OneLinQN
 from azad.policy import epsilon_greedy
