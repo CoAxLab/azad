@@ -123,7 +123,7 @@ class Wythoff3x3(WythoffEnv):
 
 
 class Wythoff10x10(WythoffEnv):
-    """A 3 by 3 Wythoff game"""
+    """A 10 by 10 Wythoff game"""
 
     def __init__(self):
         WythoffEnv.__init__(self, m=10, n=10)
