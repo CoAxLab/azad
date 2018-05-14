@@ -20,7 +20,8 @@ def exp_list(details=False):
 
 
 if __name__ == "__main__":
-    # Auto build a CL API from all azad.exps
+    # Auto build a CL API from all azad.exps,
+    # but first add a couple local things.
     cl = {"exp_list": exp_list, "exp_build": exp_build}
 
     # Get all the attrs on azad.exp
