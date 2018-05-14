@@ -9,8 +9,6 @@ import azad.local_gym
 
 from azad.stumblers import OneLinQN
 from azad.policy import epsilon_greedy
-from azad.util import ReplayMemory
-from azad.util import plot_cart_durations
 
 import matplotlib.pyplot as plt
 
