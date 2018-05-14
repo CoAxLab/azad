@@ -1,7 +1,7 @@
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
-from torch.autograd import Variable
+# from torch.autograd import Variable
 
 import gym
 from gym import wrappers
@@ -27,7 +27,7 @@ def bandit_1(name,
              num_trials=10,
              epsilon=0.1,
              gamma=0.8,
-             learning_rate=0.01,
+             learning_rate=0.1,
              bandit_name='BanditTwoArmedDeterministicFixed'):
     """Train a Q-agent to play n-bandit, using SGD.
     
