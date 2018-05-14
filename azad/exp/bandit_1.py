@@ -35,7 +35,7 @@ def bandit_1(name,
              gamma=0.8,
              learning_rate=0.01,
              bandit_name='BanditTwoArmedDeterministicFixed'):
-    """Train a Q-lookup table on a bandit using SGD.
+    """Train a Q-agent to play n-bandit, using SGD.
     
     Note: bandits are drawm from azad.local_gym. See that module for
     more information on the bandits.
