@@ -21,6 +21,7 @@ We come at ANN design as scientists and humanists. Meaning we take three strong 
 - python3
 - a standard Anaconda install
 - pytorch
+- fire (https://github.com/google/python-fire)
 
 
 # Install
