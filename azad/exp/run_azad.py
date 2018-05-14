@@ -2,6 +2,7 @@
 """Run azad experiments"""
 import fire
 
+from azad import exp as a_exps
 from azad.exp import cart_1
 from azad.exp import bandit_1
 
@@ -18,11 +19,17 @@ def exp_list(details=False):
     raise NotImplementedError("TODO.")
 
 
-# TODO: autobuild this list for all exps.*
 if __name__ == "__main__":
-    fire.Fire({
-        "exp_list": exp_list,
-        "exp_build": exp_build,
-        "cart_1": cart_1,
-        "bandit_1": bandit_1
-    })
+    # Auto build a CL API from all azad.exps
+    cl = {"exp_list": exp_list, "exp_build": exp_build}
+    all_possible = dir(a_exps)
+    for a_poss in all_possible:
+        if a_poss == "run_azad":
+            continue
+        elif a_poss.startswith("__"):
+            continue
+        else:
+            cl[a_poss] = getattr(a_exps, a_poss)
+
+    # Instantiate the CL interface, with Fire!
+    fire.Fire(cl)
