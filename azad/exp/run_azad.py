@@ -2,7 +2,7 @@
 """Run azad experiments"""
 import fire
 
-from azad.exp import exp_1
+from azad.exp import cart_1
 
 
 def exp_build():
@@ -21,5 +21,5 @@ if __name__ == "__main__":
     fire.Fire({
         "exp_list": exp_list,
         "exp_build": exp_build,
-        "exp_1": exp_1,
+        "cart_1": cart_1,
     })

@@ -31,15 +31,15 @@ Tensor = FloatTensor
 # ---------------------------------------------------------------
 
 
-def exp_1(name,
-          num_episodes=500,
-          epsilon=0.1,
-          epsilon_min=0.01,
-          epsilon_tau=500,
-          gamma=1,
-          learning_rate=0.001,
-          num_hidden=200,
-          batch_size=64):
+def cart_1(name,
+           num_episodes=500,
+           epsilon=0.1,
+           epsilon_min=0.01,
+           epsilon_tau=500,
+           gamma=1,
+           learning_rate=0.001,
+           num_hidden=200,
+           batch_size=64):
     """Train TwoQN to use a pole cart"""
 
     # -------------------------------------------
