@@ -24,8 +24,8 @@ We come at ANN design as scientists and humanists. Meaning we take three strong 
 
 # Install
 
-1. `git clone https://github.com/CoAxLab/azad.git`
-2. From the top-level `azad` directory run, `pip install .` for a normal install or `pip install -e .` if you are going to be editing the code.
+1. From the command line run `git clone https://github.com/CoAxLab/azad.git`
+2. Then from the top-level `azad` directory run, `pip install .` for a normal install or `pip install -e .` if you are going to be editing the code.
 
 
 # That funny project name
