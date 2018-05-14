@@ -5,7 +5,7 @@ DATA_PATH=/Users/type/Code/azad/data/
 # 5-10-2018
 # Pole cart: Params that follow are the best I've found following a day or so of
 # manual hyperparam opt. After about 100 episodes the pole balanced duration
-# should start to hover around 200; 200 is considered winning amount; defined 
+# should start to hover around 200; 200 is considered winning amount and defines 
 # when the problem is 'solved'. 
 #
 # This isn't a quite perfect tuning. The models hangs around 200 but does not
