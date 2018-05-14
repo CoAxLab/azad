@@ -5,6 +5,7 @@ from math import exp
 import numpy as np
 
 import gym
+import azad.local_gym
 from gym import wrappers
 
 import torch.optim as optim
