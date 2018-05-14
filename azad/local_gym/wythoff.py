@@ -13,13 +13,13 @@ def random_wythoff_move(state, m, n):
     pass
 
 
-class Wythoff(gym.Env):
+class WythoffEnv(gym.Env):
     """Wythoff's game.
     
     Note: the opponent is simulated by a perfect player
     """
 
-    def __init__(self, m, n, seed=None):
+    def __init__(self, m, n):
         # Board/pile size
         self.m = int(m)
         self.n = int(n)
@@ -30,6 +30,10 @@ class Wythoff(gym.Env):
         self.x = None
         self.y = None
 
+        # Set by seed()
+        self.prng = None
+
+    def seed(self, seed):
         # Seed control
         self.prng = np.random.RandomState(seed)
 
@@ -98,6 +102,9 @@ class Wythoff(gym.Env):
         return state, reward, done, info
 
     def reset(self):
+        if self.prng is None:
+            self.seed(None)
+
         self.x = int(self.prng.randint(1, self.m))
         self.y = int(self.prng.randint(1, self.n))
 
@@ -106,3 +113,17 @@ class Wythoff(gym.Env):
 
     def render(self, mode='human', close=False):
         raise NotImplementedError("TODO")
+
+
+class Wythoff3x3(WythoffEnv):
+    """A 3 by 3 Wythoff game"""
+
+    def __init__(self):
+        WythoffEnv.__init__(self, m=3, n=3)
+
+
+class Wythoff10x10(WythoffEnv):
+    """A 3 by 3 Wythoff game"""
+
+    def __init__(self):
+        WythoffEnv.__init__(self, m=10, n=10)
