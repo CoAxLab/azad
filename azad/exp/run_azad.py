@@ -22,12 +22,19 @@ def exp_list(details=False):
 if __name__ == "__main__":
     # Auto build a CL API from all azad.exps
     cl = {"exp_list": exp_list, "exp_build": exp_build}
+
+    # Get all the attrs on azad.exp
     all_possible = dir(a_exps)
     for a_poss in all_possible:
+        # Skip this program,
         if a_poss == "run_azad":
             continue
+        # and any hidden things,
         elif a_poss.startswith("__"):
             continue
+        elif a_poss.startswith("_"):
+            continue
+        # otherwise add.
         else:
             cl[a_poss] = getattr(a_exps, a_poss)
 
