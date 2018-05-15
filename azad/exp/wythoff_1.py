@@ -40,6 +40,8 @@ def wythoff_1(name,
 
     # -------------------------------------------
     # The world is a cart....
+    # import ipdb
+    # ipdb.set_trace()
     env = gym.make('{}-v0'.format(wythoff_name))
     env = wrappers.Monitor(
         env, './tmp/{}-v0-1'.format(wythoff_name), force=True)
@@ -74,7 +76,7 @@ def wythoff_1(name,
 
             # -------------------------------------------
             # Look at the world and approximate its value.
-            Qs = model(state)
+            Qs = model(state).squeeze()
 
             # Make a decision.
             action_index = epsilon_greedy(Qs, epsilon)
@@ -95,7 +97,7 @@ def wythoff_1(name,
             loss = F.smooth_l1_loss(Q, next_Q)
 
             optimizer.zero_grad()
-            loss.backward()
+            loss.backward(retain_graph=True)  # retain is needed for opp. WHY?
             optimizer.step()
 
             # Shuffle state notation
@@ -122,9 +124,10 @@ def wythoff_1(name,
             action_index = np.random.randint(0, len(possible_actions))
             action = possible_actions[action_index]
 
-            Q = Qs[int(action_index)]
+            Q = Qs[int(action_index)].squeeze()
 
             next_state, reward, done, _ = env.step(action)
+            next_state = Tensor([next_state])
 
             # Flip signs so opp victories are punishments
             if reward > 0:
@@ -136,7 +139,7 @@ def wythoff_1(name,
             next_Q = reward + (gamma * max_Q)
             loss = F.smooth_l1_loss(Q, next_Q)
 
-            optimizer.zero_grad()
+            # optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
