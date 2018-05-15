@@ -39,9 +39,7 @@ def wythoff_1(name,
     possible_actions = [(-1, 0), (0, -1), (-1, -1)]
 
     # -------------------------------------------
-    # The world is a cart....
-    # import ipdb
-    # ipdb.set_trace()
+    # The world is a pebble on a board
     env = gym.make('{}-v0'.format(wythoff_name))
     env = wrappers.Monitor(
         env, './tmp/{}-v0-1'.format(wythoff_name), force=True)
@@ -72,6 +70,7 @@ def wythoff_1(name,
         steps = 0
         while True:
             # -------------------------------------------
+            # TODO
             # env.render()
 
             # -------------------------------------------
