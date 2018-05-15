@@ -13,21 +13,21 @@ from .wythoff import Wythoff3x3
 from .wythoff import Wythoff10x10
 
 environments = [
-    ['BanditTenArmedRandomFixed', 'v0'],
-    ['BanditTenArmedRandomRandom', 'v0'],
-    ['BanditTenArmedGaussian', 'v0'],
-    ['BanditTenArmedUniformDistributedReward', 'v0'],
-    ['BanditTwoArmedDeterministicFixed', 'v0'],
-    ['BanditTwoArmedHighHighFixed', 'v0'],
-    ['BanditTwoArmedHighLowFixed', 'v0'],
-    ['BanditTwoArmedLowLowFixed', 'v0'],
-    ['Wythoff3x3', 'v0'],
-    ['Wythoff10x10', 'v0'],
+    ['BanditTenArmedRandomFixed', 'v0', 1],
+    ['BanditTenArmedRandomRandom', 'v0', 1],
+    ['BanditTenArmedGaussian', 'v0', 1],
+    ['BanditTenArmedUniformDistributedReward', 'v0', 1],
+    ['BanditTwoArmedDeterministicFixed', 'v0', 1],
+    ['BanditTwoArmedHighHighFixed', 'v0', 1],
+    ['BanditTwoArmedHighLowFixed', 'v0', 1],
+    ['BanditTwoArmedLowLowFixed', 'v0', 1],
+    ['Wythoff3x3', 'v0', 1000],
+    ['Wythoff10x10', 'v0', 1000],
 ]
 
 for environment in environments:
     register(
         id='{}-{}'.format(environment[0], environment[1]),
         entry_point='azad.local_gym:{}'.format(environment[0]),
-        timestep_limit=1,
+        timestep_limit=environment[2],
         nondeterministic=True, )
