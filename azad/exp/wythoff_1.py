@@ -58,10 +58,12 @@ def wythoff_1(name,
     # Run some trials
     trials = []
     trial_steps = []
-    trail_states = []
+    trial_state_xs = []
+    trial_state_ys = []
     trial_rewards = []
     trial_values = []
-    trial_actions = []
+    trial_move_xs = []
+    trial_move_ys = []
 
     for trial in range(num_trials):
         state = Tensor(env.reset())
@@ -102,10 +104,12 @@ def wythoff_1(name,
             # -------------------------------------------
             # Save results
             trials.append(trial)
-            trail_states.append(state)
-            trial_steps.append(steps)
+            trial_state_xs.append(int(state[0][0]))
+            trial_state_ys.append(int(state[0][1]))
+            trial_steps.append(int(steps))
             trial_rewards.append(float(reward))
-            trial_actions.append(int(action_index))
+            trial_move_xs.append(action[0])
+            trial_move_ys.append(action[1])
             trial_values.append(float(Q))
 
             # -------------------------------------------
@@ -140,5 +144,6 @@ def wythoff_1(name,
                 break
 
     results = list(
-        zip(trials, trial_steps, trial_actions, trial_rewards, trial_values))
+        zip(trials, trial_steps, trial_state_xs, trial_state_ys, trial_move_xs,
+            trial_move_ys, trial_rewards, trial_values))
     return results
