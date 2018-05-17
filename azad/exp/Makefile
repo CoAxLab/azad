@@ -25,7 +25,6 @@ clean_exp1:
 	-rm -rf $(DATA_PATH)/exp1
 
 exp1:
-	-rm $(DATA_PATH)/exp1/*
 	python run_azad.py bandit_1 $(DATA_PATH)/exp1 --num_trials=200 --epsilon=0.2 --learning_rate=0.1
 
 
@@ -34,7 +33,6 @@ clean_exp2:
 	-rm -rf $(DATA_PATH)/exp2
 
 exp2: 
-	-rm $(DATA_PATH)/exp2/*
 	python run_azad.py bandit_1 $(DATA_PATH)/exp2 --bandit_name=BanditTwoArmedHighLowFixed --num_trials=200 --epsilon=0.2 --learning_rate=0.1
 
 # ---------------------------------------------------------------
