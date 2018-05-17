@@ -1,3 +1,6 @@
+import os
+import errno
+
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
@@ -10,7 +13,9 @@ import azad.local_gym
 from azad.stumblers import OneLinQN
 from azad.policy import epsilon_greedy
 
-import matplotlib.pyplot as plt
+# import matplotlib.pyplot as plt
+
+from tensorboardX import SummaryWriter
 
 # ---------------------------------------------------------------
 # Handle dtypes for the device
@@ -23,17 +28,30 @@ Tensor = FloatTensor
 # ---------------------------------------------------------------
 
 
-def bandit_1(name,
+def bandit_1(path,
              num_trials=10,
              epsilon=0.1,
              gamma=0.8,
              learning_rate=0.1,
+             log_path=None,
              bandit_name='BanditTwoArmedDeterministicFixed'):
     """Train a Q-agent to play n-bandit, using SGD.
     
     Note: bandits are drawm from azad.local_gym. See that module for
     more information on the bandits.
     """
+    # Create path
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+
+    # -------------------------------------------
+    # Tensorboard setup    
+    if log_path is None:
+        log_path = path
+    writer = SummaryWriter(log_dir=log_path)
 
     # -------------------------------------------
     # The world is a cart....
@@ -59,6 +77,9 @@ def bandit_1(name,
     for trial in range(num_trials):
         state = Tensor([env.reset()])
 
+        if trial == 0:
+            writer.add_graph(model, state)
+
         # Look at the world and approximate its value then act.
         Qs = model(state)
         action = epsilon_greedy(Qs, epsilon)
@@ -80,10 +101,19 @@ def bandit_1(name,
 
         # -------------------------------------------
         # Save results
+        for path, param in model.named_parameters():
+            writer.add_histogram(path, param.clone().cpu().data.numpy(), trial)
+
+        writer.add_scalar(os.path.join(log_path, 'Q'), Q, trial)
+        writer.add_scalar(os.path.join(log_path, 'reward'), reward, trial)
+        writer.add_scalar(os.path.join(log_path, 'state'), state, trial)
+
         trials.append(trial)
         trial_rewards.append(float(reward))
         trial_actions.append(int(action))
         trial_values.append(float(Q))
+
+    writer.close()
 
     results = list(zip(trials, trial_actions, trial_rewards, trial_values))
     return results
