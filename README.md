@@ -24,6 +24,15 @@ We come at ANN design as scientists and humanists. Meaning we take three strong 
 - fire (https://github.com/google/python-fire)
 
 
+## Optional tensorboard visuals
+
+- tensorflow
+- tensorboard
+- tensorboardX 
+
+Install instructions: https://github.com/lanpa/tensorboard-pytorch
+
+
 # Install
 
 1. From the command line run `git clone https://github.com/CoAxLab/azad.git`
