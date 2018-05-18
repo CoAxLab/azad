@@ -5,6 +5,10 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 # from torch.autograd import Variable
+from tensorboardX import SummaryWriter
+
+# import numpy as np
+import matplotlib.pyplot as plt
 
 import gym
 from gym import wrappers
@@ -12,10 +16,6 @@ import azad.local_gym
 
 from azad.stumblers import OneLinQN
 from azad.policy import epsilon_greedy
-
-# import matplotlib.pyplot as plt
-
-from tensorboardX import SummaryWriter
 
 # ---------------------------------------------------------------
 # Handle dtypes for the device
@@ -95,6 +95,8 @@ def bandit_1(path,
         next_Q = reward + (gamma * max_Q)
         loss = F.smooth_l1_loss(Q, next_Q)
 
+        writer.add_scalar(os.path.join(log_path, 'error'), loss.data[0], trial)
+
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
@@ -113,6 +115,7 @@ def bandit_1(path,
         trial_actions.append(int(action))
         trial_values.append(float(Q))
 
+    # Cleanup and end
     writer.close()
 
     results = list(zip(trials, trial_actions, trial_rewards, trial_values))

@@ -1,19 +1,17 @@
-import torch
-
+import os
+import errno
 from math import exp
-
-import numpy as np
 
 import gym
 from gym import wrappers
 
+import torch
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
+from tensorboardX import SummaryWriter
 
 from azad.stumblers import TwoQN
-from azad.stumblers import ThreeQN
-from azad.stumblers import DQN
 from azad.policy import epsilon_greedy
 from azad.util import ReplayMemory
 from azad.util import plot_cart_durations
@@ -31,7 +29,7 @@ Tensor = FloatTensor
 # ---------------------------------------------------------------
 
 
-def cart_1(name,
+def cart_1(path,
            num_episodes=500,
            epsilon=0.1,
            epsilon_min=0.01,
@@ -39,8 +37,21 @@ def cart_1(name,
            gamma=1,
            learning_rate=0.001,
            num_hidden=200,
+           log_path=None,
            batch_size=64):
     """Train TwoQN to use a pole cart"""
+    # Create path
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+
+    # -------------------------------------------
+    # Tensorboard setup    
+    if log_path is None:
+        log_path = path
+    writer = SummaryWriter(log_dir=log_path)
 
     # -------------------------------------------
     # The world is a cart....
@@ -61,6 +72,9 @@ def cart_1(name,
     for episode in range(num_episodes):
         state = Tensor(env.reset())
 
+        if episode == 0:
+            writer.add_graph(model, state)
+
         steps = 0
         while True:
             env.render()
@@ -79,11 +93,17 @@ def cart_1(name,
             if done:
                 reward = -1
 
-            # Always remember the past
-            # (you are still doomed to repeat it).
             next_state = Tensor(next_state)
             reward = Tensor([reward])
 
+            # Log this episode
+            writer.add_scalar(
+                os.path.join(log_path, 'Q'), Q[int(action)], episode)
+            writer.add_scalar(
+                os.path.join(log_path, 'reward'), reward, episode)
+
+            # Always remember the past
+            # (you are still doomed to repeat it).
             memory.push(
                 state.unsqueeze(0),
                 action.unsqueeze(0),
@@ -100,7 +120,10 @@ def cart_1(name,
                     if steps >= 195 else '\033[99m'))
 
                 episode_durations.append(steps)
-                plot_cart_durations(episode_durations)
+                writer.add_scalar(
+                    os.path.join(log_path, 'durations'), steps, episode)
+
+                # plot_cart_durations(episode_durations)
 
                 break
             elif len(memory) < batch_size:
@@ -129,6 +152,8 @@ def cart_1(name,
             # Want to min the loss between predicted Qs
             # and the observed
             loss = F.smooth_l1_loss(Qs, future_Qs)
+            writer.add_scalar(
+                os.path.join(log_path, 'error'), loss.data[0].mean(), episode)
 
             # Grad. descent!
             optimizer.zero_grad()
@@ -144,9 +169,11 @@ def cart_1(name,
 
     # -------------------------------------------
     # Clean up
+    writer.close()
+
     env.env.close()
     plt.ioff()
-    plt.savefig("{}.png".format(name))
+    plt.savefig("{}.png".format(path))
     plt.close()
 
     return episode_durations

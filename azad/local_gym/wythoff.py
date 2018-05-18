@@ -9,10 +9,6 @@ def optimal_wythoff_move(state, m, n):
     pass
 
 
-def random_wythoff_move(state, m, n):
-    pass
-
-
 class WythoffEnv(gym.Env):
     """Wythoff's game.
     
@@ -24,25 +20,20 @@ class WythoffEnv(gym.Env):
         self.m = int(m)
         self.n = int(n)
 
+        self.info = {"m": m, "n": n}
+
         # Current postition
         # (needs a .reset()) to take
         # on useful values
         self.x = None
         self.y = None
-
-        # Set by seed()
-        self.prng = None
+        self.board = None
 
         self.action_space = spaces.Discrete(3)
         self.observation_space = spaces.Discrete(2)
 
-    def seed(self, seed):
-        # Seed control
-        self.prng = np.random.RandomState(seed)
-
     def step(self, move):
         # Empty. Required for gym API.
-        info = {}
 
         # Parse the move
         dx, dy = move
@@ -115,16 +106,24 @@ class WythoffEnv(gym.Env):
             reward = 0
             done = False
 
-        return state, reward, done, info
+        # Place the piece on the board
+        self._reset_board()
+        self.board[self.x, self.y] = 1
+        state = (self.x, self.y, self.board)
+
+        return state, reward, done, self.info
+
+    def _reset_board(self):
+        self.board = np.zeros((self.m, self.n))
 
     def reset(self):
-        if self.prng is None:
-            self.seed(None)
+        self.x = self.m - 1
+        self.y = self.n - 1
 
-        self.x = self.m
-        self.y = self.n
+        self._reset_board()
+        self.board[self.x, self.y] = 1
+        state = (self.x, self.y, self.board)
 
-        state = (self.x, self.y)
         return state
 
     def render(self, mode='human', close=False):
