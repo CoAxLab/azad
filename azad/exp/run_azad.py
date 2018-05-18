@@ -3,8 +3,6 @@
 import fire
 
 from azad import exp as a_exps
-from azad.exp import cart_1
-from azad.exp import bandit_1
 
 
 def exp_build():
