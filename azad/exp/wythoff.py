@@ -10,6 +10,9 @@ from tensorboardX import SummaryWriter
 import numpy as np
 import matplotlib.pyplot as plt
 
+import skimage
+from skimage import data, io
+
 import gym
 from gym import wrappers
 import azad.local_gym
@@ -28,23 +31,46 @@ Tensor = FloatTensor
 # ---------------------------------------------------------------
 
 
-def plot_wythoff_expected_values(m, n, model, path=None):
+def plot_wythoff_board(board, plot=False, path=None):
+
+    # !
+    fig = plt.figure()
+    plt.matshow(board)
+
+    # Save an image?
+    if path is not None:
+        plt.savefig(os.path.join(path, 'wythoff_board.png'))
+
+    if plot:
+        # plt.show()
+        plt.pause(0.01)
+        plt.close()
+
+
+def plot_wythoff_expected_values(m, n, model, plot=False, path=None):
+
     # Build the matrix a values for each (i, j) board
     values = np.zeros((m, n))
     for i in range(m):
         for j in range(n):
-            values[i, j] = np.max(model(Tensor([i, j])).detach().numpy())
+            board = np.zeros((m, n))
+            board[i, j] = 1.0
+
+            values[i, j] = np.max(
+                model(Tensor(board.reshape(m * n))).detach().numpy())
 
     # !
+    fig = plt.figure()
     plt.matshow(values)
 
     # Save an image?
     if path is not None:
-        plt.savefig(os.join.path(path, 'wythoff_expected_values.png'))
+        plt.savefig(os.path.join(path, 'wythoff_expected_values.png'))
 
-    # plt.show()
-    plt.pause(0.01)
-    plt.close()
+    if plot:
+        # plt.show()
+        plt.pause(0.01)
+        plt.close()
 
 
 def wythoff_1(path,
@@ -54,7 +80,6 @@ def wythoff_1(path,
               learning_rate=0.1,
               wythoff_name='Wythoff3x3',
               log_path=None,
-              plot_progress=False,
               seed=None):
     """Train a Q-agent to play Wythoff's game, using SGD."""
 
@@ -200,9 +225,13 @@ def wythoff_1(path,
             optimizer.step()
 
             # Plot?
-            if (trial % 10) == 0 and plot_progress:
-                m, n = info["m"], info["n"]
-                plot_wythoff_expected_values(m, n, model)
+            if (trial % 10) == 0:
+                plot_wythoff_expected_values(m, n, model, path=path)
+
+                writer.add_image(
+                    'expected_value',
+                    skimage.io.imread(
+                        os.path.join(path, 'wythoff_expected_values.png')))
 
             if done:
                 break
