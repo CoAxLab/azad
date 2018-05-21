@@ -35,5 +35,5 @@ bandit_exp1:
 # Testing wythoff 
 wythoff_exp0:
 	-rm -rf $(DATA_PATH)/wythoff/exp0
-	sleep 3  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_1 $(DATA_PATH)/wythoff/exp0 --num_trials=2000 --learning_rate=0.1 --wythoff_name=Wythoff10x10
+	sleep 5  # Wait for tensorboard to notice the deletion
+	python run_azad.py wythoff_1 $(DATA_PATH)/wythoff/exp0 --num_trials=500 --learning_rate=0.1 --wythoff_name=Wythoff3x3

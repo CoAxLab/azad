@@ -1,4 +1,4 @@
-import os
+import os, csv
 import errno
 
 import torch
@@ -32,6 +32,7 @@ Tensor = FloatTensor
 
 
 def plot_wythoff_board(board, plot=False, path=None):
+    """Plot the board"""
 
     # !
     fig = plt.figure()
@@ -48,16 +49,8 @@ def plot_wythoff_board(board, plot=False, path=None):
 
 
 def plot_wythoff_expected_values(m, n, model, plot=False, path=None):
-
-    # Build the matrix a values for each (i, j) board
-    values = np.zeros((m, n))
-    for i in range(m):
-        for j in range(n):
-            board = np.zeros((m, n))
-            board[i, j] = 1.0
-
-            values[i, j] = np.max(
-                model(Tensor(board.reshape(m * n))).detach().numpy())
+    """Plot EVs"""
+    values = wythoff_expected_values(m, n, model)
 
     # !
     fig = plt.figure()
@@ -73,13 +66,59 @@ def plot_wythoff_expected_values(m, n, model, plot=False, path=None):
         plt.close()
 
 
+def wythoff_expected_values(m, n, model):
+    """Estimate the expected value of each board position"""
+    # Build the matrix a values for each (i, j) board
+    values = np.zeros((m, n))
+    for i in range(m):
+        for j in range(n):
+            board = np.zeros((m, n))
+            board[i, j] = 1.0
+
+            values[i, j] = np.max(
+                model(Tensor(board.reshape(m * n))).detach().numpy())
+
+    return values
+
+
+def estimate_alp_value(x, dim):
+    """Estimate the expected value using the Muyesser method
+    
+    As described in:
+    
+    Muyesser, N.A., Dunovan, K. & Verstynen, T., 2018. Learning model-based 
+    strategies in simple environments with hierarchical q-networks. , pp.1–29. A
+    vailable at: http://arxiv.org/abs/1801.06689.
+    """
+
+    values = wythoff_expected_values(m, n, model)
+    values = (values + 1.0) / 2.0
+
+    return values
+
+
+def wythoff_hot_cold(m, n, model, threshold=0.25):
+    """Estimate hot/cold positions"""
+    values = wythoff_expected_values(m, n, model)
+    hotcold = np.zeros_like(values)
+
+    hotcold[values > (1 - threshold)] = 1.0
+    hotcold[values < threshold] = -1.0
+
+    return hotcold
+
+
+def hot_cold_coordinates(hotcold):
+    xs, ys = hotcold.nonzero()
+    return list(zip(xs, ys))
+
+
 def wythoff_1(path,
               num_trials=10,
               epsilon=0.1,
               gamma=0.8,
               learning_rate=0.1,
               wythoff_name='Wythoff3x3',
-              log_path=None,
               seed=None):
     """Train a Q-agent to play Wythoff's game, using SGD."""
 
@@ -92,10 +131,15 @@ def wythoff_1(path,
             raise
 
     # -------------------------------------------
-    # Tensorboard setup    
-    if log_path is None:
-        log_path = path
-    writer = SummaryWriter(log_dir=log_path)
+    # Log setup    
+    #
+    # csv for archiving select data
+    f = open(os.path.join(path, "data.csv"), "w")
+    csv_writer = csv.writer(f)
+    csv_writer.writerow(["trial", "steps", "action_index", "Q", "x", "y"])
+
+    # Tensorboard log
+    writer = SummaryWriter(log_dir=path)
 
     # -------------------------------------------
     # The world is a pebble on a board
@@ -126,16 +170,6 @@ def wythoff_1(path,
 
     # -------------------------------------------
     # Run some trials
-    trials = []
-    trial_steps = []
-    trial_state_xs = []
-    trial_state_ys = []
-    trial_rewards = []
-    trial_values = []
-    trial_move_xs = []
-    trial_move_ys = []
-    errors = []
-
     for trial in range(num_trials):
         x, y, board = env.reset()
         board = Tensor(board.reshape(m * n))
@@ -176,19 +210,12 @@ def wythoff_1(path,
             board = next_board
 
             # -------------------------------------------
-            # Save results
-            trials.append(trial)
-            trial_state_xs.append(int(x))
-            trial_state_ys.append(int(y))
-            trial_steps.append(int(steps))
-            trial_rewards.append(float(reward))
-            trial_move_xs.append(action[0])
-            trial_move_ys.append(action[1])
-            trial_values.append(float(Q))
+            # Log results
+            csv_writer.writerow(
+                [trial, steps, int(action_index), float(Q), x, y])
 
-            # -
-            writer.add_scalar(os.path.join(log_path, 'Q'), Q, trial)
-            writer.add_scalar(os.path.join(log_path, 'reward'), reward, trial)
+            writer.add_scalar(os.path.join(path, 'Q'), Q, trial)
+            writer.add_scalar(os.path.join(path, 'reward'), reward, trial)
 
             # -------------------------------------------
             # If the game is over, stop
@@ -210,9 +237,8 @@ def wythoff_1(path,
                 reward *= -1
 
             # -
-            writer.add_scalar(os.path.join(log_path, 'opp_Q'), Q, trial)
-            writer.add_scalar(
-                os.path.join(log_path, 'opp_reward'), reward, trial)
+            writer.add_scalar(os.path.join(path, 'opp_Q'), Q, trial)
+            writer.add_scalar(os.path.join(path, 'opp_reward'), reward, trial)
 
             # ---
             # Learn from your opponent
@@ -237,12 +263,24 @@ def wythoff_1(path,
                 break
 
         # save min loss for this trial
-        writer.add_scalar(os.path.join(log_path, 'error'), loss.data[0], trial)
+        writer.add_scalar(os.path.join(path, 'error'), loss.data[0], trial)
 
     # Cleanup and end
     writer.close()
+    f.close()
 
-    results = list(
-        zip(trials, trial_steps, trial_state_xs, trial_state_ys, trial_move_xs,
-            trial_move_ys, trial_rewards, trial_values))
-    return results
+
+def wythoff_2(path,
+              num_trials=10,
+              epsilon=0.1,
+              gamma=0.8,
+              learning_rate=0.1,
+              wythoff_name='Wythoff3x3',
+              seed=None):
+    """A reimplementation of 
+
+     Muyesser, N.A., Dunovan, K. & Verstynen, T., 2018. Learning model-based 
+     strategies in simple environments with hierarchical q-networks. 
+     pp.1–29. Available at: http://arxiv.org/abs/1801.06689.
+     """
+    pass
