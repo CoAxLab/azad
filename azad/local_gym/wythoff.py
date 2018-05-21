@@ -4,11 +4,6 @@ from gym import spaces
 from gym.utils import seeding
 
 
-def optimal_wythoff_move(state, m, n):
-    # every step is followed by an optimal opponent play
-    pass
-
-
 class WythoffEnv(gym.Env):
     """Wythoff's game.
     
