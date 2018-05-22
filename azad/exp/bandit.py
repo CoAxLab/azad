@@ -14,7 +14,7 @@ import gym
 from gym import wrappers
 import azad.local_gym
 
-from azad.stumblers import OneLinQN
+from azad.models import OneLinQN
 from azad.policy import epsilon_greedy
 
 # ---------------------------------------------------------------

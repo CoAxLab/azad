@@ -17,7 +17,7 @@ import gym
 from gym import wrappers
 import azad.local_gym
 
-from azad.stumblers import OneLinQN
+from azad.models import OneLinQN
 from azad.policy import epsilon_greedy
 
 # ---------------------------------------------------------------
@@ -146,13 +146,14 @@ def estimate_alp_hot(m, n, model, threshold=0.75, default_value=0.5):
     return hot
 
 
-def wythoff_1(path,
-              num_trials=10,
-              epsilon=0.1,
-              gamma=0.8,
-              learning_rate=0.1,
-              wythoff_name='Wythoff3x3',
-              seed=None):
+def stumbler(path,
+             num_trials=10,
+             epsilon=0.1,
+             gamma=0.8,
+             learning_rate=0.1,
+             wythoff_name='Wythoff3x3',
+             log=False,
+             seed=None):
     """Train a Q-agent to play Wythoff's game, using SGD."""
 
     # -------------------------------------------
@@ -165,14 +166,14 @@ def wythoff_1(path,
 
     # -------------------------------------------
     # Log setup    
+    if log:
+        # Create a csv for archiving select data
+        f = open(os.path.join(path, "data.csv"), "w")
+        csv_writer = csv.writer(f)
+        csv_writer.writerow(["trial", "steps", "action_index", "Q", "x", "y"])
 
-    # Create a csv for archiving select data
-    f = open(os.path.join(path, "data.csv"), "w")
-    csv_writer = csv.writer(f)
-    csv_writer.writerow(["trial", "steps", "action_index", "Q", "x", "y"])
-
-    # Tensorboard log
-    writer = SummaryWriter(log_dir=path)
+        # Tensorboard log
+        writer = SummaryWriter(log_dir=path)
 
     # -------------------------------------------
     # The world is a pebble on a board
@@ -244,11 +245,12 @@ def wythoff_1(path,
 
             # -------------------------------------------
             # Log results
-            csv_writer.writerow(
-                [trial, steps, int(action_index), float(Q), x, y])
+            if log:
+                csv_writer.writerow(
+                    [trial, steps, int(action_index), float(Q), x, y])
 
-            writer.add_scalar(os.path.join(path, 'Q'), Q, trial)
-            writer.add_scalar(os.path.join(path, 'reward'), reward, trial)
+                writer.add_scalar(os.path.join(path, 'Q'), Q, trial)
+                writer.add_scalar(os.path.join(path, 'reward'), reward, trial)
 
             # -------------------------------------------
             # If the game is over, stop
@@ -270,8 +272,10 @@ def wythoff_1(path,
                 reward *= -1
 
             # -
-            writer.add_scalar(os.path.join(path, 'opp_Q'), Q, trial)
-            writer.add_scalar(os.path.join(path, 'opp_reward'), reward, trial)
+            if log:
+                writer.add_scalar(os.path.join(path, 'opp_Q'), Q, trial)
+                writer.add_scalar(
+                    os.path.join(path, 'opp_reward'), reward, trial)
 
             # ---
             # Learn from your opponent
@@ -284,7 +288,7 @@ def wythoff_1(path,
             optimizer.step()
 
             # Plot?
-            if (trial % 10) == 0:
+            if (trial % 10) == 0 and log:
                 plot_wythoff_expected_values(m, n, model, path=path)
 
                 writer.add_image(
@@ -296,11 +300,15 @@ def wythoff_1(path,
                 break
 
         # save min loss for this trial
-        writer.add_scalar(os.path.join(path, 'error'), loss.data[0], trial)
+        if log:
+            writer.add_scalar(os.path.join(path, 'error'), loss.data[0], trial)
 
     # Cleanup and end
-    writer.close()
-    f.close()
+    if log:
+        writer.close()
+        f.close()
+
+    return expected_value(m, n, model)
 
 
 def wythoff_2(path,

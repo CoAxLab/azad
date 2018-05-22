@@ -11,10 +11,9 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 
-from azad.stumblers import TwoQN
+from azad.models import TwoQN
 from azad.policy import epsilon_greedy
 from azad.util import ReplayMemory
-from azad.util import plot_cart_durations
 
 import matplotlib.pyplot as plt
 
@@ -26,7 +25,24 @@ LongTensor = torch.cuda.LongTensor if USE_CUDA else torch.LongTensor
 ByteTensor = torch.cuda.ByteTensor if USE_CUDA else torch.ByteTensor
 Tensor = FloatTensor
 
+
 # ---------------------------------------------------------------
+def plot_cart_durations(episode_durations):
+    plt.figure(2, figsize=(7, 4))
+    plt.clf()
+    durations_t = Tensor(episode_durations)
+    plt.title('Training...')
+    plt.xlabel('Episode')
+    plt.ylabel('Duration')
+    plt.plot(durations_t.numpy())
+
+    # take 100 episode averages and plot them too
+    if len(durations_t) >= 100:
+        means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
+        means = torch.cat((torch.zeros(99), means))
+        plt.plot(means.numpy())
+
+    plt.pause(0.001)  # pause a bit so that plots are updated
 
 
 def cart_1(path,
