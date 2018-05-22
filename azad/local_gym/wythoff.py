@@ -137,3 +137,17 @@ class Wythoff10x10(WythoffEnv):
 
     def __init__(self):
         WythoffEnv.__init__(self, m=10, n=10)
+
+
+class Wythoff15x15(WythoffEnv):
+    """A 15 by 15 Wythoff game"""
+
+    def __init__(self):
+        WythoffEnv.__init__(self, m=15, n=15)
+
+
+class Wythoff50x50(WythoffEnv):
+    """A 50 by 50 Wythoff game"""
+
+    def __init__(self):
+        WythoffEnv.__init__(self, m=50, n=50)
