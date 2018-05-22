@@ -146,14 +146,14 @@ def estimate_alp_hot(m, n, model, threshold=0.75, default_value=0.5):
     return hot
 
 
-def stumbler(path,
-             num_trials=10,
-             epsilon=0.1,
-             gamma=0.8,
-             learning_rate=0.1,
-             wythoff_name='Wythoff3x3',
-             log=False,
-             seed=None):
+def wythoff_stumbler(path,
+                     num_trials=10,
+                     epsilon=0.1,
+                     gamma=0.8,
+                     learning_rate=0.1,
+                     wythoff_name='Wythoff3x3',
+                     log=False,
+                     seed=None):
     """Train a Q-agent to play Wythoff's game, using SGD."""
 
     # -------------------------------------------

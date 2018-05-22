@@ -28,13 +28,13 @@ Tensor = FloatTensor
 # ---------------------------------------------------------------
 
 
-def bandit_1(path,
-             num_trials=10,
-             epsilon=0.1,
-             gamma=0.8,
-             learning_rate=0.1,
-             log_path=None,
-             bandit_name='BanditTwoArmedDeterministicFixed'):
+def bandit_stumbler(path,
+                    num_trials=10,
+                    epsilon=0.1,
+                    gamma=0.8,
+                    learning_rate=0.1,
+                    log_path=None,
+                    bandit_name='BanditTwoArmedDeterministicFixed'):
     """Train a Q-agent to play n-bandit, using SGD.
     
     Note: bandits are drawm from azad.local_gym. See that module for

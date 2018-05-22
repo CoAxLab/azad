@@ -13,7 +13,7 @@ DATA_PATH=/Users/type/Code/azad/data/
 cart_exp0:
 	-rm -rf $(DATA_PATH)/cart/exp0
 	sleep 3  # Wait for tensorboard to notice the deletion
-	python run_azad.py cart_1 $(DATA_PATH)/cart/exp0 --num_episodes=4000 --epsilon_max=0.1 --gamma=0.8 --learning_rate=0.001 --num_hidden=256 
+	python run_azad.py cart_stumbler $(DATA_PATH)/cart/exp0 --num_episodes=4000 --epsilon_max=0.1 --gamma=0.8 --learning_rate=0.001 --num_hidden=256 
 
 # ---------------------------------------------------------------
 # 5-14-2018
@@ -23,12 +23,12 @@ cart_exp0:
 bandit_exp0:
 	-rm -rf $(DATA_PATH)/bandit/exp0
 	sleep 3  # Wait for tensorboard to notice the deletion
-	python run_azad.py bandit_1 $(DATA_PATH)/bandit/exp0 --num_trials=200 --epsilon=0.2 --learning_rate=0.1
+	python run_azad.py bandit_stumbler $(DATA_PATH)/bandit/exp0 --num_trials=200 --epsilon=0.2 --learning_rate=0.1
 
 bandit_exp1: 
 	-rm -rf $(DATA_PATH)/bandit/exp1
 	sleep 3  # Wait for tensorboard to notice the deletion
-	python run_azad.py bandit_1 $(DATA_PATH)/bandit/exp1 --bandit_name=BanditTwoArmedHighLowFixed --num_trials=200 --epsilon=0.2 --learning_rate=0.1
+	python run_azad.py bandit_stumbler $(DATA_PATH)/bandit/exp1 --bandit_name=BanditTwoArmedHighLowFixed --num_trials=200 --epsilon=0.2 --learning_rate=0.1
 
 # ---------------------------------------------------------------
 # 5-16-2018
@@ -36,4 +36,4 @@ bandit_exp1:
 wythoff_exp0:
 	-rm -rf $(DATA_PATH)/wythoff/exp0
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py stumbler $(DATA_PATH)/wythoff/exp0 --num_trials=500 --learning_rate=0.1 --wythoff_name=Wythoff3x3 --log=True
+	python run_azad.py wythoff_stumbler $(DATA_PATH)/wythoff/exp0 --num_trials=500 --learning_rate=0.1 --wythoff_name=Wythoff3x3 --log=True
