@@ -1,4 +1,6 @@
 import os, csv
+import sys
+
 import errno
 
 import torch
@@ -18,6 +20,7 @@ from gym import wrappers
 import azad.local_gym
 
 from azad.models import OneLinQN
+from azad.models import HotCold
 from azad.policy import epsilon_greedy
 
 # ---------------------------------------------------------------
@@ -66,14 +69,59 @@ def plot_wythoff_expected_values(m, n, model, plot=False, path=None):
         plt.close()
 
 
+def create_board(i, j, m, n):
+    board = np.zeros((m, n))
+    board[i, j] = 1.0
+
+    return board
+
+
+def create_bias_board(m, n, model):
+    """Create a board to bias a stumblers moves."""
+
+    bias_board = np.zeros((m, n))
+    for i in range(m):
+        for j in range(n):
+            bias_board[i, j] = model(Tensor([i, j]))
+
+    return bias_board
+
+
+def convert_ijv(m, n, data):
+    """Convert a (m,n) matrix into a list of (i, j, value)"""
+
+    if data.shape is not (m, n):
+        raise ValueError("(m,n) and data shape do not match")
+
+    converted = []
+    for i in range(m):
+        for j in range(n):
+            converted.append([i, j, data[i, j]])
+
+    return converted
+
+
+def q_values(m, n, a, model):
+    """Estimate the expected value of each board position"""
+    # Build the matrix a values for each (i, j) board
+    qs = np.zeros((m, n, a))
+    for i in range(m):
+        for j in range(n):
+            board = create_board(i, j, m, n)
+
+            qs[i, j, :] = np.max(
+                model(Tensor(board.reshape(m * n))).detach().numpy())
+
+    return qs
+
+
 def expected_value(m, n, model):
     """Estimate the expected value of each board position"""
     # Build the matrix a values for each (i, j) board
     values = np.zeros((m, n))
     for i in range(m):
         for j in range(n):
-            board = np.zeros((m, n))
-            board[i, j] = 1.0
+            board = create_board(i, j, m, n)
 
             values[i, j] = np.max(
                 model(Tensor(board.reshape(m * n))).detach().numpy())
@@ -103,6 +151,14 @@ def estimate_hot(m, n, model, threshold=0.75):
     hot[mask] = 1.0
 
     return hot
+
+
+def estimate_hot_cold(n, n, hot_threshold=0.75, cold_threshold=0.25):
+    """Estimate hot and cold positions"""
+    hot = estimate_hot(m, n, hot_threshold)
+    cold = estimate_cold(m, n, cold_threshold)
+
+    return hot, cold
 
 
 def expected_alp_value(m, n, model):
@@ -146,12 +202,22 @@ def estimate_alp_hot(m, n, model, threshold=0.75, default_value=0.5):
     return hot
 
 
+def estimate_alp_hot_cold(n, n, hot_threshold=0.75, cold_threshold=0.25):
+    """Estimate hot and cold positions"""
+    hot = estimate_alp_hot(m, n, hot_threshold)
+    cold = estimate_alp_cold(m, n, cold_threshold)
+
+    return hot, cold
+
+
 def wythoff_stumbler(path,
                      num_trials=10,
                      epsilon=0.1,
                      gamma=0.8,
                      learning_rate=0.1,
                      wythoff_name='Wythoff3x3',
+                     model=None,
+                     bias_board=None,
                      log=False,
                      seed=None):
     """Train a Q-agent to play Wythoff's game, using SGD."""
@@ -198,8 +264,10 @@ def wythoff_stumbler(path,
     env.close()
     m, n = board.shape
 
-    # Create a model of the right size
-    model = OneLinQN(m * n, len(possible_actions))
+    # Create a model of the right size?
+    if model is None:
+        model = OneLinQN(m * n, len(possible_actions))
+
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     # -------------------------------------------
@@ -217,6 +285,15 @@ def wythoff_stumbler(path,
             # -------------------------------------------
             # Look at the world and approximate its value.
             Qs = model(board).squeeze()
+
+            # Use the bias_board to bias Qs
+            # based on all possible next moves.
+            if bias_board is not None:
+                Qs_bias = np.zeros_like(Qs)
+                for i, a in enumerate(possible_actions):
+                    Qs_bias[i] = bias_board[x + a[0], y + a[1]]
+
+                Qs += Qs_bias
 
             # Make a decision.
             action_index = epsilon_greedy(Qs, epsilon)
@@ -308,47 +385,28 @@ def wythoff_stumbler(path,
         writer.close()
         f.close()
 
-    return expected_value(m, n, model)
+    return model
 
 
-def wythoff_2(path,
-              num_trials=10,
-              epsilon=0.1,
-              gamma=0.8,
-              learning_rate=0.1,
-              strategy_name='hot_cold',
-              wythoff_name='Wythoff3x3',
-              seed=None):
-    """A reimplementation of 
-
-     Muyesser, N.A., Dunovan, K. & Verstynen, T., 2018. Learning model-based 
-     strategies in simple environments with hierarchical q-networks. 
-     pp.1–29. Available at: http://arxiv.org/abs/1801.06689.
-     """
-    # -------------------------------------------
-    # Create path
-    try:
-        os.makedirs(path)
-    except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
+def wythoff_strategist(path,
+                       num_trials=10,
+                       num_stumbles=1000,
+                       epsilon=0.1,
+                       gamma=0.8,
+                       delta=0.1,
+                       learning_rate=0.1,
+                       strategy_name='estimate_hot_cold',
+                       strategy_args=None,
+                       wythoff_name_stumbler='Wythoff15x15',
+                       wythoff_name_strategist='Wythoff50x50',
+                       seed=None):
 
     # -------------------------------------------
-    # Log setup    
-
-    # Create a csv for archiving select data
-    f = open(os.path.join(path, "data.csv"), "w")
-    csv_writer = csv.writer(f)
-    csv_writer.writerow(["trial", "steps", "action_index", "Q", "x", "y"])
-
-    # Tensorboard log
-    writer = SummaryWriter(log_dir=path)
-
+    # Setup
     # -------------------------------------------
-    # The world is a pebble on a board
-    env = gym.make('{}-v0'.format(wythoff_name))
+    env = gym.make('{}-v0'.format(wythoff_name_strategist))
     env = wrappers.Monitor(
-        env, './tmp/{}-v0-1'.format(wythoff_name), force=True)
+        env, './tmp/{}-v0-1'.format(wythoff_name_strategist), force=True)
 
     # -------------------------------------------
     # Seeding...
@@ -356,114 +414,58 @@ def wythoff_2(path,
     np.random.seed(seed)
 
     # -------------------------------------------
-    # Valid moves (in this simplified instantiation)
-    possible_actions = [(-1, 0), (0, -1), (-1, -1)]
-
-    # -------------------------------------------
-    # Build a Q agent, its memory, and its optimizer
+    # Build a Strategist, its memory, and its optimizer
 
     # How big is the board?
-    x, y, board = env.reset()
+    x, y, board = stumbler_env.reset()
     env.close()
     m, n = board.shape
 
-    # Create a model of the right size
-    model = OneLinQN(m * n, len(possible_actions))
+    # Create a model of the right size?
+    model = HotCold(2, len(possible_actions))
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+    memory = ReplayMemory(10000)
 
-    # -------------------------------------------
-    # Run some trials
+    # Setup strategy
+    thismodule = sys.modules[__name__]
+    strategy = getattr(thismodule, strategy_name)
+    if strategy_args is not None:
+        strategy = lambda m, n, model: strategy(m, n, model, **strategy_args)
+
+    # Intial model
+    stumble_model = None
+    action_bias = None
     for trial in range(num_trials):
-        x, y, board = env.reset()
-        board = Tensor(board.reshape(m * n))
 
-        steps = 0
-        while True:
-            # -------------------------------------------
-            # Look at the world and approximate its value.
-            Qs = model(board).squeeze()
+        stumble_model = wythoff_stumbler(
+            path,
+            num_trials=num_stumbles,
+            epsilon=0.1,
+            gamma=0.8,
+            model=stumble_model,
+            bias_board=bias_board,
+            learning_rate=0.1)
 
-            # Make a decision.
-            action_index = epsilon_greedy(Qs, epsilon)
-            action = possible_actions[int(action_index)]
+        # Extract strategic data, and convert it
+        s_data = convert_ijv(strategy(m, n, model))
 
-            Q = Qs[int(action_index)]
+        # Remember it
+        for d in s_data:
+            memory.push(*d)
 
-            (x, y, next_board), reward, done, _ = env.step(action)
-            next_board = Tensor([next_board.reshape(m * n)])
+        # Train a strategist
+        coords, values = memory.sample(batch_size)
+        predicted_values = model(coords)
+        loss = F.smooth_l1_loss(values, predicted_values)
 
-            # Update move counter
-            steps += 1
+        # Grad. descent!
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
-            # ---
-            # Learn w/ SGD
-            max_Q = model(next_board).detach().max()
-            next_Q = reward + (gamma * max_Q)
-            loss = F.smooth_l1_loss(Q, next_Q)
+        # Use the trained strategist to generate a bias_board,
+        bias_board = create_bias_board(m, n, model)
 
-            optimizer.zero_grad()
-            loss.backward(retain_graph=True)  # retain is needed for opp. WHY?
-            optimizer.step()
-
-            # Shuffle state notation
-            board = next_board
-
-            # -------------------------------------------
-            # Log results
-            csv_writer.writerow(
-                [trial, steps, int(action_index), float(Q), x, y])
-
-            writer.add_scalar(os.path.join(path, 'Q'), Q, trial)
-            writer.add_scalar(os.path.join(path, 'reward'), reward, trial)
-
-            # -------------------------------------------
-            # If the game is over, stop
-            if done:
-                break
-
-            # -------------------------------------------
-            # Otherwise the opponent moves
-            action_index = np.random.randint(0, len(possible_actions))
-            action = possible_actions[action_index]
-
-            Q = Qs[int(action_index)].squeeze()
-
-            (x, y, next_board), reward, done, info = env.step(action)
-            next_board = Tensor([next_board.reshape(m * n)])
-
-            # Flip signs so opp victories are punishments
-            if reward > 0:
-                reward *= -1
-
-            # -
-            writer.add_scalar(os.path.join(path, 'opp_Q'), Q, trial)
-            writer.add_scalar(os.path.join(path, 'opp_reward'), reward, trial)
-
-            # ---
-            # Learn from your opponent
-            max_Q = model(next_board).detach().max()
-            next_Q = reward + (gamma * max_Q)
-            loss = F.smooth_l1_loss(Q, next_Q)
-
-            # optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            # Plot?
-            if (trial % 10) == 0:
-                plot_wythoff_expected_values(m, n, model, path=path)
-
-                writer.add_image(
-                    'expected_value',
-                    skimage.io.imread(
-                        os.path.join(path, 'wythoff_expected_values.png')))
-
-            if done:
-                break
-
-        # save min loss for this trial
-        writer.add_scalar(os.path.join(path, 'error'), loss.data[0], trial)
-
-    # Cleanup and end
-    writer.close()
-    f.close()
+        # and threshold it using delta.
+        # TODO: change to the exp version of Alp?
+        bias_board[np.abs(bias_board) < delta] = 0.0
