@@ -23,6 +23,7 @@ from azad.models import OneLinQN
 from azad.models import HotCold
 from azad.policy import epsilon_greedy
 from azad.policy import greedy
+from azad.util import ReplayMemory
 
 # ---------------------------------------------------------------
 # Handle dtypes for the device
@@ -255,8 +256,13 @@ def evauluate_models(stumbler,
             # -------------------------------------------
             # The stumbler goes first (the polite and 
             # coservative thing to do).
-            Qs = q_values[x, y, :]
-            action_index = greedy(Qs)
+            # (Adj for board size differences)
+            if (x <= o) and (y <= p):
+                Qs = q_values[x, y, :]
+                action_index = greedy(Qs)
+            else:
+                action_index = np.random.rand(0, len(possible_actions))
+
             action = possible_actions[int(action_index)]
 
             (x, y, _), reward, done, _ = env.step(action)
@@ -266,7 +272,7 @@ def evauluate_models(stumbler,
             # Now the strategist
             Vs = []
             for a in possible_actions:
-                Vs.append(strategy_values[x + a[0], y + a[1]]])
+                Vs.append(strategy_values[x + a[0], y + a[1]])
 
             action_index = greedy(Tensor(Vs))
             action = possible_actions[int(action_index)]
@@ -478,6 +484,8 @@ def wythoff_strategist(path,
     env = wrappers.Monitor(
         env, './tmp/{}-v0-1'.format(wythoff_name_strategist), force=True)
 
+    possible_actions = [(-1, 0), (0, -1), (-1, -1)]
+
     # -------------------------------------------
     # Seeding...
     env.seed(seed)
@@ -492,7 +500,7 @@ def wythoff_strategist(path,
     m, n = board.shape
 
     # Create a model, of the right size.
-    model = HotCold(2, len(possible_actions))
+    model = HotCold(2)
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
     memory = ReplayMemory(10000)
 
@@ -504,6 +512,7 @@ def wythoff_strategist(path,
 
     # -------------------------------------------
     # !
+    wins = []
     stumbler_model = None
     bias_board = None
     for trial in range(num_trials):
@@ -511,16 +520,16 @@ def wythoff_strategist(path,
         stumbler_model, stumbler_env = wythoff_stumbler(
             path,
             num_trials=num_stumbles,
-            epsilon=epsilon=0.1,
-            gamma=gamma=0.8,
+            epsilon=epsilon,
+            gamma=gamma,
             wythoff_name=wythoff_name_stumbler,
             model=stumbler_model,
             bias_board=bias_board,
-            learning_rate=learning_rate=0.1)
+            learning_rate=learning_rate)
 
-        # Extract strategic data, convert it, and remember it
-        s_data = convert_ijv(strategy(m, n, model))
-
+        # Extract strategic data from the stumber, 
+        # convert it and remember that
+        s_data = convert_ijv(strategy(m, n, stumbler_model))
         for d in s_data:
             memory.push(*d)
 
@@ -544,7 +553,8 @@ def wythoff_strategist(path,
         optimizer.step()
 
         # Compare strategist and stumbler. Count strategist wins.
-        wins = evauluate_models(stumbler_model, model, stumbler_env, env)
+        win = evauluate_models(stumbler_model, model, stumbler_env, env)
+        wins.append(wins)
 
         # Use the trained strategist to generate a bias_board,
         bias_board = create_bias_board(m, n, model)
@@ -552,3 +562,5 @@ def wythoff_strategist(path,
         # and threshold it using delta.
         # TODO: change to the exp version of Alp?
         bias_board[np.abs(bias_board) < delta] = 0.0
+
+    return model, stumbler_model, env, stumbler_env, wins
