@@ -266,7 +266,7 @@ def evauluate_models(stumbler,
             # Now the strategist
             Vs = []
             for a in possible_actions:
-                Vs.append(strategy_values[x + a[0, y + a[1]]])
+                Vs.append(strategy_values[x + a[0], y + a[1]]])
 
             action_index = greedy(Tensor(Vs))
             action = possible_actions[int(action_index)]
