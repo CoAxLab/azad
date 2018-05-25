@@ -253,7 +253,8 @@ def evauluate_models(stumbler,
 
         while True:
             # -------------------------------------------
-            # The stumbler goes first
+            # The stumbler goes first (the polite and 
+            # coservative thing to do).
             Qs = q_values[x, y, :]
             action_index = greedy(Qs)
             action = possible_actions[int(action_index)]
