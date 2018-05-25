@@ -272,9 +272,8 @@ def evauluate_models(stumbler,
             action = possible_actions[int(action_index)]
 
             (x, y, _), reward, done, _ = env.step(action)
-
             if done:
-                wins += 1
+                wins += 1  # We care when the strategist wins
                 break
 
     return wins / num_eval
@@ -456,7 +455,7 @@ def wythoff_stumbler(path,
         writer.close()
         f.close()
 
-    return model
+    return model, env
 
 
 def wythoff_strategist(path,
@@ -488,7 +487,7 @@ def wythoff_strategist(path,
     # Build a Strategist, its memory, and its optimizer
 
     # How big is the board?
-    x, y, board = stumbler_env.reset()
+    x, y, board = env.reset()
     env.close()
     m, n = board.shape
 
@@ -505,23 +504,23 @@ def wythoff_strategist(path,
 
     # -------------------------------------------
     # !
-    stumble_model = None
+    stumbler_model = None
     bias_board = None
     for trial in range(num_trials):
 
-        stumble_model = wythoff_stumbler(
+        stumbler_model, stumbler_env = wythoff_stumbler(
             path,
             num_trials=num_stumbles,
-            epsilon=0.1,
-            gamma=0.8,
-            model=stumble_model,
+            epsilon=epsilon=0.1,
+            gamma=gamma=0.8,
+            wythoff_name=wythoff_name_stumbler,
+            model=stumbler_model,
             bias_board=bias_board,
-            learning_rate=0.1)
+            learning_rate=learning_rate=0.1)
 
-        # Extract strategic data, and convert it
+        # Extract strategic data, convert it, and remember it
         s_data = convert_ijv(strategy(m, n, model))
 
-        # Remember it
         for d in s_data:
             memory.push(*d)
 
@@ -533,10 +532,10 @@ def wythoff_strategist(path,
             coords.append(c)
             values.append(v)
 
-        # Making some preditions
+        # Making some preditions,
         predicted_values = model(coords)
 
-        # And finding their loss.
+        # and find their loss.
         loss = F.smooth_l1_loss(values, predicted_values)
 
         # Walk down the hill of righteousness!
@@ -544,8 +543,8 @@ def wythoff_strategist(path,
         loss.backward()
         optimizer.step()
 
-        # Evaulate the model, compared to stumbler.
-        score = compare_models(stumble_model, model)
+        # Compare strategist and stumbler. Count strategist wins.
+        wins = evauluate_models(stumbler_model, model, stumbler_env, env)
 
         # Use the trained strategist to generate a bias_board,
         bias_board = create_bias_board(m, n, model)
