@@ -12,18 +12,16 @@ from .bandit import BanditTwoArmedLowLowFixed
 from .wythoff import Wythoff3x3
 from .wythoff import Wythoff10x10
 
-environments = [
-    ['BanditTenArmedRandomFixed', 'v0', 1],
-    ['BanditTenArmedRandomRandom', 'v0', 1],
-    ['BanditTenArmedGaussian', 'v0', 1],
-    ['BanditTenArmedUniformDistributedReward', 'v0', 1],
-    ['BanditTwoArmedDeterministicFixed', 'v0', 1],
-    ['BanditTwoArmedHighHighFixed', 'v0', 1],
-    ['BanditTwoArmedHighLowFixed', 'v0', 1],
-    ['BanditTwoArmedLowLowFixed', 'v0', 1],
-    ['Wythoff3x3', 'v0', 1000],
-    ['Wythoff10x10', 'v0', 1000],
-]
+environments = [['BanditTenArmedRandomFixed', 'v0', 1],
+                ['BanditTenArmedRandomRandom', 'v0', 1],
+                ['BanditTenArmedGaussian', 'v0', 1],
+                ['BanditTenArmedUniformDistributedReward', 'v0', 1],
+                ['BanditTwoArmedDeterministicFixed', 'v0', 1],
+                ['BanditTwoArmedHighHighFixed', 'v0', 1],
+                ['BanditTwoArmedHighLowFixed', 'v0', 1],
+                ['BanditTwoArmedLowLowFixed', 'v0', 1],
+                ['Wythoff3x3', 'v0', 1000], ['Wythoff10x10', 'v0', 1000],
+                ['Wythoff15x15', 'v0', 1000], ['Wythoff50x50', 'v0', 1000]]
 
 for environment in environments:
     register(
