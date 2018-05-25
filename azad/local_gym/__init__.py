@@ -11,6 +11,8 @@ from .bandit import BanditTwoArmedLowLowFixed
 
 from .wythoff import Wythoff3x3
 from .wythoff import Wythoff10x10
+from .wythoff import Wythoff15x15
+from .wythoff import Wythoff50x50
 
 environments = [['BanditTenArmedRandomFixed', 'v0', 1],
                 ['BanditTenArmedRandomRandom', 'v0', 1],
