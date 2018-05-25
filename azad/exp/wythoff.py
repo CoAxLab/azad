@@ -22,6 +22,7 @@ import azad.local_gym
 from azad.models import OneLinQN
 from azad.models import HotCold
 from azad.policy import epsilon_greedy
+from azad.policy import greedy
 
 # ---------------------------------------------------------------
 # Handle dtypes for the device
@@ -96,12 +97,12 @@ def convert_ijv(m, n, data):
     converted = []
     for i in range(m):
         for j in range(n):
-            converted.append([i, j, data[i, j]])
+            converted.append([(i, j), data[i, j]])
 
     return converted
 
 
-def q_values(m, n, a, model):
+def estimate_q_values(m, n, a, model):
     """Estimate the expected value of each board position"""
     # Build the matrix a values for each (i, j) board
     qs = np.zeros((m, n, a))
@@ -153,7 +154,7 @@ def estimate_hot(m, n, model, threshold=0.75):
     return hot
 
 
-def estimate_hot_cold(n, n, hot_threshold=0.75, cold_threshold=0.25):
+def estimate_hot_cold(m, n, hot_threshold=0.75, cold_threshold=0.25):
     """Estimate hot and cold positions"""
     hot = estimate_hot(m, n, hot_threshold)
     cold = estimate_cold(m, n, cold_threshold)
@@ -202,12 +203,80 @@ def estimate_alp_hot(m, n, model, threshold=0.75, default_value=0.5):
     return hot
 
 
-def estimate_alp_hot_cold(n, n, hot_threshold=0.75, cold_threshold=0.25):
+def estimate_alp_hot_cold(m, n, hot_threshold=0.75, cold_threshold=0.25):
     """Estimate hot and cold positions"""
     hot = estimate_alp_hot(m, n, hot_threshold)
     cold = estimate_alp_cold(m, n, cold_threshold)
 
     return hot, cold
+
+
+def evauluate_models(stumbler,
+                     stategist,
+                     stumbler_env,
+                     stategist_env,
+                     num_eval=100,
+                     possible_actions=[(-1, 0), (0, -1), (-1, -1)]):
+    """Compare stumblers to strategists.
+    
+    Returns 
+    -------
+    wins : float
+        the fraction of games won by the strategist.
+    """
+    # -------------------------------------------
+    # Init boards, etc
+
+    # Stratgist
+    x, y, board = stategist_env.reset()
+    stategist_env.close()
+    m, n = board.shape
+
+    strategy_values = create_bias_board(m, n, stratgist)
+
+    # Stumbler
+    _, _, little_board = stumbler_env.reset()
+    o, p = little_board.shape
+    stumbler_env.clost()
+
+    q_values = estimate_q_values(
+        o, p, len(possible_actions), stumbler, default_value=0)
+
+    # -------------------------------------------
+    # a stumbler and a strategist take turns
+    # playing a game....
+    wins = 0.0
+    for n in range(num_eval):
+        # (re)init
+        x, y, board = env.reset()
+        board = Tensor(board.reshape(m * n))
+
+        while True:
+            # -------------------------------------------
+            # The stumbler goes first
+            Qs = q_values[x, y, :]
+            action_index = greedy(Qs)
+            action = possible_actions[int(action_index)]
+
+            (x, y, _), reward, done, _ = env.step(action)
+            if done:
+                break
+
+            # Now the strategist
+            Vs = []
+            for a in possible_actions:
+                Vs.append(strategy_values[x + a[0, y + a[1]]])
+
+            action_index = greedy(Tensor(Vs))
+            action = possible_actions[int(action_index)]
+
+            (x, y, _), reward, done, _ = env.step(action)
+
+            if done:
+                wins += 1
+                break
+
+    return wins / num_eval
 
 
 def wythoff_stumbler(path,
@@ -313,6 +382,7 @@ def wythoff_stumbler(path,
             next_Q = reward + (gamma * max_Q)
             loss = F.smooth_l1_loss(Q, next_Q)
 
+            # Walk down the hill of righteousness!
             optimizer.zero_grad()
             loss.backward(retain_graph=True)  # retain is needed for opp. WHY?
             optimizer.step()
@@ -360,7 +430,7 @@ def wythoff_stumbler(path,
             next_Q = reward + (gamma * max_Q)
             loss = F.smooth_l1_loss(Q, next_Q)
 
-            # optimizer.zero_grad()
+            # Walk down the hill of righteousness!
             loss.backward()
             optimizer.step()
 
@@ -389,14 +459,14 @@ def wythoff_stumbler(path,
 
 
 def wythoff_strategist(path,
-                       num_trials=10,
-                       num_stumbles=1000,
+                       num_trials=1000,
+                       num_stumbles=100,
                        epsilon=0.1,
                        gamma=0.8,
                        delta=0.1,
                        learning_rate=0.1,
                        strategy_name='estimate_hot_cold',
-                       strategy_args=None,
+                       strategy_kwargs=None,
                        wythoff_name_stumbler='Wythoff15x15',
                        wythoff_name_strategist='Wythoff50x50',
                        seed=None):
@@ -421,20 +491,21 @@ def wythoff_strategist(path,
     env.close()
     m, n = board.shape
 
-    # Create a model of the right size?
+    # Create a model, of the right size.
     model = HotCold(2, len(possible_actions))
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
     memory = ReplayMemory(10000)
 
     # Setup strategy
-    thismodule = sys.modules[__name__]
-    strategy = getattr(thismodule, strategy_name)
-    if strategy_args is not None:
-        strategy = lambda m, n, model: strategy(m, n, model, **strategy_args)
+    this_module = sys.modules[__name__]
+    strategy = getattr(this_module, strategy_name)
+    if strategy_kwargs is not None:
+        strategy = lambda m, n, model: strategy(m, n, model, **strategy_kwargs)
 
-    # Intial model
+    # -------------------------------------------
+    # !
     stumble_model = None
-    action_bias = None
+    bias_board = None
     for trial in range(num_trials):
 
         stumble_model = wythoff_stumbler(
@@ -453,15 +524,27 @@ def wythoff_strategist(path,
         for d in s_data:
             memory.push(*d)
 
-        # Train a strategist
-        coords, values = memory.sample(batch_size)
+        # Train a strategist, by first sampling its memory
+        coords = []
+        values = []
+        samples = memory.sample(batch_size)
+        for c, v in samples:
+            coords.append(c)
+            values.append(v)
+
+        # Making some preditions
         predicted_values = model(coords)
+
+        # And finding their loss.
         loss = F.smooth_l1_loss(values, predicted_values)
 
-        # Grad. descent!
+        # Walk down the hill of righteousness!
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
+
+        # Evaulate the model, compared to stumbler.
+        score = compare_models(stumble_model, model)
 
         # Use the trained strategist to generate a bias_board,
         bias_board = create_bias_board(m, n, model)
