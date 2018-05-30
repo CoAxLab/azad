@@ -1,7 +1,7 @@
 import torch
 
 
-def greedy(x, epsilon):
+def greedy(x):
     """Pick the biggest"""
     action = torch.argmax(x).unsqueeze(0)
 
