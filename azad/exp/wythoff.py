@@ -36,7 +36,7 @@ from azad.util import ReplayMemory
 # # ---------------------------------------------------------------
 
 
-def plot_wythoff_board(board, plot=False, path=None):
+def plot_wythoff_board(board, plot=False, path=None, name='wythoff_board.png'):
     """Plot the board"""
 
     # !
@@ -45,7 +45,7 @@ def plot_wythoff_board(board, plot=False, path=None):
 
     # Save an image?
     if path is not None:
-        plt.savefig(os.path.join(path, 'wythoff_board.png'))
+        plt.savefig(os.path.join(path, name))
 
     if plot:
         # plt.show()
@@ -496,6 +496,7 @@ def wythoff_strategist(path,
                        strategy_default_value=0,
                        wythoff_name_stumbler='Wythoff15x15',
                        wythoff_name_strategist='Wythoff50x50',
+                       log=False,
                        seed=None):
 
     # -------------------------------------------
@@ -508,6 +509,17 @@ def wythoff_strategist(path,
     possible_actions = [(-1, 0), (0, -1), (-1, -1)]
 
     batch_size = 64
+
+    # -------------------------------------------
+    # Log setup    
+    if log:
+        # Create a csv for archiving select data
+        # f = open(os.path.join(path, "data.csv"), "w")
+        # csv_writer = csv.writer(f)
+        # csv_writer.writerow(["trial", "steps", "action_index", "Q", "x", "y"])
+
+        # Tensorboard log
+        writer = SummaryWriter(log_dir=path)
 
     # -------------------------------------------
     # Seeding...
@@ -551,11 +563,12 @@ def wythoff_strategist(path,
 
         # Extract strategic data from the stumber, 
         # project it and remember that
-        s_data = strategy(o, p, stumbler_model)
-        s_data = pad_board(m, n, s_data, strategy_default_value)
+        strategy_board = strategy(o, p, stumbler_model)
+        strategy_board = pad_board(m, n, strategy_board,
+                                   strategy_default_value)
 
         # ...Into tuples
-        s_data = convert_ijv(s_data)
+        s_data = convert_ijv(strategy_board)
         for d in s_data:
             memory.push(*d)
 
@@ -592,5 +605,23 @@ def wythoff_strategist(path,
         # and threshold it using delta.
         # TODO: change to the exp version of Alp?
         bias_board[np.abs(bias_board) < delta] = 0.0
+
+        if (trial % 10) == 0 and log:
+            plot_wythoff_expected_values(o, p, stumbler_model, path=path)
+            writer.add_image(
+                'stumbler_expected_value',
+                skimage.io.imread(
+                    os.path.join(path, 'wythoff_expected_values.png')))
+
+            plot_wythoff_board(
+                strategy_board, path=path, name='strategy_board.png')
+            writer.add_image(
+                'strategy_board',
+                skimage.io.imread(os.path.join(path, 'strategy_board.png')))
+
+            plot_wythoff_board(bias_board, path=path, name='bias_board.png')
+            writer.add_image(
+                'bias_board',
+                skimage.io.imread(os.path.join(path, 'bias_board.png')))
 
     return model, stumbler_model, env, stumbler_env, wins
