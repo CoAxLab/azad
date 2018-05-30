@@ -37,3 +37,9 @@ wythoff_exp0:
 	-rm -rf $(DATA_PATH)/wythoff/exp0
 	sleep 5  # Wait for tensorboard to notice the deletion
 	python run_azad.py wythoff_stumbler $(DATA_PATH)/wythoff/exp0 --num_trials=500 --learning_rate=0.1 --wythoff_name=Wythoff3x3 --log=True
+
+# Testing wythoff 
+wythoff_exp1:
+	-rm -rf $(DATA_PATH)/wythoff/exp1
+	sleep 5  # Wait for tensorboard to notice the deletion
+	python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp1 --num_trials=1000 --num_stumble=100 --learning_rate=0.1 --log=True
