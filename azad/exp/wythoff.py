@@ -42,6 +42,7 @@ def plot_wythoff_board(board, plot=False, path=None, name='wythoff_board.png'):
     # !
     fig = plt.figure()
     plt.matshow(board)
+    plt.colorbar()
 
     # Save an image?
     if path is not None:
@@ -60,6 +61,7 @@ def plot_wythoff_expected_values(m, n, model, plot=False, path=None):
     # !
     fig = plt.figure()
     plt.matshow(values)
+    plt.colorbar()
 
     # Save an image?
     if path is not None:
