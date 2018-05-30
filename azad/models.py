@@ -103,4 +103,4 @@ class HotCold(nn.Module):
 
     def forward(self, x):
         x = self.fc1(x)
-        return self.fc2
+        return self.fc2(x)
