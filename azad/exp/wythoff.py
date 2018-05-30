@@ -84,7 +84,8 @@ def create_bias_board(m, n, hotcold):
     bias_board = np.zeros((m, n))
     for i in range(m):
         for j in range(n):
-            bias_board[i, j] = hotcold(torch.tensor([i, j]))
+            coord = torch.tensor([i, j], dtype=torch.float)
+            bias_board[i, j] = hotcold(coord)
 
     return bias_board
 
@@ -219,9 +220,9 @@ def estimate_alp_hot_cold(m, n, hot_threshold=0.75, cold_threshold=0.25):
 
 
 def evauluate_models(stumbler,
-                     stategist,
+                     strategist,
                      stumbler_env,
-                     stategist_env,
+                     strategist_env,
                      num_eval=100,
                      possible_actions=[(-1, 0), (0, -1), (-1, -1)]):
     """Compare stumblers to strategists.
@@ -235,27 +236,26 @@ def evauluate_models(stumbler,
     # Init boards, etc
 
     # Stratgist
-    x, y, board = stategist_env.reset()
-    stategist_env.close()
+    x, y, board = strategist_env.reset()
+    strategist_env.close()
     m, n = board.shape
 
-    strategy_values = create_bias_board(m, n, stratgist)
+    strategy_values = create_bias_board(m, n, strategist)
 
     # Stumbler
     _, _, little_board = stumbler_env.reset()
     o, p = little_board.shape
-    stumbler_env.clost()
+    stumbler_env.close()
 
-    q_values = estimate_q_values(
-        o, p, len(possible_actions), stumbler, default_value=0)
+    q_values = estimate_q_values(o, p, len(possible_actions), stumbler)
 
     # -------------------------------------------
     # a stumbler and a strategist take turns
     # playing a game....
     wins = 0.0
-    for n in range(num_eval):
+    for _ in range(num_eval):
         # (re)init
-        x, y, board = env.reset()
+        x, y, board = strategist_env.reset()
         board = torch.tensor(board.reshape(m * n))
 
         while True:
@@ -263,15 +263,17 @@ def evauluate_models(stumbler,
             # The stumbler goes first (the polite and 
             # coservative thing to do).
             # (Adj for board size differences)
-            if (x <= o) and (y <= p):
+            if (x < o) and (y < p):
                 Qs = q_values[x, y, :]
+                Qs = torch.tensor(Qs)
+
                 action_index = greedy(Qs)
             else:
-                action_index = np.random.rand(0, len(possible_actions))
+                action_index = np.random.randint(0, len(possible_actions))
 
             action = possible_actions[int(action_index)]
 
-            (x, y, _), reward, done, _ = env.step(action)
+            (x, y, _), reward, done, _ = strategist_env.step(action)
             if done:
                 break
 
@@ -283,7 +285,7 @@ def evauluate_models(stumbler,
             action_index = greedy(torch.tensor(Vs))
             action = possible_actions[int(action_index)]
 
-            (x, y, _), reward, done, _ = env.step(action)
+            (x, y, _), reward, done, _ = strategist_env.step(action)
             if done:
                 wins += 1  # We care when the strategist wins
                 break
@@ -380,11 +382,11 @@ def wythoff_stumbler(path,
             # Use the bias_board to bias Qs
             # based on all possible next moves.
             if bias_board is not None:
-                Qs_bias = np.zeros_like(Qs)
+                Qs_bias = np.zeros_like(Qs.detach())
                 for i, a in enumerate(possible_actions):
                     Qs_bias[i] = bias_board[x + a[0], y + a[1]]
 
-                Qs += Qs_bias
+                Qs += torch.tensor(Qs_bias, dtype=torch.float)
 
             # Make a decision.
             action_index = epsilon_greedy(Qs, epsilon)
@@ -565,8 +567,9 @@ def wythoff_strategist(path,
             coords.append(c)
             values.append(v)
 
-        coords = torch.tensor(np.vstack(coords), requires_grad=True)
-        values = torch.tensor(values, requires_grad=True)
+        coords = torch.tensor(
+            np.vstack(coords), requires_grad=True, dtype=torch.float)
+        values = torch.tensor(values, requires_grad=True, dtype=torch.float)
 
         # Making some preditions,
         predicted_values = model(coords).detach().squeeze()
