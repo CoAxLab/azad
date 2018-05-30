@@ -25,15 +25,15 @@ from azad.policy import epsilon_greedy
 from azad.policy import greedy
 from azad.util import ReplayMemory
 
-# ---------------------------------------------------------------
-# Handle dtypes for the device
-USE_CUDA = torch.cuda.is_available()
-FloatTensor = torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor
-LongTensor = torch.cuda.LongTensor if USE_CUDA else torch.LongTensor
-ByteTensor = torch.cuda.ByteTensor if USE_CUDA else torch.ByteTensor
-Tensor = FloatTensor
+# # ---------------------------------------------------------------
+# # Handle dtypes for the device
+# USE_CUDA = torch.cuda.is_available()
+# FloatTensor = torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor
+# LongTensor = torch.cuda.LongTensor if USE_CUDA else torch.LongTensor
+# ByteTensor = torch.cuda.ByteTensor if USE_CUDA else torch.ByteTensor
+# Tensor = FloatTensor
 
-# ---------------------------------------------------------------
+# # ---------------------------------------------------------------
 
 
 def plot_wythoff_board(board, plot=False, path=None):
@@ -78,23 +78,21 @@ def create_board(i, j, m, n):
     return board
 
 
-def create_bias_board(m, n, model):
+def create_bias_board(m, n, hotcold):
     """Create a board to bias a stumblers moves."""
 
     bias_board = np.zeros((m, n))
     for i in range(m):
         for j in range(n):
-            bias_board[i, j] = model(Tensor([i, j]))
+            bias_board[i, j] = hotcold(torch.tensor([i, j]))
 
     return bias_board
 
 
-def convert_ijv(m, n, data):
+def convert_ijv(data):
     """Convert a (m,n) matrix into a list of (i, j, value)"""
 
-    if data.shape is not (m, n):
-        raise ValueError("(m,n) and data shape do not match")
-
+    m, n = data.shape
     converted = []
     for i in range(m):
         for j in range(n):
@@ -110,9 +108,8 @@ def estimate_q_values(m, n, a, model):
     for i in range(m):
         for j in range(n):
             board = create_board(i, j, m, n)
-
-            qs[i, j, :] = np.max(
-                model(Tensor(board.reshape(m * n))).detach().numpy())
+            board = torch.tensor(board.reshape(m * n), dtype=torch.float)
+            qs[i, j, :] = np.max(model(board).detach().numpy())
 
     return qs
 
@@ -124,9 +121,8 @@ def expected_value(m, n, model):
     for i in range(m):
         for j in range(n):
             board = create_board(i, j, m, n)
-
-            values[i, j] = np.max(
-                model(Tensor(board.reshape(m * n))).detach().numpy())
+            board = torch.tensor(board.reshape(m * n), dtype=torch.float)
+            values[i, j] = np.max(model(board).detach().numpy())
 
     return values
 
@@ -155,12 +151,22 @@ def estimate_hot(m, n, model, threshold=0.75):
     return hot
 
 
-def estimate_hot_cold(m, n, hot_threshold=0.75, cold_threshold=0.25):
+def estimate_hot_cold(m, n, model, hot_threshold=0.75, cold_threshold=0.25):
     """Estimate hot and cold positions"""
-    hot = estimate_hot(m, n, hot_threshold)
-    cold = estimate_cold(m, n, cold_threshold)
+    hot = estimate_hot(m, n, model, hot_threshold)
+    cold = estimate_cold(m, n, model, cold_threshold)
 
-    return hot, cold
+    return hot + cold
+
+
+def pad_board(m, n, board, value):
+    """Given a board-shaped array, pad it to (m,n) with value."""
+
+    padded = np.ones((m, n)) * value
+    o, p = board.shape
+    padded[0:o, 0:p] = board
+
+    return padded
 
 
 def expected_alp_value(m, n, model):
@@ -250,7 +256,7 @@ def evauluate_models(stumbler,
     for n in range(num_eval):
         # (re)init
         x, y, board = env.reset()
-        board = Tensor(board.reshape(m * n))
+        board = torch.tensor(board.reshape(m * n))
 
         while True:
             # -------------------------------------------
@@ -274,7 +280,7 @@ def evauluate_models(stumbler,
             for a in possible_actions:
                 Vs.append(strategy_values[x + a[0], y + a[1]])
 
-            action_index = greedy(Tensor(Vs))
+            action_index = greedy(torch.tensor(Vs))
             action = possible_actions[int(action_index)]
 
             (x, y, _), reward, done, _ = env.step(action)
@@ -283,6 +289,17 @@ def evauluate_models(stumbler,
                 break
 
     return wins / num_eval
+
+
+def peak(name):
+    """Peak at the env's board"""
+    env = gym.make('{}-v0'.format(name))
+
+    x, y, board = env.reset()
+    env.close()
+    m, n = board.shape
+
+    return m, n, board
 
 
 def wythoff_stumbler(path,
@@ -335,9 +352,7 @@ def wythoff_stumbler(path,
     # Build a Q agent, its memory, and its optimizer
 
     # How big is the board?
-    x, y, board = env.reset()
-    env.close()
-    m, n = board.shape
+    m, n, board = peak(wythoff_name)
 
     # Create a model of the right size?
     if model is None:
@@ -349,7 +364,8 @@ def wythoff_stumbler(path,
     # Run some trials
     for trial in range(num_trials):
         x, y, board = env.reset()
-        board = Tensor(board.reshape(m * n))
+
+        board = torch.tensor(board.reshape(m * n), dtype=torch.float)
 
         steps = 0
         while True:
@@ -377,7 +393,8 @@ def wythoff_stumbler(path,
             Q = Qs[int(action_index)]
 
             (x, y, next_board), reward, done, _ = env.step(action)
-            next_board = Tensor([next_board.reshape(m * n)])
+            next_board = torch.tensor(
+                next_board.reshape(m * n), dtype=torch.float)
 
             # Update move counter
             steps += 1
@@ -392,9 +409,6 @@ def wythoff_stumbler(path,
             optimizer.zero_grad()
             loss.backward(retain_graph=True)  # retain is needed for opp. WHY?
             optimizer.step()
-
-            # Shuffle state notation
-            board = next_board
 
             # -------------------------------------------
             # Log results
@@ -418,7 +432,8 @@ def wythoff_stumbler(path,
             Q = Qs[int(action_index)].squeeze()
 
             (x, y, next_board), reward, done, info = env.step(action)
-            next_board = Tensor([next_board.reshape(m * n)])
+            next_board = torch.tensor(
+                next_board.reshape(m * n), dtype=torch.float)
 
             # Flip signs so opp victories are punishments
             if reward > 0:
@@ -452,6 +467,9 @@ def wythoff_stumbler(path,
             if done:
                 break
 
+            # Shuffle state notation
+            board = next_board
+
         # save min loss for this trial
         if log:
             writer.add_scalar(os.path.join(path, 'error'), loss.data[0], trial)
@@ -473,6 +491,7 @@ def wythoff_strategist(path,
                        learning_rate=0.1,
                        strategy_name='estimate_hot_cold',
                        strategy_kwargs=None,
+                       strategy_default_value=0,
                        wythoff_name_stumbler='Wythoff15x15',
                        wythoff_name_strategist='Wythoff50x50',
                        seed=None):
@@ -486,6 +505,8 @@ def wythoff_strategist(path,
 
     possible_actions = [(-1, 0), (0, -1), (-1, -1)]
 
+    batch_size = 64
+
     # -------------------------------------------
     # Seeding...
     env.seed(seed)
@@ -494,10 +515,9 @@ def wythoff_strategist(path,
     # -------------------------------------------
     # Build a Strategist, its memory, and its optimizer
 
-    # How big is the board?
-    x, y, board = env.reset()
-    env.close()
-    m, n = board.shape
+    # How big are the boards?
+    m, n, board = peak(wythoff_name_strategist)
+    o, p, _ = peak(wythoff_name_stumbler)
 
     # Create a model, of the right size.
     model = HotCold(2)
@@ -528,8 +548,12 @@ def wythoff_strategist(path,
             learning_rate=learning_rate)
 
         # Extract strategic data from the stumber, 
-        # convert it and remember that
-        s_data = convert_ijv(strategy(m, n, stumbler_model))
+        # project it and remember that
+        s_data = strategy(o, p, stumbler_model)
+        s_data = pad_board(m, n, s_data, strategy_default_value)
+
+        # ...Into tuples
+        s_data = convert_ijv(s_data)
         for d in s_data:
             memory.push(*d)
 
@@ -541,8 +565,11 @@ def wythoff_strategist(path,
             coords.append(c)
             values.append(v)
 
+        coords = torch.tensor(np.vstack(coords), requires_grad=True)
+        values = torch.tensor(values, requires_grad=True)
+
         # Making some preditions,
-        predicted_values = model(coords)
+        predicted_values = model(coords).detach().squeeze()
 
         # and find their loss.
         loss = F.smooth_l1_loss(values, predicted_values)
