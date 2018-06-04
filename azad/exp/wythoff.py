@@ -11,6 +11,7 @@ from tensorboardX import SummaryWriter
 
 import numpy as np
 import matplotlib.pyplot as plt
+from scipy.constants import golden
 
 import skimage
 from skimage import data, io
@@ -51,10 +52,69 @@ def plot_wythoff_board(board, plot=False, path=None, name='wythoff_board.png'):
     if plot:
         # plt.show()
         plt.pause(0.01)
-        plt.close()
+
+    plt.close()
 
 
-def plot_wythoff_expected_values(m, n, model, plot=False, path=None):
+def plot_cold_board(m, n, plot=False, path=None, name='cold_board.png'):
+    cold = create_cold_board(m, n)
+
+    # !
+    fig = plt.figure()
+    plt.matshow(cold)
+    plt.colorbar()
+
+    # Save an image?
+    if path is not None:
+        plt.savefig(os.path.join(path, name))
+
+    if plot:
+        # plt.show()
+        plt.pause(0.1)
+
+    plt.close()
+
+
+def plot_q_action_values(m,
+                         n,
+                         a,
+                         model,
+                         plot=False,
+                         possible_actions=None,
+                         path=None,
+                         name='wythoff_q_action_values.png'):
+    """Plot Q values for each possible action"""
+
+    qs = estimate_q_values(m, n, a, model)
+
+    # Init plot
+    fig, axarr = plt.subplots(1, a, sharey=True, figsize=(17, 4))
+
+    for k in range(a):
+        q_a = qs[:, :, k]
+        im = axarr[k].matshow(q_a)
+        fig.colorbar(im, ax=axarr[k])
+
+        if possible_actions is not None:
+            axarr[k].set_title(possible_actions[k])
+
+    # Save an image?
+    if path is not None:
+        plt.savefig(os.path.join(path, name))
+
+    if plot:
+        # plt.show()
+        plt.pause(0.01)
+
+    plt.close('all')
+
+
+def plot_wythoff_expected_values(m,
+                                 n,
+                                 model,
+                                 plot=False,
+                                 path=None,
+                                 name='wythoff_expected_values.png'):
     """Plot EVs"""
     values = expected_value(m, n, model)
 
@@ -65,12 +125,25 @@ def plot_wythoff_expected_values(m, n, model, plot=False, path=None):
 
     # Save an image?
     if path is not None:
-        plt.savefig(os.path.join(path, 'wythoff_expected_values.png'))
+        plt.savefig(os.path.join(path, name))
 
     if plot:
         # plt.show()
         plt.pause(0.01)
-        plt.close()
+
+    plt.close()
+
+
+def create_cold_board(m, n):
+    cold_board = np.zeros((m, n))
+    for k in range(m - 1):
+        mk = int(k * golden)
+        nk = int(k * golden**2)
+        if (nk < m) and (mk < n):
+            cold_board[mk, nk] = -1
+            cold_board[nk, mk] = -1
+
+    return cold_board
 
 
 def create_board(i, j, m, n):
@@ -112,7 +185,7 @@ def estimate_q_values(m, n, a, model):
         for j in range(n):
             board = create_board(i, j, m, n)
             board = torch.tensor(board.reshape(m * n), dtype=torch.float)
-            qs[i, j, :] = np.max(model(board).detach().numpy())
+            qs[i, j, :] = model(board).detach().numpy()
 
     return qs
 
@@ -292,7 +365,7 @@ def evauluate_models(stumbler,
                 wins += 1  # We care when the strategist wins
                 break
 
-    return wins / num_eval
+    return float(wins)
 
 
 def peak(name):
@@ -368,7 +441,6 @@ def wythoff_stumbler(path,
     # Run some trials
     for trial in range(num_trials):
         x, y, board = env.reset()
-
         board = torch.tensor(board.reshape(m * n), dtype=torch.float)
 
         steps = 0
@@ -433,40 +505,58 @@ def wythoff_stumbler(path,
             action_index = np.random.randint(0, len(possible_actions))
             action = possible_actions[action_index]
 
-            Q = Qs[int(action_index)].squeeze()
+            # Q = Qs[int(action_index)].squeeze()
 
             (x, y, next_board), reward, done, info = env.step(action)
             next_board = torch.tensor(
                 next_board.reshape(m * n), dtype=torch.float)
 
-            # Flip signs so opp victories are punishments
-            if reward > 0:
-                reward *= -1
+            # # Flip signs so opp victories are punishments
+            # if reward > 0:
+            #     reward *= -1
 
-            # -
-            if log:
-                writer.add_scalar(os.path.join(path, 'opp_Q'), Q, trial)
-                writer.add_scalar(
-                    os.path.join(path, 'opp_reward'), reward, trial)
+            # # -
+            # if log:
+            #     writer.add_scalar(os.path.join(path, 'opp_Q'), Q, trial)
+            #     writer.add_scalar(
+            #         os.path.join(path, 'opp_reward'), reward, trial)
 
             # ---
             # Learn from your opponent
-            max_Q = model(next_board).detach().max()
-            next_Q = reward + (gamma * max_Q)
-            loss = F.smooth_l1_loss(Q, next_Q)
+            # max_Q = model(next_board).detach().max()
+            # next_Q = reward + (gamma * max_Q)
+            # loss = F.smooth_l1_loss(Q, next_Q)
 
-            # Walk down the hill of righteousness!
-            loss.backward()
-            optimizer.step()
+            # # Walk down the hill of righteousness!
+            # loss.backward()
+            # optimizer.step()
 
             # Plot?
             if (trial % 10) == 0 and log:
-                plot_wythoff_expected_values(m, n, model, path=path)
+                plot_cold_board(m, n, path=path, name='cold_board.png')
+                writer.add_image(
+                    'cold_positions',
+                    skimage.io.imread(os.path.join(path, 'cold_board.png')))
 
+                plot_wythoff_expected_values(
+                    m, n, model, path=path, name='wythoff_expected_values.png')
                 writer.add_image(
                     'expected_value',
                     skimage.io.imread(
                         os.path.join(path, 'wythoff_expected_values.png')))
+
+                plot_q_action_values(
+                    m,
+                    n,
+                    len(possible_actions),
+                    model,
+                    possible_actions=possible_actions,
+                    path=path,
+                    name='wythoff_q_action_values.png')
+                writer.add_image(
+                    'q_action_values',
+                    skimage.io.imread(
+                        os.path.join(path, 'wythoff_q_action_values.png')))
 
             if done:
                 break
@@ -493,7 +583,7 @@ def wythoff_strategist(path,
                        gamma=0.8,
                        delta=0.1,
                        learning_rate=0.1,
-                       strategy_name='estimate_hot_cold',
+                       strategy_name='estimate_cold',
                        strategy_kwargs=None,
                        strategy_default_value=0,
                        wythoff_name_stumbler='Wythoff15x15',
@@ -510,16 +600,12 @@ def wythoff_strategist(path,
 
     possible_actions = [(-1, 0), (0, -1), (-1, -1)]
 
-    batch_size = 64
+    batch_size = 128
+    num_strategist_iter = 1000
 
     # -------------------------------------------
-    # Log setup    
+    # Log setup
     if log:
-        # Create a csv for archiving select data
-        # f = open(os.path.join(path, "data.csv"), "w")
-        # csv_writer = csv.writer(f)
-        # csv_writer.writerow(["trial", "steps", "action_index", "Q", "x", "y"])
-
         # Tensorboard log
         writer = SummaryWriter(log_dir=path)
 
@@ -559,8 +645,8 @@ def wythoff_strategist(path,
             epsilon=epsilon,
             gamma=gamma,
             wythoff_name=wythoff_name_stumbler,
-            model=stumbler_model,
-            bias_board=bias_board,
+            model=None,
+            bias_board=None,
             learning_rate=learning_rate)
 
         # Extract strategic data from the stumber, 
@@ -575,40 +661,44 @@ def wythoff_strategist(path,
             memory.push(*d)
 
         # Train a strategist, by first sampling its memory
-        coords = []
-        values = []
-        samples = memory.sample(batch_size)
-        for c, v in samples:
-            coords.append(c)
-            values.append(v)
+        for _ in range(num_strategist_iter):
+            coords = []
+            values = []
+            samples = memory.sample(batch_size)
 
-        coords = torch.tensor(
-            np.vstack(coords), requires_grad=True, dtype=torch.float)
-        values = torch.tensor(values, requires_grad=True, dtype=torch.float)
+            for c, v in samples:
+                coords.append(c)
+                values.append(v)
 
-        # Making some preditions,
-        predicted_values = model(coords).detach().squeeze()
+            coords = torch.tensor(
+                np.vstack(coords), requires_grad=True, dtype=torch.float)
+            values = torch.tensor(
+                values, requires_grad=True, dtype=torch.float)
 
-        # and find their loss.
-        loss = F.smooth_l1_loss(values, predicted_values)
+            # Making some preditions,
+            predicted_values = model(coords).detach().squeeze()
 
-        # Walk down the hill of righteousness!
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+            # and find their loss.
+            loss = F.smooth_l1_loss(values, predicted_values)
+
+            # Walk down the hill of righteousness!
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
 
         # Compare strategist and stumbler. Count strategist wins.
         win = evauluate_models(stumbler_model, model, stumbler_env, env)
-        wins.append(wins)
 
         # Use the trained strategist to generate a bias_board,
         bias_board = create_bias_board(m, n, model)
+        # bias_board[np.abs(bias_board) < delta] = 0.0
 
-        # and threshold it using delta.
-        # TODO: change to the exp version of Alp?
-        bias_board[np.abs(bias_board) < delta] = 0.0
+        if log:
+            writer.add_scalar(
+                os.path.join(path, 'stategist_error'), loss.data[0], trial)
 
-        if (trial % 10) == 0 and log:
+            writer.add_scalar(os.path.join(path, 'stategist_wins'), win, trial)
+
             plot_wythoff_expected_values(o, p, stumbler_model, path=path)
             writer.add_image(
                 'stumbler_expected_value',
@@ -618,12 +708,12 @@ def wythoff_strategist(path,
             plot_wythoff_board(
                 strategy_board, path=path, name='strategy_board.png')
             writer.add_image(
-                'strategy_board',
+                'stumbler_to_strategy_board',
                 skimage.io.imread(os.path.join(path, 'strategy_board.png')))
 
             plot_wythoff_board(bias_board, path=path, name='bias_board.png')
             writer.add_image(
-                'bias_board',
+                'strategy_board',
                 skimage.io.imread(os.path.join(path, 'bias_board.png')))
 
     return model, stumbler_model, env, stumbler_env, wins
