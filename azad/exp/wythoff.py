@@ -109,6 +109,38 @@ def plot_q_action_values(m,
     plt.close('all')
 
 
+def plot_random_rewards(m,
+                        n,
+                        a,
+                        rewards,
+                        plot=False,
+                        possible_actions=None,
+                        path=None,
+                        name='wythoff_rewards.png'):
+    """Plot sum rewards for each possible action"""
+
+    # Init plot
+    fig, axarr = plt.subplots(1, a, sharey=True, figsize=(17, 4))
+
+    for k in range(a):
+        r = rewards[:, :, k]
+        im = axarr[k].matshow(r)
+        fig.colorbar(im, ax=axarr[k])
+
+        if possible_actions is not None:
+            axarr[k].set_title(possible_actions[k])
+
+    # Save an image?
+    if path is not None:
+        plt.savefig(os.path.join(path, name))
+
+    if plot:
+        # plt.show()
+        plt.pause(0.01)
+
+    plt.close('all')
+
+
 def plot_wythoff_expected_values(m,
                                  n,
                                  model,
@@ -377,6 +409,96 @@ def peak(name):
     m, n = board.shape
 
     return m, n, board
+
+
+def wythoff_random(path,
+                   num_trials=10,
+                   wythoff_name='Wythoff3x3',
+                   log=False,
+                   seed=None):
+    """Play a game of random (valid) moves."""
+
+    # -------------------------------------------
+    # Create path
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+
+    # -------------------------------------------
+    # Log setup    
+    if log:
+        # Create a csv for archiving select data
+        f = open(os.path.join(path, "data.csv"), "w")
+        csv_writer = csv.writer(f)
+        csv_writer.writerow(["trial", "steps", "action_index", "Q", "x", "y"])
+
+        # Tensorboard log
+        writer = SummaryWriter(log_dir=path)
+
+    # -------------------------------------------
+    # The world is a pebble on a board
+    env = gym.make('{}-v0'.format(wythoff_name))
+    env = wrappers.Monitor(
+        env, './tmp/{}-v0-1'.format(wythoff_name), force=True)
+    m, n, board = peak(wythoff_name)
+
+    # -------------------------------------------
+    # Seeding...
+    env.seed(seed)
+    np.random.seed(seed)
+
+    # -------------------------------------------
+    # Valid moves (in this simplified instantiation)
+    possible_actions = [(-1, 0), (0, -1), (-1, -1)]
+    a = len(possible_actions)
+
+    # Create a place to sum rewards
+    rewards = np.zeros((m, n, a))
+
+    # Run the random trials....
+    for trial in range(num_trials):
+        x, y, board = env.reset()
+
+        steps = 0
+        while True:
+            # Make a decision,
+            action_index = np.random.randint(0, a)
+            action = possible_actions[int(action_index)]
+
+            # and a move.
+            (x, y, next_board), reward, done, _ = env.step(action)
+            rewards[x, y, action_index] += reward
+
+            # Update move counter
+            steps += 1
+
+            if log:
+                writer.add_scalar(os.path.join(path, 'steps'), steps, trial)
+                writer.add_scalar(os.path.join(path, 'reward'), reward, trial)
+                writer.add_scalar(
+                    os.path.join(path, 'action_index'), action_index, trial)
+
+            if done:
+                break
+
+        if (trial % 10) == 0 and log:
+            # Plot?
+            plot_random_rewards(
+                m,
+                n,
+                len(possible_actions),
+                rewards,
+                possible_actions=possible_actions,
+                path=path,
+                name='wythoff_rewards.png')
+
+            writer.add_image(
+                'wythoff_rewards',
+                skimage.io.imread(os.path.join(path, 'wythoff_rewards.png')))
+
+    return rewards, env
 
 
 def wythoff_stumbler(path,
