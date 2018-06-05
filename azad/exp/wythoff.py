@@ -838,4 +838,18 @@ def wythoff_strategist(path,
                 'strategy_board',
                 skimage.io.imread(os.path.join(path, 'bias_board.png')))
 
+            plot_q_action_values(
+                o,
+                p,
+                len(possible_actions),
+                stumbler_model,
+                possible_actions=possible_actions,
+                path=path,
+                name='wythoff_q_action_values.png')
+
+            writer.add_image(
+                'stumbler_q_action_values',
+                skimage.io.imread(
+                    os.path.join(path, 'wythoff_q_action_values.png')))
+
     return model, stumbler_model, env, stumbler_env, wins
