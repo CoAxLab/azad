@@ -280,53 +280,25 @@ def pad_board(m, n, board, value):
     return padded
 
 
-def expected_alp_value(m, n, model):
-    """Estimate the expected value using the 'Muyesser' method
-    
-    As described in:
-    
-    Muyesser, N.A., Dunovan, K. & Verstynen, T., 2018. Learning model-based 
-    strategies in simple environments with hierarchical q-networks. , pp.1–29. A
-    vailable at: http://arxiv.org/abs/1801.06689.
-    """
+def estimate_alp_hot_cold(m, n, model, conf=0.05, default=0.5):
+    """Estimate hot and cold positions"""
 
     values = expected_value(m, n, model)
     values = (values + 1.0) / 2.0
 
-    return values
-
-
-def estimate_alp_cold(m, n, model, threshold=0.25, default_value=0.5):
-    """Estimate cold positions, enforcing symmetry on the diagonal"""
-    values = expected_alp_value(m, n, model)
-    cold = np.ones_like(values) * default_value
+    hotcold = np.ones_like(values) * default
 
     # Cold
-    mask = values < threshold
-    cold[mask] = values[mask]
-    cold[mask.transpose()] = values[mask]
+    mask = values < (conf * 1.3)
+    hotcold[mask] = values[mask]
+    hotcold[mask.transpose()] = values[mask]
 
-    return cold
+    # Hot?
+    # TODO? Skipped the random part....
+    mask = values > (1 - conf)
+    hotcold[mask] = values[mask]
 
-
-def estimate_alp_hot(m, n, model, threshold=0.75, default_value=0.5):
-    """Estimate hot positions"""
-
-    values = expected_alp_value(m, n, model)
-    hot = np.ones_like(values) * default_value
-
-    mask = values > threshold
-    hot[mask] = values[mask]
-
-    return hot
-
-
-def estimate_alp_hot_cold(m, n, hot_threshold=0.75, cold_threshold=0.25):
-    """Estimate hot and cold positions"""
-    hot = estimate_alp_hot(m, n, hot_threshold)
-    cold = estimate_alp_cold(m, n, cold_threshold)
-
-    return hot, cold
+    return hotcold
 
 
 def evauluate_models(stumbler,
@@ -370,7 +342,7 @@ def evauluate_models(stumbler,
 
         while True:
             # -------------------------------------------
-            # The stumbler goes first (the polite and 
+            # The stumbler goes first (the polite and
             # coservative thing to do).
             # (Adj for board size differences)
             if (x < o) and (y < p):
@@ -430,7 +402,7 @@ def wythoff_random(path,
             raise
 
     # -------------------------------------------
-    # Log setup    
+    # Log setup
     if log:
         # Create a csv for archiving select data
         f = open(os.path.join(path, "data.csv"), "w")
@@ -525,7 +497,7 @@ def wythoff_stumbler(path,
             raise
 
     # -------------------------------------------
-    # Log setup    
+    # Log setup
     if log:
         writer = SummaryWriter(log_dir=path)
 
@@ -760,7 +732,7 @@ def wythoff_strategist(path,
             bias_board=None,
             learning_rate=learning_rate)
 
-        # Extract strategic data from the stumber, 
+        # Extract strategic data from the stumber,
         # project it and remember that
         strategy_board = strategy(o, p, stumbler_model)
         strategy_board = pad_board(m, n, strategy_board,
