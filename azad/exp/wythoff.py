@@ -61,7 +61,7 @@ def plot_cold_board(m, n, plot=False, path=None, name='cold_board.png'):
 
     # !
     fig = plt.figure()
-    plt.matshow(cold)
+    plt.matshow(cold, vmin=-1.5, vmax=1.5)
     plt.colorbar()
 
     # Save an image?
@@ -82,6 +82,7 @@ def plot_q_action_values(m,
                          plot=False,
                          possible_actions=None,
                          path=None,
+                         v_size=2,
                          name='wythoff_q_action_values.png'):
     """Plot Q values for each possible action"""
 
@@ -92,7 +93,8 @@ def plot_q_action_values(m,
 
     for k in range(a):
         q_a = qs[:, :, k]
-        im = axarr[k].matshow(q_a)
+        im = axarr[k].matshow(q_a, vmin=-v_size, vmax=v_size)
+
         fig.colorbar(im, ax=axarr[k])
 
         if possible_actions is not None:
@@ -146,13 +148,14 @@ def plot_wythoff_expected_values(m,
                                  model,
                                  plot=False,
                                  path=None,
+                                 v_size=2,
                                  name='wythoff_expected_values.png'):
     """Plot EVs"""
     values = expected_value(m, n, model)
 
     # !
     fig = plt.figure()
-    plt.matshow(values)
+    plt.matshow(values, vmin=-v_size, vmax=v_size)
     plt.colorbar()
 
     # Save an image?
@@ -235,7 +238,7 @@ def expected_value(m, n, model):
     return values
 
 
-def estimate_cold(m, n, model, threshold=0.25):
+def estimate_cold(m, n, model, threshold=0.0):
     """Estimate cold positions, enforcing symmetry on the diagonal"""
     values = expected_value(m, n, model)
     cold = np.zeros_like(values)
@@ -248,7 +251,7 @@ def estimate_cold(m, n, model, threshold=0.25):
     return cold
 
 
-def estimate_hot(m, n, model, threshold=0.75):
+def estimate_hot(m, n, model, threshold=0.5):
     """Estimate hot positions"""
     values = expected_value(m, n, model)
     hot = np.zeros_like(values)
@@ -524,12 +527,6 @@ def wythoff_stumbler(path,
     # -------------------------------------------
     # Log setup    
     if log:
-        # Create a csv for archiving select data
-        f = open(os.path.join(path, "data.csv"), "w")
-        csv_writer = csv.writer(f)
-        csv_writer.writerow(["trial", "steps", "action_index", "Q", "x", "y"])
-
-        # Tensorboard log
         writer = SummaryWriter(log_dir=path)
 
     # -------------------------------------------
@@ -608,58 +605,51 @@ def wythoff_stumbler(path,
             loss.backward(retain_graph=True)  # retain is needed for opp. WHY?
             optimizer.step()
 
-            # -------------------------------------------
-            # Log results
             if log:
-                csv_writer.writerow(
-                    [trial, steps, int(action_index), float(Q), x, y])
-
                 writer.add_scalar(os.path.join(path, 'Q'), Q, trial)
                 writer.add_scalar(os.path.join(path, 'reward'), reward, trial)
+                writer.add_scalar(os.path.join(path, 'steps'), steps, trial)
 
             # -------------------------------------------
             # If the game is over, stop
+            # Otherwise the opponent moves
             if done:
                 break
 
-            # -------------------------------------------
-            # Otherwise the opponent moves
             action_index = np.random.randint(0, len(possible_actions))
             action = possible_actions[action_index]
 
-            # Q = Qs[int(action_index)].squeeze()
+            Q = Qs[int(action_index)].squeeze()
 
             (x, y, next_board), reward, done, info = env.step(action)
             next_board = torch.tensor(
                 next_board.reshape(m * n), dtype=torch.float)
 
-            # # Flip signs so opp victories are punishments
-            # if reward > 0:
-            #     reward *= -1
+            # Learn from your opponent when they win
+            if done:
+                # Opp victories are punishments
+                reward *= -1
 
-            # # -
-            # if log:
-            #     writer.add_scalar(os.path.join(path, 'opp_Q'), Q, trial)
-            #     writer.add_scalar(
-            #         os.path.join(path, 'opp_reward'), reward, trial)
+                max_Q = model(next_board).detach().max()
+                next_Q = reward + (gamma * max_Q)
+                loss = F.smooth_l1_loss(Q, next_Q)
 
-            # ---
-            # Learn from your opponent
-            # max_Q = model(next_board).detach().max()
-            # next_Q = reward + (gamma * max_Q)
-            # loss = F.smooth_l1_loss(Q, next_Q)
+                loss.backward()
+                optimizer.step()
 
-            # # Walk down the hill of righteousness!
-            # loss.backward()
-            # optimizer.step()
+            if log:
+                writer.add_scalar(os.path.join(path, 'opp_Q'), Q, trial)
+                writer.add_scalar(
+                    os.path.join(path, 'opp_reward'), reward, trial)
 
-            # Plot?
             if (trial % 10) == 0 and log:
+                # Opt play
                 plot_cold_board(m, n, path=path, name='cold_board.png')
                 writer.add_image(
                     'cold_positions',
                     skimage.io.imread(os.path.join(path, 'cold_board.png')))
 
+                # EV
                 plot_wythoff_expected_values(
                     m, n, model, path=path, name='wythoff_expected_values.png')
                 writer.add_image(
@@ -667,6 +657,7 @@ def wythoff_stumbler(path,
                     skimage.io.imread(
                         os.path.join(path, 'wythoff_expected_values.png')))
 
+                # Q(a)
                 plot_q_action_values(
                     m,
                     n,
@@ -680,20 +671,18 @@ def wythoff_stumbler(path,
                     skimage.io.imread(
                         os.path.join(path, 'wythoff_q_action_values.png')))
 
+            # Stop or update?
             if done:
                 break
 
-            # Shuffle state notation
             board = next_board
 
-        # save min loss for this trial
         if log:
             writer.add_scalar(os.path.join(path, 'error'), loss.data[0], trial)
 
-    # Cleanup and end
+    # The end
     if log:
         writer.close()
-        f.close()
 
     return model, env
 
@@ -722,7 +711,7 @@ def wythoff_strategist(path,
 
     possible_actions = [(-1, 0), (0, -1), (-1, -1)]
 
-    batch_size = 128
+    batch_size = 64
     num_strategist_iter = 1000
 
     # -------------------------------------------
@@ -767,7 +756,7 @@ def wythoff_strategist(path,
             epsilon=epsilon,
             gamma=gamma,
             wythoff_name=wythoff_name_stumbler,
-            model=None,
+            model=stumbler_model,
             bias_board=None,
             learning_rate=learning_rate)
 
@@ -821,7 +810,8 @@ def wythoff_strategist(path,
 
             writer.add_scalar(os.path.join(path, 'stategist_wins'), win, trial)
 
-            plot_wythoff_expected_values(o, p, stumbler_model, path=path)
+            plot_wythoff_expected_values(
+                o, p, stumbler_model, path=path, v_size=3)
             writer.add_image(
                 'stumbler_expected_value',
                 skimage.io.imread(
@@ -843,6 +833,7 @@ def wythoff_strategist(path,
                 p,
                 len(possible_actions),
                 stumbler_model,
+                v_size=3,
                 possible_actions=possible_actions,
                 path=path,
                 name='wythoff_q_action_values.png')
