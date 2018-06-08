@@ -41,14 +41,14 @@ class WythoffEnv(gym.Env):
 
         # Can't move backward
         if (self.x + dx) > self.x:
-            reward = -1
+            reward = 0
 
             # Don't move
             done = False
             state = (self.x, self.y)
 
         elif (self.y + dy) > self.y:
-            reward = -1
+            reward = 0
 
             # Don't move
             done = False
@@ -56,28 +56,28 @@ class WythoffEnv(gym.Env):
 
         # Out of bounds
         elif (self.x + dx) > self.m:
-            reward = -1
+            reward = 0
 
             # Don't move
             done = False
             state = (self.x, self.y)
 
         elif (self.y + dy) > self.n:
-            reward = -1
+            reward = 0
 
             # Don't move
             done = False
             state = (self.x, self.y)
 
         elif (self.x + dx) < 0:
-            reward = -1
+            reward = 0
 
             # Don't move
             done = False
             state = (self.x, self.y)
 
         elif (self.y + dy) < 0:
-            reward = -1
+            reward = 0
 
             # Don't move
             done = False
