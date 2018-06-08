@@ -41,5 +41,5 @@ Install instructions: https://github.com/lanpa/tensorboard-pytorch
 
 # That funny project name
 
-In Ian Banks delightful book, *The Player of Games*, master game player Jernau Morat Gurgeh travels to the planet Azad to play the game Azad. Though it takes a lifetime to master, Azad is as much a statement of philosphy as it is a game of winning and strategy. In the book, Gurgeh comes from an alien culture so his philosophy and play is quite different than his opponents. 
+In Ian Banks delightful book, *The Player of Games*, master game player Jernau Morat Gurgeh travels to the planet Azad to play the game Azad. Though it takes a lifetime to master, Azad is as much a statement of philosophy as it is a game of winning and strategy. In the book, Gurgeh comes from an alien culture so his philosophy and play is quite different than his opponents.
 
