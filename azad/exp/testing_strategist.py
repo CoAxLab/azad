@@ -1,3 +1,30 @@
+"""
+The aim here it to teach a perceptron where the 'cold' game positions are
+in Wythoff's game
+
+This is a 'gridworld' game where opponents take turns moving a tile,
+each trying to reach the origin first. There's an optimal
+way to play. In this there are 'cold' spots you want to force your
+opponent into. Turns out there are arranged on the on set of diagonals.
+
+More background at: 
+https://en.wikipedia.org/wiki/Wythoff%27s_game
+https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=2&cad=rja&uact=8&ved=0ahUKEwjazcqI1MzbAhWpFzQIHYKiBe4QtwIIPDAB&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DAYOB-6wyK_I&usg=AOvVaw2sBye4bqZ368La03eC-jHF
+
+The aim of the model below it to take an exact map of the exact cold spots, 
+and teach an ANN where they are. It should be easy! 
+
+...For some reason, my model does not learn at all!
+
+After many permutations, I think it has to do with how I'm constructing the 
+input (see line 151) but it could be anything. Eyes open.
+
+I've construted a minimal-ish example balow but I've been trying to figure this 
+out for too long and need some new eyes.
+
+Help. :)
+"""
+
 import os, csv
 import sys
 
@@ -29,14 +56,35 @@ from azad.util import ReplayMemory
 from azad.exp.wythoff import *
 
 
+class HotCold(nn.Module):
+    """Layers for learning Wythoff optimal play
+    
+    As described in:
+    
+    Muyesser, N.A., Dunovan, K. & Verstynen, T., 2018. Learning model-based 
+    strategies in simple environments with hierarchical q-networks. , pp.1–29. A
+    vailable at: http://arxiv.org/abs/1801.06689.
+    """
+
+    def __init__(self, in_channels=2):
+        super(HotCold, self).__init__()
+        self.fc1 = nn.Linear(in_channels, 15)
+        self.fc2 = nn.Linear(15, 1)
+
+    def forward(self, x):
+        x = F.sigmoid(self.fc1(x))
+        return F.sigmoid(self.fc2(x))
+
+
 def testing_strategist(path,
                        num_trials=1000,
-                       learning_rate=0.1,
+                       learning_rate=0.01,
                        strategic_default_value=0.5,
                        wythoff_name_stumbler='Wythoff50x50',
                        wythoff_name_strategist='Wythoff50x50',
                        log=False,
                        seed=None):
+    """A minimal example."""
 
     # -------------------------------------------
     # Setup
@@ -82,27 +130,16 @@ def testing_strategist(path,
     # Run learning trials. The 'stumbler' is just the opt
     # cold board
     for trial in range(num_trials):
+        # The cold spots are '1' everythig else is '0'
         strategic_value = create_cold_board(o, p)
-        # strategic_value = (strategic_value + 1.0) / 2.0
-        strategic_value = pad_board(m, n, strategic_value,
-                                    strategic_default_value)
 
         # ...Into tuples
         s_data = convert_ijv(strategic_value)
-
-        # Filter values great/eq to defualt
-        # s_filtered = []
-        # for (c, v) in s_data:
-        #     if v >= strategic_default_value:
-        #         continue
-        #         print("Dropping {}".format(v))
-        #     else:
-        #         s_filtered.append([c, v])
-
         for d in s_data:
             memory.push(*d)
 
-        # Train the strategist on perfect data
+        # Sample data....
+        # (this is a necessary holdover from the real implementation).
         coords = []
         values = []
         samples = memory.sample(batch_size)
@@ -122,6 +159,7 @@ def testing_strategist(path,
         predicted_values = model(coords).detach().squeeze()
 
         # and find their loss.
+        # (choose any doesn't matter)
         # loss = F.smooth_l1_loss(values, predicted_values)
         # loss = F.mse_loss(values, predicted_values)
         # loss = F.mse_loss(
