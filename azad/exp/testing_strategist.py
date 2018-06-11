@@ -2,27 +2,29 @@
 The aim here it to teach a perceptron where the 'cold' game positions are
 in Wythoff's game
 
-This is a 'gridworld' game where opponents take turns moving a tile,
-each trying to reach the origin first. There's an optimal
-way to play. In this there are 'cold' spots you want to force your
-opponent into. Turns out there are arranged on the on set of diagonals.
+Wythoffs is a 'gridworld' game where two opponents take turns moving a tile,
+each trying to reach the origin first. In this there's an optimal
+way to play. There are 'cold' spots you want to force your
+opponent into. Turns out these are arranged on the on set of diagonals, 
+spaced by the golden ration.
 
 More background at: 
 https://en.wikipedia.org/wiki/Wythoff%27s_game
 https://www.google.com/url?sa=t&rct=j&q=&esrc=s&source=web&cd=2&cad=rja&uact=8&ved=0ahUKEwjazcqI1MzbAhWpFzQIHYKiBe4QtwIIPDAB&url=https%3A%2F%2Fwww.youtube.com%2Fwatch%3Fv%3DAYOB-6wyK_I&usg=AOvVaw2sBye4bqZ368La03eC-jHF
 
-The aim of the model below it to take an exact map of the exact cold spots, 
-and teach an ANN where they are. It should be easy! 
+The aim of the model below is to take an exact map of the cold spots, 
+and teach an ANN where they are. 
 
-...For some reason, my model does not learn at all!
+It should be easy! 
+
+...For some reason, my model refuses to learn at all!
+
+I've construted a minimal-ish example below.
 
 After many permutations, I think it has to do with how I'm constructing the 
 input (see line 151) but it could be anything. Eyes open.
 
-I've construted a minimal-ish example balow but I've been trying to figure this 
-out for too long and need some new eyes.
-
-Help. :)
+Help? :)
 """
 
 import os, csv
