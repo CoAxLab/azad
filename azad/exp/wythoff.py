@@ -53,7 +53,7 @@ def plot_wythoff_board(board, plot=False, path=None, name='wythoff_board.png'):
         # plt.show()
         plt.pause(0.01)
 
-    plt.close()
+    plt.close('all')
 
 
 def plot_cold_board(m, n, plot=False, path=None, name='cold_board.png'):
@@ -72,7 +72,7 @@ def plot_cold_board(m, n, plot=False, path=None, name='cold_board.png'):
         # plt.show()
         plt.pause(0.1)
 
-    plt.close()
+    plt.close('all')
 
 
 def plot_q_action_values(m,
@@ -175,8 +175,8 @@ def create_cold_board(m, n):
         mk = int(k * golden)
         nk = int(k * golden**2)
         if (nk < m) and (mk < n):
-            cold_board[mk, nk] = -1
-            cold_board[nk, mk] = -1
+            cold_board[mk, nk] = 1
+            cold_board[nk, mk] = 1
 
     return cold_board
 
@@ -188,16 +188,16 @@ def create_board(i, j, m, n):
     return board
 
 
-def create_bias_board(m, n, hotcold):
+def estimate_strategic_value(m, n, hotcold):
     """Create a board to bias a stumblers moves."""
 
-    bias_board = np.zeros((m, n))
+    strategic_value = np.zeros((m, n))
     for i in range(m):
         for j in range(n):
-            coord = torch.tensor([i, j], dtype=torch.float)
-            bias_board[i, j] = hotcold(coord)
+            coord = torch.tensor([i, j], dtype=torch.float) / m
+            strategic_value[i, j] = hotcold(coord)
 
-    return bias_board
+    return strategic_value
 
 
 def convert_ijv(data):
@@ -301,12 +301,12 @@ def estimate_alp_hot_cold(m, n, model, conf=0.05, default=0.5):
     return hotcold
 
 
-def evauluate_models(stumbler,
-                     strategist,
-                     stumbler_env,
-                     strategist_env,
-                     num_eval=100,
-                     possible_actions=[(-1, 0), (0, -1), (-1, -1)]):
+def evaluate_models(stumbler,
+                    strategist,
+                    stumbler_env,
+                    strategist_env,
+                    num_eval=100,
+                    possible_actions=[(-1, 0), (0, -1), (-1, -1)]):
     """Compare stumblers to strategists.
     
     Returns 
@@ -322,7 +322,7 @@ def evauluate_models(stumbler,
     strategist_env.close()
     m, n = board.shape
 
-    strategy_values = create_bias_board(m, n, strategist)
+    strategy_values = estimate_strategic_value(m, n, strategist)
 
     # Stumbler
     _, _, little_board = stumbler_env.reset()
@@ -668,7 +668,7 @@ def wythoff_strategist(path,
                        learning_rate=0.1,
                        strategy_name='estimate_cold',
                        strategy_kwargs=None,
-                       strategy_default_value=0,
+                       strategic_default_value=0.5,
                        wythoff_name_stumbler='Wythoff15x15',
                        wythoff_name_strategist='Wythoff50x50',
                        log=False,
@@ -706,7 +706,7 @@ def wythoff_strategist(path,
 
     # Create a model, of the right size.
     model = HotCold(2)
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+    optimizer = optim.SGD(model.parameters(), lr=0.001)
     memory = ReplayMemory(10000)
 
     # Setup strategy
@@ -728,18 +728,18 @@ def wythoff_strategist(path,
             epsilon=epsilon,
             gamma=gamma,
             wythoff_name=wythoff_name_stumbler,
-            model=stumbler_model,
+            model=None,
             bias_board=None,
             learning_rate=learning_rate)
 
         # Extract strategic data from the stumber,
         # project it and remember that
-        strategy_board = strategy(o, p, stumbler_model)
-        strategy_board = pad_board(m, n, strategy_board,
-                                   strategy_default_value)
+        strategic_value = strategy(o, p, stumbler_model)
+        strategic_value = pad_board(m, n, strategic_value,
+                                    strategic_default_value)
 
         # ...Into tuples
-        s_data = convert_ijv(strategy_board)
+        s_data = convert_ijv(strategic_value)
         for d in s_data:
             memory.push(*d)
 
@@ -758,11 +758,21 @@ def wythoff_strategist(path,
             values = torch.tensor(
                 values, requires_grad=True, dtype=torch.float)
 
+            # Scale coords
+            coords = coords / m
+
             # Making some preditions,
             predicted_values = model(coords).detach().squeeze()
 
+            # print(values[:4], predicted_values[:4])
+
             # and find their loss.
-            loss = F.smooth_l1_loss(values, predicted_values)
+            # loss = F.smooth_l1_loss(values, predicted_values)
+            # loss = F.mse_loss(values, predicted_values)
+            loss = F.mse_loss(
+                torch.clamp(values, 0, 1), torch.clamp(predicted_values, 0, 1))
+            # loss = F.binary_cross_entropy(
+            #     torch.clamp(values, 0, 1), torch.clamp(predicted_values, 0, 1))
 
             # Walk down the hill of righteousness!
             optimizer.zero_grad()
@@ -770,10 +780,10 @@ def wythoff_strategist(path,
             optimizer.step()
 
         # Compare strategist and stumbler. Count strategist wins.
-        win = evauluate_models(stumbler_model, model, stumbler_env, env)
+        win = evaluate_models(stumbler_model, model, stumbler_env, env)
 
         # Use the trained strategist to generate a bias_board,
-        bias_board = create_bias_board(m, n, model)
+        bias_board = estimate_strategic_value(m, n, model)
         # bias_board[np.abs(bias_board) < delta] = 0.0
 
         if log:
@@ -790,7 +800,7 @@ def wythoff_strategist(path,
                     os.path.join(path, 'wythoff_expected_values.png')))
 
             plot_wythoff_board(
-                strategy_board, path=path, name='strategy_board.png')
+                strategic_value, path=path, name='strategy_board.png')
             writer.add_image(
                 'stumbler_to_strategy_board',
                 skimage.io.imread(os.path.join(path, 'strategy_board.png')))
