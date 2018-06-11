@@ -36,13 +36,13 @@ bandit_exp1:
 wythoff_exp0:
 	-rm -rf $(DATA_PATH)/wythoff/exp0
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_stumbler $(DATA_PATH)/wythoff/exp0 --num_trials=25000 --learning_rate=0.1 --wythoff_name=Wythoff50x50 --log=True
+	python run_azad.py wythoff_stumbler $(DATA_PATH)/wythoff/exp0 --num_trials=25000 --learning_rate=0.1 --wythoff_name=Wythoff5x5 --log=True
 
 # Testing wythoff 
 wythoff_exp1:
 	-rm -rf $(DATA_PATH)/wythoff/exp1
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp1 --num_trials=5000 --num_stumble=2000 --learning_rate=0.1 --strategy_default_value=0.5 --strategy_name=estimate_alp_cold --wythoff_name_stumbler='Wythoff10x10' --wythoff_name_strategist='Wythoff15x15' --log=True 
+	python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp1 --num_trials=5000 --num_stumble=100 --learning_rate=0.1 --strategy_default_value=0.5 --strategy_name=estimate_alp_hot_cold --wythoff_name_stumbler='Wythoff5x5' --wythoff_name_strategist='Wythoff10x10' --log=True 
 
 # Make only random choices
 wythoff_exp2:

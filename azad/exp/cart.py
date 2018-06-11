@@ -64,7 +64,7 @@ def cart_stumbler(path,
             raise
 
     # -------------------------------------------
-    # Tensorboard setup    
+    # Tensorboard setup
     if log_path is None:
         log_path = path
     writer = SummaryWriter(log_dir=log_path)
@@ -121,14 +121,13 @@ def cart_stumbler(path,
             # Always remember the past
             # (you are still doomed to repeat it).
             memory.push(
-                state.unsqueeze(0),
-                action.unsqueeze(0),
+                state.unsqueeze(0), action.unsqueeze(0),
                 next_state.unsqueeze(0), reward.unsqueeze(0))
 
             # -------------------------------------------
-            # Learn from the last result. 
+            # Learn from the last result.
 
-            # If there is not enough in memory, 
+            # If there is not enough in memory,
             # don't try and learn anything.
             if done:
                 print(">>> {2} Episode {0} finished after {1} steps".format(
@@ -157,8 +156,8 @@ def cart_stumbler(path,
             t_next_states = Variable(torch.cat(t_next_states))
 
             # Possible Qs for actions
-            Qs = model(t_states).gather(
-                1, t_actions.type(torch.LongTensor)).squeeze()
+            Qs = model(t_states).gather(1, t_actions.type(
+                torch.LongTensor)).squeeze()
 
             # In Q learning we use the max Q of the next state,
             # and the reward, to estimate future Qs value

@@ -102,5 +102,5 @@ class HotCold(nn.Module):
         self.fc2 = nn.Linear(15, 1)
 
     def forward(self, x):
-        x = self.fc1(x)
-        return self.fc2(x)
+        x = F.sigmoid(self.fc1(x))
+        return F.sigmoid(self.fc2(x))
