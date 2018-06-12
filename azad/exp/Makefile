@@ -49,3 +49,12 @@ wythoff_exp2:
 	-rm -rf $(DATA_PATH)/wythoff/exp2
 	sleep 5  # Wait for tensorboard to notice the deletion
 	python run_azad.py wythoff_random $(DATA_PATH)/wythoff/exp2 --num_trials=25000 --wythoff_name=Wythoff50x50 --log=True
+
+
+# 6-12-2018
+# Simplified testing fn for strategist
+# Make only random choices
+wythoff_test1:
+	-rm -rf $(DATA_PATH)/testing/test1
+	sleep 5  # Wait for tensorboard to notice the deletion
+	python run_azad.py testing_wythoff_strategist ../../data/testing/test1 --strategic_default=0.0 --num_trials=2000 --learning_rate=0.01 --num_hidden1=10 --wythoff_name_stumbler=Wythoff10x10 --wythoff_name_strategist=Wythoff50x50 --log
