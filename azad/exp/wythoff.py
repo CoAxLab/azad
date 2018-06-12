@@ -37,12 +37,17 @@ from azad.util import ReplayMemory
 # # ---------------------------------------------------------------
 
 
-def plot_wythoff_board(board, plot=False, path=None, name='wythoff_board.png'):
+def plot_wythoff_board(board,
+                       vmin=-1.5,
+                       vmax=1.5,
+                       plot=False,
+                       path=None,
+                       name='wythoff_board.png'):
     """Plot the board"""
 
     # !
     fig = plt.figure()
-    plt.matshow(board)
+    plt.matshow(board, vmin=vmin, vmax=vmax)
     plt.colorbar()
 
     # Save an image?
@@ -194,7 +199,7 @@ def estimate_strategic_value(m, n, hotcold):
     strategic_value = np.zeros((m, n))
     for i in range(m):
         for j in range(n):
-            coord = torch.tensor([i, j], dtype=torch.float) / m
+            coord = torch.tensor([i, j], dtype=torch.float)
             strategic_value[i, j] = hotcold(coord)
 
     return strategic_value
@@ -210,6 +215,44 @@ def convert_ijv(data):
             converted.append([(i, j), data[i, j]])
 
     return converted
+
+
+def balance_ijv(ijv_data, null_value):
+    # Separate data based on null_value
+    other = []
+    null = []
+    for c, v in ijv_data:
+        if np.isclose(v, null_value):
+            null.append([c, v])
+        else:
+            other.append([c, v])
+
+    # Sizes
+    N_null = len(null)
+    N_other = len(other)
+
+    # Sanity?
+    if N_null == 0:
+        raise ValueError("No null data to balance against.")
+
+    # Nothing to do if there is no other data,
+    # so just return I
+    if N_other == 0:
+        return ijv_data
+
+    np.random.shuffle(null)
+    np.random.shuffle(other)
+
+    # Finally, balance one or the other. Who is bigger?
+    if N_null > N_other:
+        null = null[:N_other]
+    elif N_other > N_null:
+        other = other[:N_null]
+    else:
+        # They already balanced. Return I
+        return ijv_data
+
+    return null + other
 
 
 def estimate_q_values(m, n, a, model):

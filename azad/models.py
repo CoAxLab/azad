@@ -96,11 +96,11 @@ class HotCold(nn.Module):
     vailable at: http://arxiv.org/abs/1801.06689.
     """
 
-    def __init__(self, in_channels=2):
+    def __init__(self, in_channels=2, num_hidden1=15):
         super(HotCold, self).__init__()
-        self.fc1 = nn.Linear(in_channels, 15)
-        self.fc2 = nn.Linear(15, 1)
+        self.fc1 = nn.Linear(in_channels, num_hidden1)
+        self.fc2 = nn.Linear(num_hidden1, 1)
 
     def forward(self, x):
         x = F.sigmoid(self.fc1(x))
-        return F.sigmoid(self.fc2(x))
+        return self.fc2(x)

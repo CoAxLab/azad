@@ -29,6 +29,7 @@ Help? :)
 
 import os, csv
 import sys
+import pudb
 
 import errno
 
@@ -58,40 +59,21 @@ from azad.util import ReplayMemory
 from azad.exp.wythoff import *
 
 
-class HotCold(nn.Module):
-    """Layers for learning Wythoff optimal play
-    
-    As described in:
-    
-    Muyesser, N.A., Dunovan, K. & Verstynen, T., 2018. Learning model-based 
-    strategies in simple environments with hierarchical q-networks. , pp.1–29. A
-    vailable at: http://arxiv.org/abs/1801.06689.
-    """
-
-    def __init__(self, in_channels=2):
-        super(HotCold, self).__init__()
-        self.fc1 = nn.Linear(in_channels, 15)
-        self.fc2 = nn.Linear(15, 1)
-
-    def forward(self, x):
-        x = F.sigmoid(self.fc1(x))
-        return F.sigmoid(self.fc2(x))
-
-
-def testing_strategist(path,
-                       num_trials=1000,
-                       learning_rate=0.01,
-                       strategic_default_value=0.5,
-                       wythoff_name_stumbler='Wythoff50x50',
-                       wythoff_name_strategist='Wythoff50x50',
-                       log=False,
-                       seed=None):
+def testing_wythoff_strategist(path,
+                               num_trials=1000,
+                               learning_rate=0.01,
+                               num_hidden1=15,
+                               strategic_default_value=0.5,
+                               wythoff_name_stumbler='Wythoff50x50',
+                               wythoff_name_strategist='Wythoff50x50',
+                               log=False,
+                               seed=None):
     """A minimal example."""
 
     # -------------------------------------------
     # Setup
     # -------------------------------------------
-    # Create path
+    # sCreate path
     try:
         os.makedirs(path)
     except OSError as exception:
@@ -125,8 +107,8 @@ def testing_strategist(path,
     o, p, _ = peak(wythoff_name_stumbler)
 
     # Create a model, of the right size.
-    model = HotCold(2)
-    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+    model = HotCold(2, num_hidden1=num_hidden1)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     memory = ReplayMemory(10000)
 
     # Run learning trials. The 'stumbler' is just the opt
@@ -137,11 +119,12 @@ def testing_strategist(path,
 
         # ...Into tuples
         s_data = convert_ijv(strategic_value)
+        s_data = balance_ijv(s_data, 0.0)
+
         for d in s_data:
             memory.push(*d)
 
         # Sample data....
-        # (this is a necessary holdover from the real implementation).
         coords = []
         values = []
         samples = memory.sample(batch_size)
@@ -152,29 +135,18 @@ def testing_strategist(path,
 
         coords = torch.tensor(
             np.vstack(coords), requires_grad=True, dtype=torch.float)
-        values = torch.tensor(values, requires_grad=True, dtype=torch.float)
-
-        # Scale coords
-        coords = coords / m
+        values = torch.tensor(values, requires_grad=False, dtype=torch.float)
 
         # Making some preditions,
-        predicted_values = model(coords).detach().squeeze()
+        predicted_values = model(coords).squeeze()
 
         # and find their loss.
-        # (choose any doesn't matter)
-        # loss = F.smooth_l1_loss(values, predicted_values)
-        # loss = F.mse_loss(values, predicted_values)
-        # loss = F.mse_loss(
-        #     torch.clamp(values, 0, 1), torch.clamp(predicted_values, 0, 1))
-        loss = F.binary_cross_entropy(values, predicted_values)
+        loss = F.mse_loss(predicted_values, values)
 
         # Walk down the hill of righteousness!
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
-
-        # Compare strategist and stumbler. Count strategist wins.
-        # win = evaluate_models(stumbler_model, model, stumbler_env, env)
 
         # Use the trained strategist to generate a bias_board,
         bias_board = estimate_strategic_value(m, n, model)
@@ -183,12 +155,17 @@ def testing_strategist(path,
             writer.add_scalar(os.path.join(path, 'error'), loss.data[0], trial)
 
             plot_wythoff_board(
-                strategic_value, path=path, name='strategy_board.png')
+                strategic_value,
+                vmin=0,
+                vmax=1,
+                path=path,
+                name='strategy_board.png')
             writer.add_image(
                 'Expected value board',
                 skimage.io.imread(os.path.join(path, 'strategy_board.png')))
 
-            plot_wythoff_board(bias_board, path=path, name='bias_board.png')
+            plot_wythoff_board(
+                bias_board, vmin=0, vmax=1, path=path, name='bias_board.png')
             writer.add_image(
                 'Strategist learning',
                 skimage.io.imread(os.path.join(path, 'bias_board.png')))
