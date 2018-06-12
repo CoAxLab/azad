@@ -51,7 +51,8 @@ from gym import wrappers
 import azad.local_gym
 
 from azad.models import OneLinQN
-from azad.models import HotCold
+from azad.models import HotCold1
+from azad.models import HotCold2
 from azad.policy import epsilon_greedy
 from azad.policy import greedy
 from azad.util import ReplayMemory
@@ -62,7 +63,8 @@ from azad.exp.wythoff import *
 def testing_wythoff_strategist(path,
                                num_trials=1000,
                                learning_rate=0.01,
-                               num_hidden1=15,
+                               num_hidden1=100,
+                               num_hidden2=25,
                                strategic_default_value=0.5,
                                wythoff_name_stumbler='Wythoff50x50',
                                wythoff_name_strategist='Wythoff50x50',
@@ -107,7 +109,9 @@ def testing_wythoff_strategist(path,
     o, p, _ = peak(wythoff_name_stumbler)
 
     # Create a model, of the right size.
-    model = HotCold(2, num_hidden1=num_hidden1)
+    model = HotCold1(2, num_hidden1=num_hidden1)
+    model = HotCold2(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
+
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     memory = ReplayMemory(10000)
 

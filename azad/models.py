@@ -86,7 +86,7 @@ class OneLinQN(nn.Module):
         return self.fc1(x)
 
 
-class HotCold(nn.Module):
+class HotCold1(nn.Module):
     """Layers for a Hot-Cold strategy
     
     As described in:
@@ -97,10 +97,32 @@ class HotCold(nn.Module):
     """
 
     def __init__(self, in_channels=2, num_hidden1=15):
-        super(HotCold, self).__init__()
+        super(HotCold1, self).__init__()
         self.fc1 = nn.Linear(in_channels, num_hidden1)
         self.fc2 = nn.Linear(num_hidden1, 1)
 
     def forward(self, x):
         x = F.sigmoid(self.fc1(x))
         return self.fc2(x)
+
+
+class HotCold2(nn.Module):
+    """Two layers for a Hot-Cold strategy
+    
+    Related to the model described in:
+    
+    Muyesser, N.A., Dunovan, K. & Verstynen, T., 2018. Learning model-based 
+    strategies in simple environments with hierarchical q-networks. , pp.1–29. A
+    vailable at: http://arxiv.org/abs/1801.06689.
+    """
+
+    def __init__(self, in_channels=2, num_hidden1=100, num_hidden2=25):
+        super(HotCold2, self).__init__()
+        self.fc1 = nn.Linear(in_channels, num_hidden1)
+        self.fc2 = nn.Linear(num_hidden1, num_hidden2)
+        self.fc3 = nn.Linear(num_hidden2, 1)
+
+    def forward(self, x):
+        x = F.sigmoid(self.fc1(x))
+        x = F.sigmoid(self.fc2(x))
+        return self.fc3(x)
