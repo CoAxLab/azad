@@ -50,7 +50,7 @@ import gym
 from gym import wrappers
 import azad.local_gym
 
-from azad.models import OneLinQN
+from azad.models import LinQN1
 from azad.models import HotCold1
 from azad.models import HotCold2
 from azad.policy import epsilon_greedy

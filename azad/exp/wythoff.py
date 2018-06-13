@@ -20,7 +20,7 @@ import gym
 from gym import wrappers
 import azad.local_gym
 
-from azad.models import OneLinQN
+from azad.models import LinQN1
 from azad.models import HotCold1
 from azad.policy import epsilon_greedy
 from azad.policy import greedy
@@ -567,7 +567,7 @@ def wythoff_stumbler(path,
 
     # Create a model of the right size?
     if model is None:
-        model = OneLinQN(m * n, len(possible_actions))
+        model = LinQN1(m * n, len(possible_actions))
 
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 

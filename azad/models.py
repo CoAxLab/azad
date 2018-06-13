@@ -38,11 +38,11 @@ class DQN(nn.Module):
         return self.fc5(x)
 
 
-class TwoQN(nn.Module):
+class QN2(nn.Module):
     """Simple 1-layer Q Network"""
 
     def __init__(self, in_channels, num_actions, num_hidden=200):
-        super(TwoQN, self).__init__()
+        super(QN2, self).__init__()
         self.fc1 = nn.Linear(in_channels, num_hidden)
         self.fc2 = nn.Linear(num_hidden, num_actions)
 
@@ -51,7 +51,7 @@ class TwoQN(nn.Module):
         return F.relu(self.fc2(x))
 
 
-class ThreeQN(nn.Module):
+class QN3(nn.Module):
     """Simple 1-layer Q Network"""
 
     def __init__(self,
@@ -59,7 +59,7 @@ class ThreeQN(nn.Module):
                  num_actions,
                  num_hidden1=200,
                  num_hidden2=100):
-        super(ThreeQN, self).__init__()
+        super(QN3, self).__init__()
         self.fc1 = nn.Linear(in_channels, num_hidden1)
         self.fc2 = nn.Linear(num_hidden1, num_hidden2)
         self.fc3 = nn.Linear(num_hidden2, num_actions)
@@ -70,7 +70,7 @@ class ThreeQN(nn.Module):
         return F.relu(self.fc3(x))
 
 
-class OneLinQN(nn.Module):
+class LinQN1(nn.Module):
     def __init__(self, in_channels=4, num_actions=2):
         """One layer linear Q model.
         
@@ -79,7 +79,7 @@ class OneLinQN(nn.Module):
         ...We waste some electrons to simplify the code...
         """
 
-        super(OneLinQN, self).__init__()
+        super(LinQN1, self).__init__()
         self.fc1 = nn.Linear(in_channels, num_actions)
 
     def forward(self, x):

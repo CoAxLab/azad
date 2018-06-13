@@ -14,7 +14,7 @@ import gym
 from gym import wrappers
 import azad.local_gym
 
-from azad.models import OneLinQN
+from azad.models import LinQN1
 from azad.policy import epsilon_greedy
 
 # ---------------------------------------------------------------
@@ -48,7 +48,7 @@ def bandit_stumbler(path,
             raise
 
     # -------------------------------------------
-    # Tensorboard setup    
+    # Tensorboard setup
     if log_path is None:
         log_path = path
     writer = SummaryWriter(log_dir=log_path)
@@ -61,7 +61,7 @@ def bandit_stumbler(path,
 
     # -------------------------------------------
     # Init the DQN, it's memory, and its optim
-    model = OneLinQN(1, 2)
+    model = LinQN1(1, 2)
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     # -------------------------------------------
@@ -72,7 +72,7 @@ def bandit_stumbler(path,
     trial_actions = []
 
     # Loop over trials not batchs, doing
-    # SGD on each outcome 
+    # SGD on each outcome
     # (no idea how well this will work)
     for trial in range(num_trials):
         state = Tensor([env.reset()])
