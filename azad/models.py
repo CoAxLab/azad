@@ -86,7 +86,7 @@ class LinQN1(nn.Module):
         return self.fc1(x)
 
 
-class HotCold1(nn.Module):
+class HotCold2(nn.Module):
     """Layers for a Hot-Cold strategy
     
     As described in:
@@ -97,7 +97,7 @@ class HotCold1(nn.Module):
     """
 
     def __init__(self, in_channels=2, num_hidden1=15):
-        super(HotCold1, self).__init__()
+        super(HotCold2, self).__init__()
         self.fc1 = nn.Linear(in_channels, num_hidden1)
         self.fc2 = nn.Linear(num_hidden1, 1)
 
@@ -106,7 +106,7 @@ class HotCold1(nn.Module):
         return self.fc2(x)
 
 
-class HotCold2(nn.Module):
+class HotCold3(nn.Module):
     """Two layers for a Hot-Cold strategy
     
     Related to the model described in:
@@ -117,7 +117,7 @@ class HotCold2(nn.Module):
     """
 
     def __init__(self, in_channels=2, num_hidden1=100, num_hidden2=25):
-        super(HotCold2, self).__init__()
+        super(HotCold3, self).__init__()
         self.fc1 = nn.Linear(in_channels, num_hidden1)
         self.fc2 = nn.Linear(num_hidden1, num_hidden2)
         self.fc3 = nn.Linear(num_hidden2, 1)

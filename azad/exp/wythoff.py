@@ -21,7 +21,7 @@ from gym import wrappers
 import azad.local_gym
 
 from azad.models import LinQN1
-from azad.models import HotCold1
+from azad.models import HotCold2
 from azad.policy import epsilon_greedy
 from azad.policy import greedy
 from azad.util import ReplayMemory
@@ -748,7 +748,7 @@ def wythoff_strategist(path,
     o, p, _ = peak(wythoff_name_stumbler)
 
     # Create a model, of the right size.
-    model = HotCold1(2)
+    model = HotCold2(2)
     optimizer = optim.SGD(model.parameters(), lr=0.001)
     memory = ReplayMemory(10000)
 
