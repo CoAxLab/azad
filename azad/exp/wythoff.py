@@ -529,9 +529,9 @@ def wythoff_stumbler(path,
             # Greedy opponent plays?
             opp_reward = 0
             if not done:
-                action_index, action = random_action(possible_actions)
-                # action_index = greedy(Qs)
-                # action = possible_actions[int(action_index)]
+                # action_index, action = random_action(possible_actions)
+                action_index = greedy(Qs)
+                action = possible_actions[int(action_index)]
 
                 (x, y, next_board), opp_reward, done, _ = env.step(action)
                 next_board = flatten_board(next_board)
@@ -616,9 +616,6 @@ def wythoff_strategist(path,
                        gamma=0.8,
                        delta=0.1,
                        learning_rate=0.1,
-                       strategy_name='estimate_cold',
-                       strategy_kwargs=None,
-                       strategic_default_value=0.5,
                        wythoff_name_stumbler='Wythoff15x15',
                        wythoff_name_strategist='Wythoff50x50',
                        log=False,
@@ -626,47 +623,32 @@ def wythoff_strategist(path,
 
     # -------------------------------------------
     # Setup
-    # -------------------------------------------
-    env = gym.make('{}-v0'.format(wythoff_name_strategist))
-    env = wrappers.Monitor(
-        env, './tmp/{}-v0-1'.format(wythoff_name_strategist), force=True)
-
+    env = create_env(wythoff_name_strategist)
     possible_actions = [(-1, 0), (0, -1), (-1, -1)]
 
-    batch_size = 64
-    num_strategist_iter = 1000
+    batch_size = 12
+    strategic_default_value = 0.0
 
-    # -------------------------------------------
-    # Log setup
-    if log:
-        # Tensorboard log
-        writer = SummaryWriter(log_dir=path)
-
-    # -------------------------------------------
-    # Seeding...
+    # Control randomness
     env.seed(seed)
     np.random.seed(seed)
+
+    if log:
+        writer = SummaryWriter(log_dir=path)
 
     # -------------------------------------------
     # Build a Strategist, its memory, and its optimizer
 
-    # How big are the boards?
+    # Board sizes....
     m, n, board = peak(wythoff_name_strategist)
     o, p, _ = peak(wythoff_name_stumbler)
 
-    # Create a model, of the right size.
-    model = HotCold2(2)
-    optimizer = optim.SGD(model.parameters(), lr=0.001)
+    # Def the strategist model, opt, and mem
+    model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     memory = ReplayMemory(10000)
 
-    # Setup strategy
-    this_module = sys.modules[__name__]
-    strategy = getattr(this_module, strategy_name)
-    if strategy_kwargs is not None:
-        strategy = lambda m, n, model: strategy(m, n, model, **strategy_kwargs)
-
     # -------------------------------------------
-    # !
     wins = []
     stumbler_model = None
     bias_board = None
@@ -684,57 +666,46 @@ def wythoff_strategist(path,
 
         # Extract strategic data from the stumber,
         # project it and remember that
-        strategic_value = strategy(o, p, stumbler_model)
+        strategic_value = estimate_cold(o, p, stumbler_model)
         strategic_value = pad_board(m, n, strategic_value,
                                     strategic_default_value)
 
         # ...Into tuples
         s_data = convert_ijv(strategic_value)
+        s_data = balance_ijv(s_data, strategic_default_value)
+
         for d in s_data:
             memory.push(*d)
 
-        # Train a strategist, by first sampling its memory
-        for _ in range(num_strategist_iter):
-            coords = []
-            values = []
-            samples = memory.sample(batch_size)
+        # Sample data....
+        coords = []
+        values = []
+        samples = memory.sample(batch_size)
 
-            for c, v in samples:
-                coords.append(c)
-                values.append(v)
+        for c, v in samples:
+            coords.append(c)
+            values.append(v)
 
-            coords = torch.tensor(
-                np.vstack(coords), requires_grad=True, dtype=torch.float)
-            values = torch.tensor(
-                values, requires_grad=True, dtype=torch.float)
+        coords = torch.tensor(
+            np.vstack(coords), requires_grad=True, dtype=torch.float)
+        values = torch.tensor(values, requires_grad=False, dtype=torch.float)
 
-            # Scale coords
-            coords = coords / m
+        # Making some preditions,
+        predicted_values = model(coords).squeeze()
 
-            # Making some preditions,
-            predicted_values = model(coords).detach().squeeze()
+        # and find their loss.
+        loss = F.mse_loss(predicted_values, values)
 
-            # print(values[:4], predicted_values[:4])
-
-            # and find their loss.
-            # loss = F.smooth_l1_loss(values, predicted_values)
-            # loss = F.mse_loss(values, predicted_values)
-            loss = F.mse_loss(
-                torch.clamp(values, 0, 1), torch.clamp(predicted_values, 0, 1))
-            # loss = F.binary_cross_entropy(
-            #     torch.clamp(values, 0, 1), torch.clamp(predicted_values, 0, 1))
-
-            # Walk down the hill of righteousness!
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-        # Compare strategist and stumbler. Count strategist wins.
-        win = evaluate_models(stumbler_model, model, stumbler_env, env)
+        # Walk down the hill of righteousness!
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
         # Use the trained strategist to generate a bias_board,
         bias_board = estimate_strategic_value(m, n, model)
-        # bias_board[np.abs(bias_board) < delta] = 0.0
+
+        # Compare strategist and stumbler. Count strategist wins.
+        win = evaluate_models(stumbler_model, model, stumbler_env, env)
 
         if log:
             writer.add_scalar(
@@ -775,4 +746,131 @@ def wythoff_strategist(path,
                 skimage.io.imread(
                     os.path.join(path, 'wythoff_q_action_values.png')))
 
+    # The end
+    if log:
+        writer.close()
+
     return model, stumbler_model, env, stumbler_env, wins
+
+
+def wythoff_optimal(
+        path,
+        num_trials=1000,
+        learning_rate=0.01,
+        num_hidden1=15,
+        # num_hidden1=100,
+        # num_hidden2=25,
+        strategic_default_value=0.5,
+        wythoff_name_stumbler='Wythoff50x50',
+        wythoff_name_strategist='Wythoff50x50',
+        log=False,
+        seed=None):
+    """A minimal example."""
+
+    # -------------------------------------------
+    # Setup
+    # -------------------------------------------
+    # sCreate path
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+
+    env = gym.make('{}-v0'.format(wythoff_name_strategist))
+    env = wrappers.Monitor(
+        env, './tmp/{}-v0-1'.format(wythoff_name_strategist), force=True)
+
+    possible_actions = [(-1, 0), (0, -1), (-1, -1)]
+
+    # Train params
+    batch_size = 12
+
+    # -------------------------------------------
+    # Log setup
+    if log:
+        writer = SummaryWriter(log_dir=path)
+
+    # -------------------------------------------
+    # Seeding...
+    env.seed(seed)
+    np.random.seed(seed)
+
+    # -------------------------------------------
+    # Build a Strategist, its memory, and its optimizer
+
+    # How big are the boards?
+    m, n, board = peak(wythoff_name_strategist)
+    o, p, _ = peak(wythoff_name_stumbler)
+
+    # Create a model, of the right size.
+    model = HotCold2(2, num_hidden1=num_hidden1)
+    # model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
+
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    memory = ReplayMemory(10000)
+
+    # Run learning trials. The 'stumbler' is just the opt
+    # cold board
+    for trial in range(num_trials):
+        # The cold spots are '1' everythig else is '0'
+        strategic_value = create_cold_board(o, p)
+
+        # ...Into tuples
+        s_data = convert_ijv(strategic_value)
+        s_data = balance_ijv(s_data, 0.0)
+
+        for d in s_data:
+            memory.push(*d)
+
+        # Sample data....
+        coords = []
+        values = []
+        samples = memory.sample(batch_size)
+
+        for c, v in samples:
+            coords.append(c)
+            values.append(v)
+
+        coords = torch.tensor(
+            np.vstack(coords), requires_grad=True, dtype=torch.float)
+        values = torch.tensor(values, requires_grad=False, dtype=torch.float)
+
+        # Making some preditions,
+        predicted_values = model(coords).squeeze()
+
+        # and find their loss.
+        loss = F.mse_loss(predicted_values, values)
+
+        # Walk down the hill of righteousness!
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        # Use the trained strategist to generate a bias_board,
+        bias_board = estimate_strategic_value(m, n, model)
+
+        if log:
+            writer.add_scalar(os.path.join(path, 'error'), loss.data[0], trial)
+
+            plot_wythoff_board(
+                strategic_value,
+                vmin=0,
+                vmax=1,
+                path=path,
+                name='strategy_board.png')
+            writer.add_image(
+                'Expected value board',
+                skimage.io.imread(os.path.join(path, 'strategy_board.png')))
+
+            plot_wythoff_board(
+                bias_board, vmin=0, vmax=1, path=path, name='bias_board.png')
+            writer.add_image(
+                'Strategist learning',
+                skimage.io.imread(os.path.join(path, 'bias_board.png')))
+
+    # The end
+    if log:
+        writer.close()
+
+    return model, env
