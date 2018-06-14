@@ -2,6 +2,7 @@ import os, csv
 import sys
 
 import errno
+import pudb
 
 import torch
 import torch.optim as optim
@@ -418,10 +419,8 @@ def evaluate_models(stumbler,
     return float(wins)
 
 
-def peak(name):
+def peak(env):
     """Peak at the env's board"""
-    env = gym.make('{}-v0'.format(name))
-
     x, y, board = env.reset()
     env.close()
     m, n = board.shape
@@ -429,94 +428,31 @@ def peak(name):
     return m, n, board
 
 
-def wythoff_random(path,
-                   num_trials=10,
-                   wythoff_name='Wythoff3x3',
-                   log=False,
-                   seed=None):
-    """Play a game of random (valid) moves."""
+def flatten_board(board):
+    m, n = board.shape
+    return torch.tensor(board.reshape(m * n), dtype=torch.float)
 
-    # -------------------------------------------
-    # Create path
-    try:
-        os.makedirs(path)
-    except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
 
-    # -------------------------------------------
-    # Log setup
-    if log:
-        # Create a csv for archiving select data
-        f = open(os.path.join(path, "data.csv"), "w")
-        csv_writer = csv.writer(f)
-        csv_writer.writerow(["trial", "steps", "action_index", "Q", "x", "y"])
+def create_Q_bias(bias_board, Qs, possible_actions):
+    Qs_bias = np.zeros_like(Qs.detach())
+    if bias_board is not None:
+        for i, a in enumerate(possible_actions):
+            Qs_bias[i] = bias_board[x + a[0], y + a[1]]
 
-        # Tensorboard log
-        writer = SummaryWriter(log_dir=path)
+    return torch.tensor(Qs_bias, dtype=torch.float)
 
-    # -------------------------------------------
-    # The world is a pebble on a board
+
+def random_action(possible_actions):
+    idx = np.random.randint(0, len(possible_actions))
+    return idx, possible_actions[idx]
+
+
+def create_env(wythoff_name):
     env = gym.make('{}-v0'.format(wythoff_name))
     env = wrappers.Monitor(
         env, './tmp/{}-v0-1'.format(wythoff_name), force=True)
-    m, n, board = peak(wythoff_name)
 
-    # -------------------------------------------
-    # Seeding...
-    env.seed(seed)
-    np.random.seed(seed)
-
-    # -------------------------------------------
-    # Valid moves (in this simplified instantiation)
-    possible_actions = [(-1, 0), (0, -1), (-1, -1)]
-    a = len(possible_actions)
-
-    # Create a place to sum rewards
-    rewards = np.zeros((m, n, a))
-
-    # Run the random trials....
-    for trial in range(num_trials):
-        x, y, board = env.reset()
-
-        steps = 0
-        while True:
-            # Make a decision,
-            action_index = np.random.randint(0, a)
-            action = possible_actions[int(action_index)]
-
-            # and a move.
-            (x, y, next_board), reward, done, _ = env.step(action)
-            rewards[x, y, action_index] += reward
-
-            # Update move counter
-            steps += 1
-
-            if log:
-                writer.add_scalar(os.path.join(path, 'steps'), steps, trial)
-                writer.add_scalar(os.path.join(path, 'reward'), reward, trial)
-                writer.add_scalar(
-                    os.path.join(path, 'action_index'), action_index, trial)
-
-            if done:
-                break
-
-        if (trial % 10) == 0 and log:
-            # Plot?
-            plot_random_rewards(
-                m,
-                n,
-                len(possible_actions),
-                rewards,
-                possible_actions=possible_actions,
-                path=path,
-                name='wythoff_rewards.png')
-
-            writer.add_image(
-                'wythoff_rewards',
-                skimage.io.imread(os.path.join(path, 'wythoff_rewards.png')))
-
-    return rewards, env
+    return env
 
 
 def wythoff_stumbler(path,
@@ -530,8 +466,9 @@ def wythoff_stumbler(path,
                      log=False,
                      seed=None):
     """Train a Q-agent to play Wythoff's game, using SGD."""
-
     # -------------------------------------------
+    # Setup
+
     # Create path
     try:
         os.makedirs(path)
@@ -539,162 +476,132 @@ def wythoff_stumbler(path,
         if exception.errno != errno.EEXIST:
             raise
 
-    # -------------------------------------------
-    # Log setup
+    # Do log?
     if log:
         writer = SummaryWriter(log_dir=path)
 
-    # -------------------------------------------
-    # The world is a pebble on a board
-    env = gym.make('{}-v0'.format(wythoff_name))
-    env = wrappers.Monitor(
-        env, './tmp/{}-v0-1'.format(wythoff_name), force=True)
+    # Crate env
+    env = create_env(wythoff_name)
 
-    # -------------------------------------------
-    # Seeding...
+    # Control randomness
     env.seed(seed)
     np.random.seed(seed)
 
-    # -------------------------------------------
     # Valid moves (in this simplified instantiation)
     possible_actions = [(-1, 0), (0, -1), (-1, -1)]
 
     # -------------------------------------------
-    # Build a Q agent, its memory, and its optimizer
-
-    # How big is the board?
-    m, n, board = peak(wythoff_name)
-
-    # Create a model of the right size?
-    if model is None:
-        model = LinQN1(m * n, len(possible_actions))
-
+    # Build a Q agent, and its optimizer
+    m, n, board = peak(env)
+    model = LinQN1(m * n, len(possible_actions))
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     # -------------------------------------------
     # Run some trials
     for trial in range(num_trials):
         x, y, board = env.reset()
-        board = torch.tensor(board.reshape(m * n), dtype=torch.float)
-
+        board = flatten_board(board)
         steps = 0
         while True:
-            # -------------------------------------------
-            # TODO
-            # env.render()
-
-            # -------------------------------------------
+            # ---
             # Look at the world and approximate its value.
             Qs = model(board).squeeze()
 
-            # Use the bias_board to bias Qs
-            # based on all possible next moves.
-            if bias_board is not None:
-                Qs_bias = np.zeros_like(Qs.detach())
-                for i, a in enumerate(possible_actions):
-                    Qs_bias[i] = bias_board[x + a[0], y + a[1]]
-
-                Qs += torch.tensor(Qs_bias, dtype=torch.float)
+            # Bias Q?
+            Qs.add_(create_Q_bias(bias_board, Qs, possible_actions))
 
             # Make a decision.
             action_index = epsilon_greedy(Qs, epsilon)
             action = possible_actions[int(action_index)]
-
             Q = Qs[int(action_index)]
 
+            # Take an action
             (x, y, next_board), reward, done, _ = env.step(action)
-            next_board = torch.tensor(
-                next_board.reshape(m * n), dtype=torch.float)
+            next_board = flatten_board(next_board)
 
-            # Update move counter
-            steps += 1
+            # Bad moves end the game with no reward
+            # we don't want to learn from bad moves
+            # so continue. Bad moves don't shift x,y.
+            if done and reward == 0:
+                break
 
             # ---
-            # Learn w/ SGD
+            # Greedy opponent plays?
+            opp_reward = 0
+            if not done:
+                action_index, action = random_action(possible_actions)
+                # action_index = greedy(Qs)
+                # action = possible_actions[int(action_index)]
+
+                (x, y, next_board), opp_reward, done, _ = env.step(action)
+                next_board = flatten_board(next_board)
+
+                if done and opp_reward == 0:
+                    break
+
+                # Opponent wins get punished
+                opp_reward *= -1
+
+            # ---
+            # Join rewards (they are exclusive)
+            reward = reward + opp_reward
+
+            # Learn
             max_Q = model(next_board).detach().max()
             next_Q = reward + (gamma * max_Q)
             loss = F.smooth_l1_loss(Q, next_Q)
 
-            # Walk down the hill of righteousness!
             optimizer.zero_grad()
-            loss.backward(retain_graph=True)  # retain is needed for opp. WHY?
+            loss.backward()
             optimizer.step()
 
-            if log:
-                writer.add_scalar(os.path.join(path, 'Q'), Q, trial)
-                writer.add_scalar(os.path.join(path, 'reward'), reward, trial)
-                writer.add_scalar(os.path.join(path, 'steps'), steps, trial)
-
-            # -------------------------------------------
-            # If the game is over, stop
-            # Otherwise the opponent moves
-            if done:
-                break
-
-            action_index = np.random.randint(0, len(possible_actions))
-            action = possible_actions[action_index]
-
-            Q = Qs[int(action_index)].squeeze()
-
-            (x, y, next_board), reward, done, info = env.step(action)
-            next_board = torch.tensor(
-                next_board.reshape(m * n), dtype=torch.float)
-
-            # Learn from your opponent when they win
-            if done:
-                # Opp victories are punishments
-                reward *= -1
-
-                max_Q = model(next_board).detach().max()
-                next_Q = reward + (gamma * max_Q)
-                loss = F.smooth_l1_loss(Q, next_Q)
-
-                loss.backward()
-                optimizer.step()
-
-            if log:
-                writer.add_scalar(os.path.join(path, 'opp_Q'), Q, trial)
-                writer.add_scalar(
-                    os.path.join(path, 'opp_reward'), reward, trial)
-
-            if (trial % 10) == 0 and log:
-                # Opt play
-                plot_cold_board(m, n, path=path, name='cold_board.png')
-                writer.add_image(
-                    'cold_positions',
-                    skimage.io.imread(os.path.join(path, 'cold_board.png')))
-
-                # EV
-                plot_wythoff_expected_values(
-                    m, n, model, path=path, name='wythoff_expected_values.png')
-                writer.add_image(
-                    'expected_value',
-                    skimage.io.imread(
-                        os.path.join(path, 'wythoff_expected_values.png')))
-
-                # Q(a)
-                plot_q_action_values(
-                    m,
-                    n,
-                    len(possible_actions),
-                    model,
-                    possible_actions=possible_actions,
-                    path=path,
-                    name='wythoff_q_action_values.png')
-                writer.add_image(
-                    'q_action_values',
-                    skimage.io.imread(
-                        os.path.join(path, 'wythoff_q_action_values.png')))
-
-            # Stop or update?
-            if done:
-                break
-
+            # Prep for next iteration
             board = next_board
+            steps += 1
 
+            if done:
+                break
+
+        # ---
         if log:
+            # -
+            # Scalars
+            writer.add_scalar(os.path.join(path, 'steps'), steps, trial)
+            writer.add_scalar(os.path.join(path, 'reward'), reward, trial)
+            writer.add_scalar(os.path.join(path, 'Q'), Q, trial)
             writer.add_scalar(os.path.join(path, 'error'), loss.data[0], trial)
 
+            # Boards
+
+            # Optimal ref:
+            plot_cold_board(m, n, path=path, name='cold_board.png')
+            writer.add_image(
+                'cold_positions',
+                skimage.io.imread(os.path.join(path, 'cold_board.png')))
+
+            # EV:
+            plot_wythoff_expected_values(
+                m, n, model, path=path, name='wythoff_expected_values.png')
+            writer.add_image(
+                'expected_value',
+                skimage.io.imread(
+                    os.path.join(path, 'wythoff_expected_values.png')))
+
+            # Q(a):
+            plot_q_action_values(
+                m,
+                n,
+                len(possible_actions),
+                model,
+                possible_actions=possible_actions,
+                path=path,
+                name='wythoff_q_action_values.png')
+            writer.add_image(
+                'q_action_values',
+                skimage.io.imread(
+                    os.path.join(path, 'wythoff_q_action_values.png')))
+
+    # -------------------------------------------
     # The end
     if log:
         writer.close()
