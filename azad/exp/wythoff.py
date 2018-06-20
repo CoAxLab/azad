@@ -11,8 +11,10 @@ from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy.constants import golden
+
+import matplotlib.pyplot as plt
+import seaborn as sns
 
 import skimage
 from skimage import data, io
@@ -23,6 +25,7 @@ import azad.local_gym
 
 from azad.models import LinQN1
 from azad.models import HotCold2
+from azad.models import HotCold3
 from azad.policy import epsilon_greedy
 from azad.policy import greedy
 from azad.util import ReplayMemory
@@ -46,10 +49,12 @@ def plot_wythoff_board(board,
                        name='wythoff_board.png'):
     """Plot the board"""
 
-    # !
-    fig = plt.figure()
-    plt.matshow(board, vmin=vmin, vmax=vmax)
-    plt.colorbar()
+    fig, ax = plt.subplots()  # Sample figsize in inches
+    ax = sns.heatmap(board, linewidths=3, vmin=vmin, vmax=vmax, ax=ax)
+
+    # fig = plt.figure()
+    # plt.matshow(board, vmin=vmin, vmax=vmax)
+    # plt.colorbar()
 
     # Save an image?
     if path is not None:
@@ -65,10 +70,8 @@ def plot_wythoff_board(board,
 def plot_cold_board(m, n, plot=False, path=None, name='cold_board.png'):
     cold = create_cold_board(m, n)
 
-    # !
-    fig = plt.figure()
-    plt.matshow(cold, vmin=-1.5, vmax=1.5)
-    plt.colorbar()
+    fig, ax = plt.subplots()  # Sample figsize in inches
+    ax = sns.heatmap(cold, linewidths=3, ax=ax)
 
     # Save an image?
     if path is not None:
@@ -88,7 +91,8 @@ def plot_q_action_values(m,
                          plot=False,
                          possible_actions=None,
                          path=None,
-                         v_size=2,
+                         vmin=-2,
+                         vmax=2,
                          name='wythoff_q_action_values.png'):
     """Plot Q values for each possible action"""
 
@@ -99,41 +103,8 @@ def plot_q_action_values(m,
 
     for k in range(a):
         q_a = qs[:, :, k]
-        im = axarr[k].matshow(q_a, vmin=-v_size, vmax=v_size)
-
-        fig.colorbar(im, ax=axarr[k])
-
-        if possible_actions is not None:
-            axarr[k].set_title(possible_actions[k])
-
-    # Save an image?
-    if path is not None:
-        plt.savefig(os.path.join(path, name))
-
-    if plot:
-        # plt.show()
-        plt.pause(0.01)
-
-    plt.close('all')
-
-
-def plot_random_rewards(m,
-                        n,
-                        a,
-                        rewards,
-                        plot=False,
-                        possible_actions=None,
-                        path=None,
-                        name='wythoff_rewards.png'):
-    """Plot sum rewards for each possible action"""
-
-    # Init plot
-    fig, axarr = plt.subplots(1, a, sharey=True, figsize=(17, 4))
-
-    for k in range(a):
-        r = rewards[:, :, k]
-        im = axarr[k].matshow(r)
-        fig.colorbar(im, ax=axarr[k])
+        axarr[k] = sns.heatmap(
+            q_a, vmin=vmin, vmax=vmax, linewidths=3, ax=axarr[k])
 
         if possible_actions is not None:
             axarr[k].set_title(possible_actions[k])
@@ -154,15 +125,19 @@ def plot_wythoff_expected_values(m,
                                  model,
                                  plot=False,
                                  path=None,
-                                 v_size=2,
+                                 vmin=-2,
+                                 vmax=2,
                                  name='wythoff_expected_values.png'):
     """Plot EVs"""
     values = expected_value(m, n, model)
 
     # !
-    fig = plt.figure()
-    plt.matshow(values, vmin=-v_size, vmax=v_size)
-    plt.colorbar()
+    fig, ax = plt.subplots()  # Sample figsize in inches
+    ax = sns.heatmap(values, linewidths=3, vmin=vmin, vmax=vmax, ax=ax)
+
+    # fig = plt.figure()
+    # plt.matshow(values, vmin=-v_size, vmax=v_size)
+    # plt.colorbar()
 
     # Save an image?
     if path is not None:
@@ -433,7 +408,7 @@ def flatten_board(board):
     return torch.tensor(board.reshape(m * n), dtype=torch.float)
 
 
-def create_Q_bias(bias_board, Qs, possible_actions):
+def create_Q_bias(x, y, bias_board, Qs, possible_actions):
     Qs_bias = np.zeros_like(Qs.detach())
     if bias_board is not None:
         for i, a in enumerate(possible_actions):
@@ -460,7 +435,7 @@ def wythoff_stumbler(path,
                      epsilon=0.1,
                      gamma=0.8,
                      learning_rate=0.1,
-                     wythoff_name='Wythoff3x3',
+                     game='Wythoff3x3',
                      model=None,
                      bias_board=None,
                      log=False,
@@ -481,7 +456,7 @@ def wythoff_stumbler(path,
         writer = SummaryWriter(log_dir=path)
 
     # Crate env
-    env = create_env(wythoff_name)
+    env = create_env(game)
 
     # Control randomness
     env.seed(seed)
@@ -493,7 +468,10 @@ def wythoff_stumbler(path,
     # -------------------------------------------
     # Build a Q agent, and its optimizer
     m, n, board = peak(env)
-    model = LinQN1(m * n, len(possible_actions))
+
+    if model is None:
+        model = LinQN1(m * n, len(possible_actions))
+
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     # -------------------------------------------
@@ -508,7 +486,8 @@ def wythoff_stumbler(path,
             Qs = model(board).squeeze()
 
             # Bias Q?
-            Qs.add_(create_Q_bias(bias_board, Qs, possible_actions))
+            print(create_Q_bias(x, y, bias_board, Qs, possible_actions))
+            Qs.add_(create_Q_bias(x, y, bias_board, Qs, possible_actions))
 
             # Make a decision.
             action_index = epsilon_greedy(Qs, epsilon)
@@ -609,25 +588,29 @@ def wythoff_stumbler(path,
     return model, env
 
 
-def wythoff_strategist(path,
-                       num_trials=1000,
-                       num_stumbles=100,
-                       epsilon=0.1,
-                       gamma=0.8,
-                       delta=0.1,
-                       learning_rate=0.1,
-                       wythoff_name_stumbler='Wythoff15x15',
-                       wythoff_name_strategist='Wythoff50x50',
-                       log=False,
-                       seed=None):
+def wythoff_strategist(
+        path,
+        num_trials=1000,
+        num_stumbles=100,
+        epsilon=0.1,
+        gamma=0.8,
+        delta=0.1,
+        learning_rate=0.1,
+        stumbler_game='Wythoff15x15',
+        strategist_game='Wythoff50x50',
+        num_hidden1=15,
+        #    num_hidden1=25,
+        #    num_hidden2=100,
+        log=False,
+        seed=None):
 
     # -------------------------------------------
     # Setup
-    env = create_env(wythoff_name_strategist)
+    env = create_env(strategist_game)
     possible_actions = [(-1, 0), (0, -1), (-1, -1)]
 
+    # Working mem size
     batch_size = 12
-    strategic_default_value = 0.0
 
     # Control randomness
     env.seed(seed)
@@ -640,11 +623,12 @@ def wythoff_strategist(path,
     # Build a Strategist, its memory, and its optimizer
 
     # Board sizes....
-    m, n, board = peak(wythoff_name_strategist)
-    o, p, _ = peak(wythoff_name_stumbler)
+    m, n, board = peak(env)
+    o, p, _ = peak(create_env(stumbler_game))
 
     # Def the strategist model, opt, and mem
-    model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
+    # model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
+    model = HotCold2(2, num_hidden1=num_hidden1)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     memory = ReplayMemory(10000)
 
@@ -659,14 +643,19 @@ def wythoff_strategist(path,
             num_trials=num_stumbles,
             epsilon=epsilon,
             gamma=gamma,
-            wythoff_name=wythoff_name_stumbler,
-            model=None,
-            bias_board=None,
+            game=stumbler_game,
+            model=stumbler_model,
+            bias_board=bias_board,
             learning_rate=learning_rate)
 
         # Extract strategic data from the stumber,
         # project it and remember that
-        strategic_value = estimate_cold(o, p, stumbler_model)
+        strategic_default_value = 0.0
+        strategic_value = -1 * create_cold_board(o, p)
+
+        # strategic_default_value = 0.5
+        # strategic_value = estimate_alp_hot_cold(
+        #     o, p, stumbler_model, conf=0.05, default=strategic_default_value)
         strategic_value = pad_board(m, n, strategic_value,
                                     strategic_default_value)
 
@@ -702,7 +691,8 @@ def wythoff_strategist(path,
         optimizer.step()
 
         # Use the trained strategist to generate a bias_board,
-        bias_board = estimate_strategic_value(m, n, model)
+        bias_board = delta * estimate_strategic_value(m, n, model)
+        # bias_board = delta * strategic_value
 
         # Compare strategist and stumbler. Count strategist wins.
         win = evaluate_models(stumbler_model, model, stumbler_env, env)
@@ -714,21 +704,21 @@ def wythoff_strategist(path,
             writer.add_scalar(os.path.join(path, 'stategist_wins'), win, trial)
 
             plot_wythoff_expected_values(
-                o, p, stumbler_model, path=path, v_size=3)
+                o, p, stumbler_model, vmin=-3, vmax=3, path=path)
             writer.add_image(
-                'stumbler_expected_value',
+                'expected_value',
                 skimage.io.imread(
                     os.path.join(path, 'wythoff_expected_values.png')))
 
             plot_wythoff_board(
                 strategic_value, path=path, name='strategy_board.png')
             writer.add_image(
-                'stumbler_to_strategy_board',
+                'strategic_value',
                 skimage.io.imread(os.path.join(path, 'strategy_board.png')))
 
             plot_wythoff_board(bias_board, path=path, name='bias_board.png')
             writer.add_image(
-                'strategy_board',
+                'strategist_model',
                 skimage.io.imread(os.path.join(path, 'bias_board.png')))
 
             plot_q_action_values(
@@ -736,15 +726,13 @@ def wythoff_strategist(path,
                 p,
                 len(possible_actions),
                 stumbler_model,
-                v_size=3,
                 possible_actions=possible_actions,
                 path=path,
-                name='wythoff_q_action_values.png')
+                name='q_action_values.png')
 
             writer.add_image(
-                'stumbler_q_action_values',
-                skimage.io.imread(
-                    os.path.join(path, 'wythoff_q_action_values.png')))
+                'q_action_values',
+                skimage.io.imread(os.path.join(path, 'q_action_values.png')))
 
     # The end
     if log:
@@ -760,9 +748,8 @@ def wythoff_optimal(
         num_hidden1=15,
         # num_hidden1=100,
         # num_hidden2=25,
-        strategic_default_value=0.5,
-        wythoff_name_stumbler='Wythoff50x50',
-        wythoff_name_strategist='Wythoff50x50',
+        stumbler_game='Wythoff50x50',
+        strategist_game='Wythoff50x50',
         log=False,
         seed=None):
     """A minimal example."""
@@ -777,13 +764,14 @@ def wythoff_optimal(
         if exception.errno != errno.EEXIST:
             raise
 
-    env = gym.make('{}-v0'.format(wythoff_name_strategist))
+    env = gym.make('{}-v0'.format(strategist_game))
     env = wrappers.Monitor(
-        env, './tmp/{}-v0-1'.format(wythoff_name_strategist), force=True)
+        env, './tmp/{}-v0-1'.format(strategist_game), force=True)
 
     possible_actions = [(-1, 0), (0, -1), (-1, -1)]
 
     # Train params
+    strategic_default_value = 0.0
     batch_size = 12
 
     # -------------------------------------------
@@ -800,8 +788,8 @@ def wythoff_optimal(
     # Build a Strategist, its memory, and its optimizer
 
     # How big are the boards?
-    m, n, board = peak(wythoff_name_strategist)
-    o, p, _ = peak(wythoff_name_stumbler)
+    m, n, board = peak(env)
+    o, p, _ = peak(env)
 
     # Create a model, of the right size.
     model = HotCold2(2, num_hidden1=num_hidden1)
@@ -818,7 +806,7 @@ def wythoff_optimal(
 
         # ...Into tuples
         s_data = convert_ijv(strategic_value)
-        s_data = balance_ijv(s_data, 0.0)
+        s_data = balance_ijv(s_data, strategic_default_value)
 
         for d in s_data:
             memory.push(*d)
