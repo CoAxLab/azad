@@ -51,7 +51,7 @@ def bandit_stumbler(path,
     # Tensorboard setup
     if log_path is None:
         log_path = path
-    writer = SummaryWriter(log_dir=log_path)
+        writer = SummaryWriter(log_dir=log_path)
 
     # -------------------------------------------
     # The world is a cart....
