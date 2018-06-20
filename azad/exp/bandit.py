@@ -48,28 +48,24 @@ def bandit_stumbler(path,
             raise
 
     # -------------------------------------------
-    # Tensorboard setup
+    # setup
+
+    # Logging
     if log_path is None:
         log_path = path
-        writer = SummaryWriter(log_dir=log_path)
+    writer = SummaryWriter(log_dir=log_path)
 
-    # -------------------------------------------
-    # The world is a cart....
+    # The world is a slot machine!
     env = gym.make('{}-v0'.format(bandit_name))
     env = wrappers.Monitor(
         env, './tmp/{}-v0-1'.format(bandit_name), force=True)
 
-    # -------------------------------------------
-    # Init the DQN, it's memory, and its optim
+    # Init the 'agent'
     model = LinQN1(1, 2)
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     # -------------------------------------------
     # Run some trials
-    trials = []
-    trial_rewards = []
-    trial_values = []
-    trial_actions = []
 
     # Loop over trials not batchs, doing
     # SGD on each outcome
@@ -110,13 +106,7 @@ def bandit_stumbler(path,
         writer.add_scalar(os.path.join(log_path, 'reward'), reward, trial)
         writer.add_scalar(os.path.join(log_path, 'state'), state, trial)
 
-        trials.append(trial)
-        trial_rewards.append(float(reward))
-        trial_actions.append(int(action))
-        trial_values.append(float(Q))
-
     # Cleanup and end
     writer.close()
 
-    results = list(zip(trials, trial_actions, trial_rewards, trial_values))
-    return results
+    return model, env
