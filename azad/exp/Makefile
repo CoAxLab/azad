@@ -36,26 +36,18 @@ bandit_exp1:
 wythoff_exp0:
 	-rm -rf $(DATA_PATH)/wythoff/exp0
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_stumbler $(DATA_PATH)/wythoff/exp0 --num_trials=25000 --learning_rate=0.1 --wythoff_name=Wythoff5x5 --log=True
+	python run_azad.py wythoff_stumbler $(DATA_PATH)/wythoff/exp0 --num_trials=25000 --learning_rate=0.1 --epsilon=0.3 --game=Wythoff10x10 --log=True
 
 # Testing wythoff 
 wythoff_exp1:
 	-rm -rf $(DATA_PATH)/wythoff/exp1
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp1 --num_trials=5000 --num_stumble=100 --learning_rate=0.1 --strategy_default_value=0.5 --strategy_name=estimate_alp_hot_cold --wythoff_name_stumbler='Wythoff5x5' --wythoff_name_strategist='Wythoff10x10' --log=True 
-
-# Make only random choices
-wythoff_exp2:
-	-rm -rf $(DATA_PATH)/wythoff/exp2
-	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_random $(DATA_PATH)/wythoff/exp2 --num_trials=25000 --wythoff_name=Wythoff50x50 --log=True
+	python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp1 --num_trials=2500 --num_stumble=250 --learning_rate=0.1 --epsilon=0.3 --delta=0.2 --stumbler_game='Wythoff10x10' --strategist_game='Wythoff15x15' --log=True 
 
 
 # 6-12-2018
-# Simplified testing fn for strategist
-# Make only random choices
-wythoff_test1:
-	-rm -rf $(DATA_PATH)/testing/test1
+# Strategist learning directly from the opt. cold board
+wythoff_exp2:
+	-rm -rf $(DATA_PATH)/testing/exp2
 	sleep 5  # Wait for tensorboard to notice the deletion
-	# python run_azad.py testing_wythoff_strategist ../../data/testing/test1 --strategic_default=0.0 --num_trials=2000 --learning_rate=0.01 --num_hidden1=10 --wythoff_name_stumbler=Wythoff10x10 --wythoff_name_strategist=Wythoff50x50 --log
-	python run_azad.py testing_wythoff_strategist ../../data/testing/test1 --strategic_default=0.0 --num_trials=5000 --learning_rate=0.01 --wythoff_name_stumbler=Wythoff10x10 --wythoff_name_strategist=Wythoff50x50 --log
+	python run_azad.py wythoff_optimal ../../data/wythoff/exp2 --num_trials=5000 --learning_rate=0.01 --stumbler_game=Wythoff10x10 --strategist_game=Wythoff50x50 --log
