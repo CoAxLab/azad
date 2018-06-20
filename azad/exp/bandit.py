@@ -85,23 +85,19 @@ def bandit_stumbler(path,
         next_state, reward, _, _ = env.step(int(action))
         next_state = Tensor([next_state])
 
-        # -------------------------------------------
-        # Learn w/ SGD
+        # Walk down the hill o' rightenous!
         max_Q = model(next_state).detach().max()
         next_Q = reward + (gamma * max_Q)
         loss = F.smooth_l1_loss(Q, next_Q)
-
-        writer.add_scalar(os.path.join(log_path, 'error'), loss.data[0], trial)
 
         optimizer.zero_grad()
         loss.backward()
         optimizer.step()
 
-        # -------------------------------------------
-        # Save results
+        # Log
         for path, param in model.named_parameters():
             writer.add_histogram(path, param.clone().cpu().data.numpy(), trial)
-
+        writer.add_scalar(os.path.join(log_path, 'error'), loss.data[0], trial)
         writer.add_scalar(os.path.join(log_path, 'Q'), Q, trial)
         writer.add_scalar(os.path.join(log_path, 'reward'), reward, trial)
         writer.add_scalar(os.path.join(log_path, 'state'), state, trial)
