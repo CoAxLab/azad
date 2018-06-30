@@ -1,21 +1,5 @@
 import numpy as np
 import gym
-from gym import spaces
-from gym.utils import seeding
-
-# def create_moves(x, y):
-#     actions = []
-
-#     for i in range(x):
-#         actions.append((i, y))
-#     for i in range(y):
-#         actions.append((x, i))
-
-#     shortest = min(x, y)
-#     for i in range(1, shortest + 1):
-#         actions.append((x - i, y - i))
-
-#     return list(set(actions))
 
 
 def create_moves(x, y):
