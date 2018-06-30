@@ -3,6 +3,34 @@ import gym
 from gym import spaces
 from gym.utils import seeding
 
+# def create_moves(x, y):
+#     actions = []
+
+#     for i in range(x):
+#         actions.append((i, y))
+#     for i in range(y):
+#         actions.append((x, i))
+
+#     shortest = min(x, y)
+#     for i in range(1, shortest + 1):
+#         actions.append((x - i, y - i))
+
+#     return list(set(actions))
+
+
+def create_moves(x, y):
+    moves = []
+    for i in range(x):
+        moves.append((i, y))
+    for i in range(y):
+        moves.append((x, i))
+
+    shortest = min(x, y)
+    for i in range(1, shortest + 1):
+        moves.append((x - i, y - i))
+
+    return list(set(moves))
+
 
 class WythoffEnv(gym.Env):
     """Wythoff's game.
@@ -10,7 +38,7 @@ class WythoffEnv(gym.Env):
     Note: the opponent is simulated by a perfect player
     """
 
-    def __init__(self, m, n):
+    def __init__(self, m, n, seed=None):
         # Board/pile size
         self.m = int(m)
         self.n = int(n)
@@ -18,106 +46,59 @@ class WythoffEnv(gym.Env):
         self.info = {"m": m, "n": n}
 
         # Current postition
-        # (needs a .reset()) to take
-        # on useful values
         self.x = None
         self.y = None
         self.board = None
+        self.moves = None
 
-        self.action_space = spaces.Discrete(3)
-        self.observation_space = spaces.Discrete(2)
+        self.prng = np.random.RandomState(seed)
 
     def step(self, move):
-        # Empty. Required for gym API.
-
         # Parse the move
         dx, dy = move
         dx = int(dx)
         dy = int(dy)
 
-        # ------------------------------------
-        # Check for illegal moves,
-        # return (-1, -1) for all
-
-        # Can't move backward
-        if (self.x + dx) > self.x:
-            reward = 0
-
-            # Don't move
-            done = True
-            state = (self.x, self.y)
-
-        elif (self.y + dy) > self.y:
-            reward = 0
-
-            # Don't move
-            done = True
-            state = (self.x, self.y)
-
-        # Out of bounds
-        elif (self.x + dx) > self.m:
-            reward = 0
-
-            # Don't move
-            done = True
-            state = (self.x, self.y)
-
-        elif (self.y + dy) > self.n:
-            reward = 0
-
-            # Don't move
-            done = True
-            state = (self.x, self.y)
-
-        elif (self.x + dx) < 0:
-            reward = 0
-
-            # Don't move
-            done = True
-            state = (self.x, self.y)
-
-        elif (self.y + dy) < 0:
-            reward = 0
-
-            # Don't move
-            done = True
-            state = (self.x, self.y)
-
         # Winning move?
-        elif (self.x + dx == 0) and (self.y + dy == 0):
-            self.x += dx
-            self.y += dy
-            state = (self.x, self.y)
-
+        if (dx == 0) and (dy == 0):
+            self.x = dx
+            self.y = dy
             reward = 1
             done = True
 
         # Just move....
         else:
-            self.x += dx
-            self.y += dy
-            state = (self.x, self.y)
-
+            self.x = dx
+            self.y = dy
             reward = 0
             done = False
 
-        # Place the piece on the board
-        self._reset_board()
-        self.board[self.x, self.y] = 1
-        state = (self.x, self.y, self.board)
+        # Update state variables
+        self._place_piece()
+        self._create_moves()
+
+        state = (self.x, self.y, self.board, self.moves)
 
         return state, reward, done, self.info
+
+    def _create_moves(self):
+        self.moves = create_moves(self.x, self.y)
 
     def _reset_board(self):
         self.board = np.zeros((self.m, self.n))
 
-    def reset(self):
-        self.x = self.m - 1
-        self.y = self.n - 1
-
+    def _place_piece(self):
         self._reset_board()
         self.board[self.x, self.y] = 1
-        state = (self.x, self.y, self.board)
+
+    def reset(self):
+        self.x = self.prng.randint(1, self.m)
+        self.y = self.prng.randint(1, self.n)
+
+        self._place_piece()
+        self._create_moves()
+
+        state = (self.x, self.y, self.board, self.moves)
 
         return state
 
