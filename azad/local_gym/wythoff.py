@@ -58,7 +58,7 @@ class WythoffEnv(gym.Env):
             done = False
 
         # Update state variables
-        self._place_piece()
+        self._create_board()
         self._create_moves()
 
         state = (self.x, self.y, self.board, self.moves)
@@ -71,7 +71,7 @@ class WythoffEnv(gym.Env):
     def _reset_board(self):
         self.board = np.zeros((self.m, self.n))
 
-    def _place_piece(self):
+    def _create_board(self):
         self._reset_board()
         self.board[self.x, self.y] = 1
 
@@ -79,7 +79,7 @@ class WythoffEnv(gym.Env):
         self.x = self.prng.randint(1, self.m)
         self.y = self.prng.randint(1, self.n)
 
-        self._place_piece()
+        self._create_board()
         self._create_moves()
 
         state = (self.x, self.y, self.board, self.moves)
