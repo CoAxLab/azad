@@ -29,643 +29,10 @@ import azad.local_gym
 from azad.models import LinQN1
 from azad.models import HotCold2
 from azad.models import HotCold3
+from azad.models import ReplayMemory
 from azad.policy import epsilon_greedy
 from azad.policy import greedy
-from azad.util import ReplayMemory
-
-# # ---------------------------------------------------------------
-# # Handle dtypes for the device
-# USE_CUDA = torch.cuda.is_available()
-# FloatTensor = torch.cuda.FloatTensor if USE_CUDA else torch.FloatTensor
-# LongTensor = torch.cuda.LongTensor if USE_CUDA else torch.LongTensor
-# ByteTensor = torch.cuda.ByteTensor if USE_CUDA else torch.ByteTensor
-# Tensor = FloatTensor
-
-# # ---------------------------------------------------------------
-
-
-def plot_wythoff_board(board,
-                       vmin=-1.5,
-                       vmax=1.5,
-                       plot=False,
-                       path=None,
-                       name='wythoff_board.png'):
-    """Plot the board"""
-
-    fig, ax = plt.subplots()  # Sample figsize in inches
-    ax = sns.heatmap(board, linewidths=3, vmin=vmin, vmax=vmax, ax=ax)
-
-    # fig = plt.figure()
-    # plt.matshow(board, vmin=vmin, vmax=vmax)
-    # plt.colorbar()
-
-    # Save an image?
-    if path is not None:
-        plt.savefig(os.path.join(path, name))
-
-    if plot:
-        # plt.show()
-        plt.pause(0.01)
-
-    plt.close('all')
-
-
-def plot_cold_board(m, n, plot=False, path=None, name='cold_board.png'):
-    cold = create_cold_board(m, n)
-
-    fig, ax = plt.subplots()  # Sample figsize in inches
-    ax = sns.heatmap(cold, linewidths=3, ax=ax)
-
-    # Save an image?
-    if path is not None:
-        plt.savefig(os.path.join(path, name))
-
-    if plot:
-        # plt.show()
-        plt.pause(0.1)
-
-    plt.close('all')
-
-
-def plot_q_action_values(m,
-                         n,
-                         a,
-                         model,
-                         plot=False,
-                         possible_actions=None,
-                         path=None,
-                         vmin=-2,
-                         vmax=2,
-                         name='wythoff_q_action_values.png'):
-    """Plot Q values for each possible action"""
-
-    qs = create_Q_tensor(m, n, a, model).detach().numpy()
-
-    # Init plot
-    fig, axarr = plt.subplots(1, a, sharey=True, figsize=(17, 4))
-
-    for k in range(a):
-        q_a = qs[:, :, k]
-        axarr[k] = sns.heatmap(
-            q_a, vmin=vmin, vmax=vmax, linewidths=3, ax=axarr[k])
-
-        if possible_actions is not None:
-            axarr[k].set_title(possible_actions[k])
-
-    # Save an image?
-    if path is not None:
-        plt.savefig(os.path.join(path, name))
-
-    if plot:
-        # plt.show()
-        plt.pause(0.01)
-
-    plt.close('all')
-
-
-def plot_wythoff_expected_values(m,
-                                 n,
-                                 model,
-                                 plot=False,
-                                 path=None,
-                                 vmin=-2,
-                                 vmax=2,
-                                 name='wythoff_expected_values.png'):
-    """Plot EVs"""
-    values = expected_value(m, n, model)
-
-    # !
-    fig, ax = plt.subplots()  # Sample figsize in inches
-    ax = sns.heatmap(values, linewidths=3, vmin=vmin, vmax=vmax, ax=ax)
-
-    # fig = plt.figure()
-    # plt.matshow(values, vmin=-v_size, vmax=v_size)
-    # plt.colorbar()
-
-    # Save an image?
-    if path is not None:
-        plt.savefig(os.path.join(path, name))
-
-    if plot:
-        # plt.show()
-        plt.pause(0.01)
-
-    plt.close()
-
-
-def create_cold_board(m, n):
-    cold_board = np.zeros((m, n))
-    for k in range(m - 1):
-        mk = int(k * golden)
-        nk = int(k * golden**2)
-        if (nk < m) and (mk < n):
-            cold_board[mk, nk] = 1
-            cold_board[nk, mk] = 1
-
-    return cold_board
-
-
-def create_board(i, j, m, n):
-    board = np.zeros((m, n))
-    board[i, j] = 1.0
-
-    return board
-
-
-def estimate_strategic_value(m, n, hotcold):
-    """Create a board to bias a stumblers moves."""
-
-    strategic_value = np.zeros((m, n))
-    for i in range(m):
-        for j in range(n):
-            coord = torch.tensor([i, j], dtype=torch.float)
-            strategic_value[i, j] = hotcold(coord)
-
-    return strategic_value
-
-
-def convert_ijv(data):
-    """Convert a (m,n) matrix into a list of (i, j, value)"""
-
-    m, n = data.shape
-    converted = []
-    for i in range(m):
-        for j in range(n):
-            converted.append([(i, j), data[i, j]])
-
-    return converted
-
-
-def balance_ijv(ijv_data, null_value):
-    # Separate data based on null_value
-    other = []
-    null = []
-    for c, v in ijv_data:
-        if np.isclose(v, null_value):
-            null.append([c, v])
-        else:
-            other.append([c, v])
-
-    # Sizes
-    N_null = len(null)
-    N_other = len(other)
-
-    # Sanity?
-    if N_null == 0:
-        raise ValueError("No null data to balance against.")
-
-    # Nothing to do if there is no other data,
-    # so just return I
-    if N_other == 0:
-        return ijv_data
-
-    np.random.shuffle(null)
-    np.random.shuffle(other)
-
-    # Finally, balance one or the other. Who is bigger?
-    if N_null > N_other:
-        null = null[:N_other]
-    elif N_other > N_null:
-        other = other[:N_null]
-    else:
-        # They already balanced. Return I
-        return ijv_data
-
-    return null + other
-
-
-def create_Q_tensor(m, n, a, model):
-    """Estimate the expected value of each board position"""
-    # Build the matrix a values for each (i, j) board
-    qs = torch.zeros((m, n, a), dtype=torch.float)
-    for i in range(m):
-        for j in range(n):
-            board = create_board(i, j, m, n)
-            board = torch.tensor(board.reshape(m * n), dtype=torch.float)
-            qs[i, j, :] = model(board)
-
-    return qs
-
-
-def filter_Q_tensor(Qs, possible_actions, default=0.0):
-    """Filter Qs that are not currently possible"""
-    m, n, _ = Qs.shape
-    m -= 1  # max size offset
-    n -= 1
-
-    Qs_filt = torch.ones_like(Qs) * default
-    for action in possible_actions:
-        x, y = m + action[0], n + action[1]
-        Qs_filt[x, y, :] = Qs[x, y, :]
-
-    return Qs_filt
-
-
-def expected_value(m, n, model):
-    """Estimate the expected value of each board position"""
-    # Build the matrix a values for each (i, j) board
-    values = np.zeros((m, n))
-    for i in range(m):
-        for j in range(n):
-            board = flatten_board(create_board(i, j, m, n))
-            values[i, j] = np.max(model(board).detach().numpy())
-
-    return values
-
-
-def estimate_cold(m, n, model, threshold=0.0):
-    """Estimate cold positions, enforcing symmetry on the diagonal"""
-    values = expected_value(m, n, model)
-    cold = np.zeros_like(values)
-
-    # Cold
-    mask = values < threshold
-    cold[mask] = -1.0
-    cold[mask.transpose()] = -1.0
-
-    return cold
-
-
-def estimate_hot(m, n, model, threshold=0.5):
-    """Estimate hot positions"""
-    values = expected_value(m, n, model)
-    hot = np.zeros_like(values)
-
-    mask = values > threshold
-    hot[mask] = 1.0
-
-    return hot
-
-
-def estimate_hot_cold(m, n, model, hot_threshold=0.75, cold_threshold=0.25):
-    """Estimate hot and cold positions"""
-    hot = estimate_hot(m, n, model, hot_threshold)
-    cold = estimate_cold(m, n, model, cold_threshold)
-
-    return hot + cold
-
-
-def pad_board(m, n, board, value):
-    """Given a board-shaped array, pad it to (m,n) with value."""
-
-    padded = np.ones((m, n)) * value
-    o, p = board.shape
-    padded[0:o, 0:p] = board
-
-    return padded
-
-
-def estimate_alp_hot_cold(m, n, model, conf=0.05, default=0.5):
-    """Estimate hot and cold positions"""
-
-    values = expected_value(m, n, model)
-    values = (values + 1.0) / 2.0
-
-    hotcold = np.ones_like(values) * default
-
-    # Cold
-    mask = values < (conf * 1.3)
-    hotcold[mask] = values[mask]
-    hotcold[mask.transpose()] = values[mask]
-
-    # Hot?
-    # TODO? Skipped the random part....
-    mask = values > (1 - conf)
-    hotcold[mask] = values[mask]
-
-    return hotcold
-
-
-def evaluate_models(stumbler,
-                    strategist,
-                    stumbler_env,
-                    strategist_env,
-                    num_eval=100,
-                    possible_actions=[(-1, 0), (0, -1), (-1, -1)]):
-    """Compare stumblers to strategists.
-    
-    Returns 
-    -------
-    wins : float
-        the fraction of games won by the strategist.
-    """
-    # -------------------------------------------
-    # Init boards, etc
-
-    # Stratgist
-    x, y, board = strategist_env.reset()
-    strategist_env.close()
-    m, n = board.shape
-
-    strategy_values = estimate_strategic_value(m, n, strategist)
-
-    # Stumbler
-    _, _, little_board = stumbler_env.reset()
-    o, p = little_board.shape
-    stumbler_env.close()
-
-    q_values = create_Q_tensor(o, p, len(possible_actions), stumbler)
-
-    # -------------------------------------------
-    # a stumbler and a strategist take turns
-    # playing a game....
-    wins = 0.0
-    for _ in range(num_eval):
-        # (re)init
-        x, y, board = strategist_env.reset()
-        board = torch.tensor(board.reshape(m * n))
-
-        while True:
-            # -------------------------------------------
-            # The stumbler goes first (the polite and
-            # coservative thing to do).
-            # (Adj for board size differences)
-            if (x < o) and (y < p):
-                Qs = q_values[x, y, :]
-                Qs = torch.tensor(Qs)
-
-                action_index = greedy(Qs)
-            else:
-                action_index = np.random.randint(0, len(possible_actions))
-
-            action = possible_actions[int(action_index)]
-
-            (x, y, _), reward, done, _ = strategist_env.step(action)
-            if done:
-                break
-
-            # Now the strategist
-            Vs = []
-            for a in possible_actions:
-                Vs.append(strategy_values[x + a[0], y + a[1]])
-
-            action_index = greedy(torch.tensor(Vs))
-            action = possible_actions[int(action_index)]
-
-            (x, y, _), reward, done, _ = strategist_env.step(action)
-            if done:
-                wins += 1  # We care when the strategist wins
-                break
-
-    return float(wins)
-
-
-def peak(env):
-    """Peak at the env's board"""
-    x, y, board, moves = env.reset()
-    env.close()
-    m, n = board.shape
-
-    return m, n, board, moves
-
-
-def flatten_board(board):
-    m, n = board.shape
-    return torch.tensor(board.reshape(m * n), dtype=torch.float)
-
-
-def create_Q_bias(x, y, bias_board, Qs, possible_actions):
-    Qs_bias = np.zeros_like(Qs.detach())
-    if bias_board is not None:
-        for i, a in enumerate(possible_actions):
-            Qs_bias[i] = bias_board[x + a[0], y + a[1]]
-
-    return torch.tensor(Qs_bias, dtype=torch.float)
-
-
-def random_action(possible_actions):
-    idx = np.random.randint(0, len(possible_actions))
-    return idx, possible_actions[idx]
-
-
-def create_env(wythoff_name):
-    env = gym.make('{}-v0'.format(wythoff_name))
-    env = wrappers.Monitor(
-        env, './tmp/{}-v0-1'.format(wythoff_name), force=True)
-
-    return env
-
-
-def create_actions(x, y):
-    actions = []
-
-    for i in range(1, x):
-        actions.append((-i, 0))
-    for i in range(1, y):
-        actions.append((0, -i))
-
-    shortest = min(x, y)
-    for i in range(1, shortest + 1):
-        actions.append((-i, -i))
-
-    return actions
-
-
-def locate_actions(x, y, actions):
-    possible = []
-    for k, (i, j) in enumerate(actions):
-        if (abs(i) <= x) and (abs(j) <= y):
-            possible.append(k)
-
-    return possible
-
-
-def _np_greedy(x, index=None):
-    """Pick the biggest"""
-    # Filter x using index, but first ensure we can
-    # map the action back to x' orignal 'space'
-    if index is not None:
-        x = x[index]
-
-    action = np.argmax(x)
-
-    # Map back to x's original space
-    if index is not None:
-        action = index[action]
-
-    return action
-
-
-def _np_epsilon_greedy(x, epsilon, index=None):
-    """Pick the biggest, with probability epsilon"""
-
-    # Filter x using index, but first ensure we can
-    # map the action back to x' orignal 'space'
-    if index is not None:
-        x = x[index]
-
-    if np.random.rand() < epsilon:
-        action = np.random.randint(0, x.shape[0])
-    else:
-        action = np.argmax(x)
-
-    # Map back to x's original space
-    if index is not None:
-        action = index[action]
-
-    return action
-
-
-def _np_softmax(x, beta=0.98, index=None):
-    """
-    Pick an action with softmax
-    """
-
-    # Filter x using index, but first ensure we can
-    # map the action back to x' orignal 'space'
-    if index is not None:
-        x = x[index]
-
-    # multiply x against the beta parameter,
-    x = x * float(beta)
-
-    # subtract the max for numerical stability
-    x = x - np.max(x)
-
-    # exponentiate x
-    x = np.exp(x)
-
-    # take the sum along the specified axis
-    ax_sum = np.sum(x)
-
-    # finally: divide elementwise
-    p = x / ax_sum
-
-    # sample action using p
-    actions = np.arange(len(x), dtype=np.int)
-    action = np.random.choice(actions, p=p)
-
-    # Map back to x's original space
-    if index is not None:
-        action = index[action]
-
-    return action
-
-
-def _np_expected_value(m, n, model):
-    """Estimate the expected value of each board position"""
-    # Build the matrix a values for each (i, j) board
-    values = np.zeros((m, n))
-    for i in range(m):
-        for j in range(n):
-            board = tuple(flatten_board(create_board(i, j, m, n)).numpy())
-            try:
-                values[i, j] = model[board].mean()
-            except KeyError:
-                values[i, j] = 0.0
-
-    return values
-
-
-def _np_min_value(m, n, model):
-    """Estimate the min value of each board position"""
-    # Build the matrix a values for each (i, j) board
-    values = np.zeros((m, n))
-    for i in range(m):
-        for j in range(n):
-            board = tuple(flatten_board(create_board(i, j, m, n)).numpy())
-            try:
-                values[i, j] = model[board].min()
-            except KeyError:
-                values[i, j] = 0.0
-
-    return values
-
-
-def _np_max_value(m, n, model):
-    """Estimate the max value of each board position"""
-    # Build the matrix a values for each (i, j) board
-    values = np.zeros((m, n))
-    for i in range(m):
-        for j in range(n):
-            board = tuple(flatten_board(create_board(i, j, m, n)).numpy())
-            try:
-                values[i, j] = model[board].max()
-            except KeyError:
-                values[i, j] = 0.0
-
-    return values
-
-
-def _np_plot_wythoff_expected_values(m,
-                                     n,
-                                     model,
-                                     plot=False,
-                                     path=None,
-                                     vmin=-2,
-                                     vmax=2,
-                                     name='wythoff_expected_values.png'):
-    """Plot EVs"""
-    values = _np_expected_value(m, n, model)
-
-    # !
-    fig, ax = plt.subplots()  # Sample figsize in inches
-    # ax = sns.heatmap(values, linewidths=3, vmin=vmin, vmax=vmax, ax=ax)
-    ax = sns.heatmap(values, linewidths=3, ax=ax)
-
-    # Save an image?
-    if path is not None:
-        plt.savefig(os.path.join(path, name))
-
-    if plot:
-        # plt.show()
-        plt.pause(0.01)
-
-    plt.close()
-
-
-def _np_plot_wythoff_min_values(m,
-                                n,
-                                model,
-                                plot=False,
-                                path=None,
-                                vmin=-2,
-                                vmax=2,
-                                name='wythoff_min_values.png'):
-    """Plot min Vs"""
-    values = _np_min_value(m, n, model)
-
-    # !
-    fig, ax = plt.subplots()  # Sample figsize in inches
-    # ax = sns.heatmap(values, linewidths=3, vmin=vmin, vmax=vmax, ax=ax)
-    ax = sns.heatmap(values, linewidths=3, ax=ax)
-
-    # Save an image?
-    if path is not None:
-        plt.savefig(os.path.join(path, name))
-
-    if plot:
-        # plt.show()
-        plt.pause(0.01)
-
-    plt.close()
-
-
-def _np_plot_wythoff_max_values(m,
-                                n,
-                                model,
-                                plot=False,
-                                path=None,
-                                vmin=-2,
-                                vmax=2,
-                                name='wythoff_max_values.png'):
-    """Plot  max Vs"""
-    values = _np_max_value(m, n, model)
-
-    # !
-    fig, ax = plt.subplots()  # Sample figsize in inches
-    # ax = sns.heatmap(values, linewidths=3, vmin=vmin, vmax=vmax, ax=ax)
-    ax = sns.heatmap(values, linewidths=3, ax=ax)
-
-    # Save an image?
-    if path is not None:
-        plt.savefig(os.path.join(path, name))
-
-    if plot:
-        # plt.show()
-        plt.pause(0.01)
-
-    plt.close()
+from azad.util.wythoff import *
 
 
 def wythoff_agent(path,
@@ -848,7 +215,7 @@ def wythoff_stumbler(path,
                      game='Wythoff3x3',
                      model=None,
                      bias_board=None,
-                     log=False,
+                     tensorboard=False,
                      seed=None):
     """Train a NN-based Q-agent to play Wythoff's game, using SGD."""
     # -------------------------------------------
@@ -861,8 +228,8 @@ def wythoff_stumbler(path,
         if exception.errno != errno.EEXIST:
             raise
 
-    # Do log?
-    if log:
+    # Do tensorboard?
+    if tensorboard:
         writer = SummaryWriter(log_dir=path)
 
     # Crate env
@@ -872,112 +239,79 @@ def wythoff_stumbler(path,
     env.seed(seed)
     np.random.seed(seed)
 
-    # -------------------------------------------
+    # ------------------------------------------------------------------------
     # Build a Q agent, and its optimizer
-    m, n, board = peak(env)
-    all_actions = create_actions(m, n)
-    a = len(all_actions)
+    default_Q = 0.0
+    m, n, board, moves = peak(env)
 
+    # Init the model
     if model is None:
         model = LinQN1(m * n, len(all_actions))
-
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     # -------------------------------------------
     # Run some trials
     for trial in range(num_trials):
-        x, y, board = env.reset()
-        board = flatten_board(board)
-
+        # ----------------------------------------------------------------
+        # Re-init
         steps = 0
 
-        if log:
-            print("--- TRIAL {} ---".format(trial))
+        x, y, board, moves = env.reset()
+        board = tuple(flatten_board(board).numpy())
 
-        while True:
-            # Generate moves
-            possible_index = locate_actions(x, y, all_actions)
-            possible_actions = [all_actions[i] for i in possible_index]
+        if debug:
+            print("---------------------------------------")
+            print(">>> NEW GAME ({}).".format(trial))
+            print(">>> Initial position ({}, {})".format(x, y))
+            print(">>> Initial moves {}".format(moves))
+            print("---------------------------------------")
 
-            # Get their values
+        # --------------------------------------------------------------------
+        done = False
+        while done:
+            # ----------------------------------------------------------------
+            # PLAYER
+
+            # Get all the values
             Qs = model(board)
-            # Qs = create_Q_tensor(m, n, a, model)
-            # Qs = filter_Q_tensor(Qs, possible_actions, default=0.0)
-            # Qs = Qs[x, y, :]
 
             # Bias Q?
             # Qs.add_(create_Q_bias(x, y, bias_board, Qs, possible_index))
 
-            # Make a decision.
+            # Move!
             with torch.no_grad():
-                action_index = epsilon_greedy(
+                player_index = epsilon_greedy(
                     Qs, epsilon, index=possible_index)
-                action = all_actions[action_index]
+                player_move = moves[player_index]
 
-            Q = Qs.gather(0, torch.tensor(action_index))
+            (x, y, next_board, moves), reward, done, _ = env.step(player_move)
+            next_board = tuple(flatten_board(next_board).numpy())
 
-            if log:
-                print("--- PLAYER ---")
-                print(">>> Position ({}, {})".format(x, y))
-                print(">>> All moves {}".format(all_actions))
-                print(">>> Possible index {}".format(possible_index))
-                print(">>> Possible moves {}".format(possible_actions))
-                print(">>> Action index {}".format(action_index))
-                print(">>> Action {}".format(action))
-
-            # Take an action
-            (x, y, next_board), reward, done, _ = env.step(action)
-            next_board = flatten_board(next_board)
-
-            # Step complete....
             steps += 1
 
-            # Bad moves end the game with no reward
-            # we don't want to learn from bad moves
-            # so continue. Bad moves don't shift x,y.
-            if done and reward == 0:
-                if log:
-                    print(">>> Bad move ({}, {})".format(*action))
-                break
+            if debug:
+                print(">>> PLAYER move {}".format(player_move))
 
-            # ---
+            # ----------------------------------------------------------------
             # Greedy opponent plays?
-            opp_reward = 0
             if not done:
-                # Generate moves
-                possible_index = locate_actions(x, y, all_actions)
-                possible_actions = [all_actions[i] for i in possible_index]
-
                 with torch.no_grad():
-                    action_index_opp = greedy(Qs, index=possible_index)
-                    action_opp = all_actions[action_index]
+                    opponent_index = greedy(model(next_board))
+                    opponent_move = moves[opponent_index]
 
-                if log:
-                    print("--- OPPONENT ---")
-                    print(">>> Position ({}, {})".format(x, y))
-                    print(">>> All moves {}".format(all_actions))
-                    print(">>> Possible index {}".format(possible_index))
-                    print(">>> Possible moves {}".format(possible_actions))
-                    print(">>> Action index {}".format(action_index_opp))
-                    print(">>> Action {}".format(action_opp))
-
-                (x, y, next_board), opp_reward, done, _ = env.step(action_opp)
+                (x, y, next_board,
+                 moves), reward, done, _ = env.step(opponent_move)
                 next_board = flatten_board(next_board)
 
-                if done and opp_reward == 0:
-                    if log:
-                        print(">>> Opponent bad move ({}, {})".format(
-                            *action_opp))
-                    break
+                reward *= -1
 
-                # Opponent wins get punished
-                opp_reward *= -1
+                if debug:
+                    print(">>> OPPONENT move {}".format(opponent_move))
 
-            # ---
-            # Join rewards (they are exclusive)
-            reward = reward + opp_reward
+            # ----------------------------------------------------------------
+            # Learn!
+            Q = Qs.gather(0, torch.tensor(player_index))
 
-            # Learn
             max_Q = model(next_board).detach().max()
             next_Q = reward + (gamma * max_Q)
             loss = F.smooth_l1_loss(Q, next_Q)
@@ -986,29 +320,27 @@ def wythoff_stumbler(path,
             loss.backward()
             optimizer.step()
 
+            # ----------------------------------------------------------------
             # Prep for next iteration
             board = next_board
 
-            if log:
-                if reward > 0:
-                    print("--- WIN ---")
-                if reward < 0:
-                    print("--- OPPONENT WIN ---")
+            # ----------------------------------------------------------------
+            if debug:
+                print(">>> Reward {}; Loss(Q {}, next_Q {}) -> {}".format(
+                    reward, Q, next_Q, loss))
 
-                print(">>> Reward {}".format(reward))
-                print(">>> Loss(Q {}, next_Q {})".format(Q, next_Q))
-                print(">>> Bias grad. {}".format(model.fc1.bias.grad))
+                if done and (reward > 0):
+                    print("*** WIN ***")
+                if done and (reward < 0):
+                    print("*** OPPONENT WIN ***")
 
-                # TB:
-                # Scalars
-                writer.add_scalar(os.path.join(path, 'trial'), trial, steps)
-                writer.add_scalar(os.path.join(path, 'steps'), steps, trial)
+            if tensorboard and (int(trial) % 50) == 0:
                 writer.add_scalar(os.path.join(path, 'reward'), reward, trial)
                 writer.add_scalar(os.path.join(path, 'Q'), Q, trial)
                 writer.add_scalar(
                     os.path.join(path, 'error'), loss.data[0], trial)
+                writer.add_scalar(os.path.join(path, 'steps'), steps, trial)
 
-                # Boards
                 # Optimal ref:
                 plot_cold_board(m, n, path=path, name='cold_board.png')
                 writer.add_image(
@@ -1016,33 +348,30 @@ def wythoff_stumbler(path,
                     skimage.io.imread(os.path.join(path, 'cold_board.png')))
 
                 # EV:
-                plot_wythoff_expected_values(
+                _np_plot_wythoff_expected_values(
                     m, n, model, path=path, name='wythoff_expected_values.png')
                 writer.add_image(
                     'expected_value',
                     skimage.io.imread(
                         os.path.join(path, 'wythoff_expected_values.png')))
 
-                # Q(a):
-                plot_q_action_values(
-                    m,
-                    n,
-                    len(all_actions),
-                    model,
-                    possible_actions=all_actions,
-                    path=path,
-                    name='wythoff_q_action_values.png')
+                _np_plot_wythoff_min_values(
+                    m, n, model, path=path, name='wythoff_min_values.png')
                 writer.add_image(
-                    'q_action_values',
+                    'min_value',
                     skimage.io.imread(
-                        os.path.join(path, 'wythoff_q_action_values.png')))
+                        os.path.join(path, 'wythoff_min_values.png')))
 
-            if done:
-                break
+                _np_plot_wythoff_max_values(
+                    m, n, model, path=path, name='wythoff_max_values.png')
+                writer.add_image(
+                    'max_value',
+                    skimage.io.imread(
+                        os.path.join(path, 'wythoff_max_values.png')))
 
-    # -------------------------------------------
+    # ------------------------------------------------------------------------
     # The end
-    if log:
+    if tensorboard:
         writer.close()
 
     return model, env
