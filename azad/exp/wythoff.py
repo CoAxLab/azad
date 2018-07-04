@@ -25,6 +25,11 @@ from skimage import data, io
 import gym
 from gym import wrappers
 import azad.local_gym
+from azad.local_gym.wythoff import create_moves
+from azad.local_gym.wythoff import create_all_possible_moves
+from azad.local_gym.wythoff import locate_moves
+from azad.local_gym.wythoff import create_cold_board
+from azad.local_gym.wythoff import create_board
 
 from azad.models import LinQN1
 from azad.models import HotCold2
@@ -71,7 +76,7 @@ def wythoff_agent(path,
     # ------------------------------------------------------------------------
     # Build a Q agent, and its optimizer
     default_Q = 0.0
-    m, n, board, moves = peak(env)
+    m, n, board, moves = peek(env)
 
     # Init the lookup table
     model = {}
@@ -157,7 +162,7 @@ def wythoff_agent(path,
             # if tensorboard and (int(trial) % 50) == 0:
             if debug:
                 print(">>> Reward {}; Loss(Q {}, next_Q {}) -> {}".format(
-                    reward, Q, next_Q, loss))
+                    reward, float(Q.detach().numpy()), next_Q, loss))
 
                 if done and (reward > 0):
                     print("*** WIN ***")
@@ -216,6 +221,7 @@ def wythoff_stumbler(path,
                      model=None,
                      bias_board=None,
                      tensorboard=False,
+                     debug=False,
                      seed=None):
     """Train a NN-based Q-agent to play Wythoff's game, using SGD."""
     # -------------------------------------------
@@ -241,23 +247,27 @@ def wythoff_stumbler(path,
 
     # ------------------------------------------------------------------------
     # Build a Q agent, and its optimizer
-    default_Q = 0.0
-    m, n, board, moves = peak(env)
+    m, n, board, _ = peek(env)
+    all_possible_moves = create_all_possible_moves(m, n)
 
     # Init the model
     if model is None:
-        model = LinQN1(m * n, len(all_actions))
+        model = LinQN1(m * n, len(all_possible_moves))
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
-    # -------------------------------------------
+    # ------------------------------------------------------------------------
     # Run some trials
     for trial in range(num_trials):
-        # ----------------------------------------------------------------
+        # --------------------------------------------------------------------
         # Re-init
         steps = 0
 
+        # Start the game
         x, y, board, moves = env.reset()
-        board = tuple(flatten_board(board).numpy())
+
+        # Post-process play
+        board = flatten_board(board)
+        moves_index = locate_moves(moves, all_possible_moves)
 
         if debug:
             print("---------------------------------------")
@@ -268,7 +278,7 @@ def wythoff_stumbler(path,
 
         # --------------------------------------------------------------------
         done = False
-        while done:
+        while not done:
             # ----------------------------------------------------------------
             # PLAYER
 
@@ -280,54 +290,63 @@ def wythoff_stumbler(path,
 
             # Move!
             with torch.no_grad():
-                player_index = epsilon_greedy(
-                    Qs, epsilon, index=possible_index)
-                player_move = moves[player_index]
+                move_i = epsilon_greedy(Qs, epsilon, index=moves_index)
+                move = all_possible_moves[move_i]
 
-            (x, y, next_board, moves), reward, done, _ = env.step(player_move)
-            next_board = tuple(flatten_board(next_board).numpy())
+            # Get Q(s, ....)
+            Q = Qs.gather(0, torch.tensor(move_i))
 
+            # Play
+            (x, y, board, moves), reward, done, _ = env.step(move)
+
+            board = flatten_board(board)
+            moves_index = locate_moves(moves, all_possible_moves)
+
+            # Count player moves
             steps += 1
 
             if debug:
-                print(">>> PLAYER move {}".format(player_move))
+                print(">>> PLAYER move {}".format(move))
 
             # ----------------------------------------------------------------
             # Greedy opponent plays?
             if not done:
                 with torch.no_grad():
-                    opponent_index = greedy(model(next_board))
-                    opponent_move = moves[opponent_index]
+                    move_i = greedy(model(board), index=moves_index)
+                    move = all_possible_moves[move_i]
 
-                (x, y, next_board,
-                 moves), reward, done, _ = env.step(opponent_move)
-                next_board = flatten_board(next_board)
+                # Play
+                (x, y, board, moves), reward, done, _ = env.step(move)
 
+                board = flatten_board(board)
+                moves_index = locate_moves(moves, all_possible_moves)
+
+                # Count opponent moves
+                steps += 1
+
+                # Flip reward
                 reward *= -1
 
                 if debug:
-                    print(">>> OPPONENT move {}".format(opponent_move))
+                    print(">>> OPPONENT move {}".format(move))
 
             # ----------------------------------------------------------------
             # Learn!
-            Q = Qs.gather(0, torch.tensor(player_index))
+            next_Qs = model(board).detach()
+            next_Qs.gather(0, torch.tensor(moves_index))
+            max_Q = next_Qs.max()
 
-            max_Q = model(next_board).detach().max()
-            next_Q = reward + (gamma * max_Q)
-            loss = F.smooth_l1_loss(Q, next_Q)
+            next_Q = (reward + (gamma * max_Q))
+            loss = next_Q - Q
 
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
 
             # ----------------------------------------------------------------
-            # Prep for next iteration
-            board = next_board
-
-            # ----------------------------------------------------------------
             if debug:
                 print(">>> Reward {}; Loss(Q {}, next_Q {}) -> {}".format(
-                    reward, Q, next_Q, loss))
+                    reward, float(Q.detach().numpy()), next_Q, loss))
 
                 if done and (reward > 0):
                     print("*** WIN ***")
@@ -337,8 +356,7 @@ def wythoff_stumbler(path,
             if tensorboard and (int(trial) % 50) == 0:
                 writer.add_scalar(os.path.join(path, 'reward'), reward, trial)
                 writer.add_scalar(os.path.join(path, 'Q'), Q, trial)
-                writer.add_scalar(
-                    os.path.join(path, 'error'), loss.data[0], trial)
+                writer.add_scalar(os.path.join(path, 'error'), loss, trial)
                 writer.add_scalar(os.path.join(path, 'steps'), steps, trial)
 
                 # Optimal ref:
@@ -348,26 +366,12 @@ def wythoff_stumbler(path,
                     skimage.io.imread(os.path.join(path, 'cold_board.png')))
 
                 # EV:
-                _np_plot_wythoff_expected_values(
+                plot_wythoff_expected_values(
                     m, n, model, path=path, name='wythoff_expected_values.png')
                 writer.add_image(
                     'expected_value',
                     skimage.io.imread(
                         os.path.join(path, 'wythoff_expected_values.png')))
-
-                _np_plot_wythoff_min_values(
-                    m, n, model, path=path, name='wythoff_min_values.png')
-                writer.add_image(
-                    'min_value',
-                    skimage.io.imread(
-                        os.path.join(path, 'wythoff_min_values.png')))
-
-                _np_plot_wythoff_max_values(
-                    m, n, model, path=path, name='wythoff_max_values.png')
-                writer.add_image(
-                    'max_value',
-                    skimage.io.imread(
-                        os.path.join(path, 'wythoff_max_values.png')))
 
     # ------------------------------------------------------------------------
     # The end
@@ -412,8 +416,8 @@ def wythoff_strategist(
     # Build a Strategist, its memory, and its optimizer
 
     # Board sizes....
-    m, n, board = peak(env)
-    o, p, _ = peak(create_env(stumbler_game))
+    m, n, board = peek(env)
+    o, p, _ = peek(create_env(stumbler_game))
 
     # Def the strategist model, opt, and mem
     # model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
@@ -577,8 +581,8 @@ def wythoff_optimal(
     # Build a Strategist, its memory, and its optimizer
 
     # How big are the boards?
-    m, n, board = peak(env)
-    o, p, _ = peak(env)
+    m, n, board = peek(env)
+    o, p, _ = peek(env)
 
     # Create a model, of the right size.
     model = HotCold2(2, num_hidden1=num_hidden1)
