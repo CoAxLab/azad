@@ -1,8 +1,41 @@
+from scipy.constants import golden
+
 import numpy as np
 import gym
 
 
+def create_board(i, j, m, n):
+    board = np.zeros((m, n))
+    board[i, j] = 1.0
+
+    return board
+
+
+def create_cold_board(m, n):
+    cold_board = np.zeros((m, n))
+    for k in range(m - 1):
+        mk = int(k * golden)
+        nk = int(k * golden**2)
+        if (nk < m) and (mk < n):
+            cold_board[mk, nk] = 1
+            cold_board[nk, mk] = 1
+
+    return cold_board
+
+
+def create_all_possible_moves(m, n):
+    moves = []
+    for i in range(m):
+        for j in range(n):
+            moves.append((i, j))
+
+    return list(set(moves))
+
+
 def create_moves(x, y):
+    if (x == 0) and (y == 0):
+        return list([(0, 0)])
+
     moves = []
     for i in range(x):
         moves.append((i, y))
@@ -14,6 +47,15 @@ def create_moves(x, y):
         moves.append((x - i, y - i))
 
     return list(set(moves))
+
+
+def locate_moves(moves, all_possible_moves):
+    index = []
+    for m in moves:
+        i = all_possible_moves.index(m)
+        index.append(i)
+
+    return index
 
 
 class WythoffEnv(gym.Env):

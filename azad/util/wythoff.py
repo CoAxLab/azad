@@ -31,7 +31,11 @@ from azad.models import HotCold2
 from azad.models import HotCold3
 from azad.policy import epsilon_greedy
 from azad.policy import greedy
-from azad.util import ReplayMemory
+from azad.local_gym.wythoff import create_moves
+from azad.local_gym.wythoff import create_all_possible_moves
+from azad.local_gym.wythoff import locate_moves
+from azad.local_gym.wythoff import create_cold_board
+from azad.local_gym.wythoff import create_board
 
 
 def plot_wythoff_board(board,
@@ -44,10 +48,6 @@ def plot_wythoff_board(board,
 
     fig, ax = plt.subplots()  # Sample figsize in inches
     ax = sns.heatmap(board, linewidths=3, vmin=vmin, vmax=vmax, ax=ax)
-
-    # fig = plt.figure()
-    # plt.matshow(board, vmin=vmin, vmax=vmax)
-    # plt.colorbar()
 
     # Save an image?
     if path is not None:
@@ -77,40 +77,25 @@ def plot_cold_board(m, n, plot=False, path=None, name='cold_board.png'):
     plt.close('all')
 
 
-def plot_q_action_values(m,
-                         n,
-                         a,
-                         model,
-                         plot=False,
-                         possible_actions=None,
-                         path=None,
-                         vmin=-2,
-                         vmax=2,
-                         name='wythoff_q_action_values.png'):
-    """Plot Q values for each possible action"""
+def expected_value(m, n, model):
+    """Estimate the expected value of each board position"""
 
-    qs = create_Q_tensor(m, n, a, model).detach().numpy()
+    # Build the matrix a values for each (i, j) board
+    values = np.zeros((m, n))
+    all_possible_moves = create_all_possible_moves(m, n)
 
-    # Init plot
-    fig, axarr = plt.subplots(1, a, sharey=True, figsize=(17, 4))
+    for i in range(m):
+        for j in range(n):
+            board = flatten_board(create_board(i, j, m, n))
+            if i == 0 and j == 0:
+                moves = [(0, 0)]
+            else:
+                moves = create_moves(i, j)
 
-    for k in range(a):
-        q_a = qs[:, :, k]
-        axarr[k] = sns.heatmap(
-            q_a, vmin=vmin, vmax=vmax, linewidths=3, ax=axarr[k])
+            index = locate_moves(moves, all_possible_moves)
+            values[i, j] = np.max(model(board).detach().numpy()[index])
 
-        if possible_actions is not None:
-            axarr[k].set_title(possible_actions[k])
-
-    # Save an image?
-    if path is not None:
-        plt.savefig(os.path.join(path, name))
-
-    if plot:
-        # plt.show()
-        plt.pause(0.01)
-
-    plt.close('all')
+    return values
 
 
 def plot_wythoff_expected_values(m,
@@ -127,39 +112,16 @@ def plot_wythoff_expected_values(m,
     # !
     fig, ax = plt.subplots()  # Sample figsize in inches
     ax = sns.heatmap(values, linewidths=3, vmin=vmin, vmax=vmax, ax=ax)
-
-    # fig = plt.figure()
-    # plt.matshow(values, vmin=-v_size, vmax=v_size)
-    # plt.colorbar()
+    # ax = sns.heatmap(values, linewidths=3, ax=ax)
 
     # Save an image?
     if path is not None:
         plt.savefig(os.path.join(path, name))
 
     if plot:
-        # plt.show()
         plt.pause(0.01)
 
     plt.close()
-
-
-def create_cold_board(m, n):
-    cold_board = np.zeros((m, n))
-    for k in range(m - 1):
-        mk = int(k * golden)
-        nk = int(k * golden**2)
-        if (nk < m) and (mk < n):
-            cold_board[mk, nk] = 1
-            cold_board[nk, mk] = 1
-
-    return cold_board
-
-
-def create_board(i, j, m, n):
-    board = np.zeros((m, n))
-    board[i, j] = 1.0
-
-    return board
 
 
 def estimate_strategic_value(m, n, hotcold):
@@ -187,6 +149,8 @@ def convert_ijv(data):
 
 
 def balance_ijv(ijv_data, null_value):
+    """Balance counts of null versus other values"""
+
     # Separate data based on null_value
     other = []
     null = []
@@ -204,8 +168,7 @@ def balance_ijv(ijv_data, null_value):
     if N_null == 0:
         raise ValueError("No null data to balance against.")
 
-    # Nothing to do if there is no other data,
-    # so just return I
+    # Nothing to do if there is no other data, so just return I
     if N_other == 0:
         return ijv_data
 
@@ -222,45 +185,6 @@ def balance_ijv(ijv_data, null_value):
         return ijv_data
 
     return null + other
-
-
-def create_Q_tensor(m, n, a, model):
-    """Estimate the expected value of each board position"""
-    # Build the matrix a values for each (i, j) board
-    qs = torch.zeros((m, n, a), dtype=torch.float)
-    for i in range(m):
-        for j in range(n):
-            board = create_board(i, j, m, n)
-            board = torch.tensor(board.reshape(m * n), dtype=torch.float)
-            qs[i, j, :] = model(board)
-
-    return qs
-
-
-def filter_Q_tensor(Qs, possible_actions, default=0.0):
-    """Filter Qs that are not currently possible"""
-    m, n, _ = Qs.shape
-    m -= 1  # max size offset
-    n -= 1
-
-    Qs_filt = torch.ones_like(Qs) * default
-    for action in possible_actions:
-        x, y = m + action[0], n + action[1]
-        Qs_filt[x, y, :] = Qs[x, y, :]
-
-    return Qs_filt
-
-
-def expected_value(m, n, model):
-    """Estimate the expected value of each board position"""
-    # Build the matrix a values for each (i, j) board
-    values = np.zeros((m, n))
-    for i in range(m):
-        for j in range(n):
-            board = flatten_board(create_board(i, j, m, n))
-            values[i, j] = np.max(model(board).detach().numpy())
-
-    return values
 
 
 def estimate_cold(m, n, model, threshold=0.0):
@@ -400,7 +324,7 @@ def evaluate_models(stumbler,
     return float(wins)
 
 
-def peak(env):
+def peek(env):
     """Peak at the env's board"""
     x, y, board, moves = env.reset()
     env.close()
@@ -414,15 +338,6 @@ def flatten_board(board):
     return torch.tensor(board.reshape(m * n), dtype=torch.float)
 
 
-def create_Q_bias(x, y, bias_board, Qs, possible_actions):
-    Qs_bias = np.zeros_like(Qs.detach())
-    if bias_board is not None:
-        for i, a in enumerate(possible_actions):
-            Qs_bias[i] = bias_board[x + a[0], y + a[1]]
-
-    return torch.tensor(Qs_bias, dtype=torch.float)
-
-
 def random_action(possible_actions):
     idx = np.random.randint(0, len(possible_actions))
     return idx, possible_actions[idx]
@@ -434,30 +349,6 @@ def create_env(wythoff_name):
         env, './tmp/{}-v0-1'.format(wythoff_name), force=True)
 
     return env
-
-
-def create_actions(x, y):
-    actions = []
-
-    for i in range(1, x):
-        actions.append((-i, 0))
-    for i in range(1, y):
-        actions.append((0, -i))
-
-    shortest = min(x, y)
-    for i in range(1, shortest + 1):
-        actions.append((-i, -i))
-
-    return actions
-
-
-def locate_actions(x, y, actions):
-    possible = []
-    for k, (i, j) in enumerate(actions):
-        if (abs(i) <= x) and (abs(j) <= y):
-            possible.append(k)
-
-    return possible
 
 
 def _np_greedy(x, index=None):
