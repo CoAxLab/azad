@@ -96,6 +96,19 @@ class QN3(nn.Module):
         return F.relu(self.fc3(x))
 
 
+class Table(nn.Module):
+    def __init__(self, in_channels=4, out_channels=2):
+        """A linear model, tuned to act as lookup table learned by SGD.
+        """
+
+        super(Table, self).__init__()
+        self.fc1 = nn.Linear(in_channels, out_channels, bias=False)
+        self.fc1.weight.data.uniform_(0, 0)
+
+    def forward(self, x):
+        return self.fc1(x)
+
+
 class LinQN1(nn.Module):
     def __init__(self, in_channels=4, num_actions=2):
         """One layer linear Q model.
