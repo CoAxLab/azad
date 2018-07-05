@@ -53,9 +53,9 @@ import azad.local_gym
 from azad.models import LinQN1
 from azad.models import HotCold2
 from azad.models import HotCold3
+from azad.models import ReplayMemory
 from azad.policy import epsilon_greedy
 from azad.policy import greedy
-from azad.util import ReplayMemory
 
 from azad.exp.wythoff import *
 
@@ -105,8 +105,8 @@ def testing_wythoff_strategist(path,
     # Build a Strategist, its memory, and its optimizer
 
     # How big are the boards?
-    m, n, board = peak(wythoff_name_strategist)
-    o, p, _ = peak(wythoff_name_stumbler)
+    m, n, board = peek(wythoff_name_strategist)
+    o, p, _ = peek(wythoff_name_stumbler)
 
     # Create a model, of the right size.
     # model = HotCold2(2, num_hidden1=num_hidden1)
