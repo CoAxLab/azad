@@ -27,9 +27,10 @@ def epsilon_greedy(x, epsilon, index=None):
         x = x[index]
 
     if torch.rand(1) < epsilon:
-        action = torch.argmax(x).unsqueeze(0)
-    else:
         action = torch.randint(0, x.shape[0], (1, ))
+    else:
+        action = torch.argmax(x).unsqueeze(0)
+
     action = int(action)
 
     # Map back to x's original space
