@@ -372,6 +372,7 @@ def wythoff_stumbler(path,
             max_Q = next_Qs.max()
 
             next_Q = (reward + (gamma * max_Q))
+            loss = F.l1_loss(Q, next_Q)
             # loss = next_Q - Q
 
             optimizer.zero_grad()
