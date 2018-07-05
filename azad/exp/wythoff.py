@@ -5,6 +5,7 @@ import errno
 import pudb
 
 from collections import defaultdict
+from copy import deepcopy
 
 import torch
 import torch.optim as optim
@@ -37,7 +38,23 @@ from azad.models import HotCold3
 from azad.models import ReplayMemory
 from azad.policy import epsilon_greedy
 from azad.policy import greedy
-from azad.util.wythoff import *
+
+from azad.util.wythoff import peek
+from azad.util.wythoff import pad_board
+from azad.util.wythoff import flatten_board
+from azad.util.wythoff import convert_ijv
+from azad.util.wythoff import balance_ijv
+from azad.util.wythoff import create_env
+from azad.util.wythoff import create_moves
+from azad.util.wythoff import create_all_possible_moves
+from azad.util.wythoff import create_cold_board
+from azad.util.wythoff import _np_epsilon_greedy
+from azad.util.wythoff import _np_expected_value
+from azad.util.wythoff import _np_greedy
+from azad.util.wythoff import _np_plot_wythoff_max_values
+from azad.util.wythoff import plot_cold_board
+from azad.util.wythoff import plot_wythoff_board
+from azad.util.wythoff import plot_wythoff_expected_values
 
 
 def wythoff_agent(path,
@@ -109,16 +126,26 @@ def wythoff_agent(path,
                 Qs = model[board]
 
             # Move!
-            player_index = _np_epsilon_greedy(Qs, epsilon=epsilon)
-            player_move = moves[player_index]
+            move_i = _np_epsilon_greedy(Qs, epsilon=epsilon)
 
-            (x, y, next_board, moves), reward, done, _ = env.step(player_move)
-            next_board = tuple(flatten_board(next_board).numpy())
+            # Freeze indices so can update Q(s,a) after the opponent
+            # moves.
+            grad_i = deepcopy(move_i)
+            grad_board = deepcopy(board)
+
+            move = moves[move_i]
+
+            # Get Q(s, ....)
+            Q = Qs[move_i]
+
+            # Play
+            (x, y, board, moves), reward, done, _ = env.step(move)
+            board = tuple(flatten_board(board).numpy())
 
             steps += 1
 
             if debug:
-                print(">>> PLAYER move {}".format(player_move))
+                print(">>> PLAYER move {}".format(move))
 
             # ----------------------------------------------------------------
             # Greedy opponent plays?
@@ -126,43 +153,44 @@ def wythoff_agent(path,
 
                 # Generate moves
                 try:
-                    opponent_index = _np_greedy(model[next_board])
+                    move_i = _np_greedy(model[board])
                 except KeyError:
-                    opponent_index = np.random.randint(0, len(moves))
+                    move_i = np.random.randint(0, len(moves))
 
-                opponent_move = moves[opponent_index]
+                move = moves[move_i]
 
-                (x, y, next_board,
-                 moves), reward, done, _ = env.step(opponent_move)
-                next_board = tuple(flatten_board(next_board).numpy())
+                # Play
+                (x, y, board, moves), reward, done, _ = env.step(move)
+                board = tuple(flatten_board(board).numpy())
 
+                # Count opponent moves
+                steps += 1
+
+                # Flip reward
                 reward *= -1
 
                 if debug:
-                    print(">>> OPPONENT move {}".format(opponent_move))
+                    print(">>> OPPONENT move {}".format(move))
 
             # ----------------------------------------------------------------
             # Learn!
             # Value the moves
-            Q = Qs[player_index]
             try:
-                max_Q = model[next_board].max()
+                max_Q = model[board].max()
             except KeyError:
-                max_Q = default_Q
+                model[board] = np.ones(len(moves)) * default_Q
+                max_Q = model[board].max()
 
             next_Q = reward + (gamma * max_Q)
-            loss = next_Q - Q
-            model[board][player_index] = Q + (learning_rate * loss)
 
-            # ----------------------------------------------------------------
-            # Shuffle state
-            board = next_board
+            loss = next_Q - Q
+            model[grad_board][grad_i] = Q + (learning_rate * loss)
 
             # ----------------------------------------------------------------
             # if tensorboard and (int(trial) % 50) == 0:
             if debug:
                 print(">>> Reward {}; Loss(Q {}, next_Q {}) -> {}".format(
-                    reward, float(Q.detach().numpy()), next_Q, loss))
+                    reward, Q, next_Q, loss))
 
                 if done and (reward > 0):
                     print("*** WIN ***")
@@ -183,19 +211,19 @@ def wythoff_agent(path,
                     skimage.io.imread(os.path.join(path, 'cold_board.png')))
 
                 # EV:
-                _np_plot_wythoff_expected_values(
-                    m, n, model, path=path, name='wythoff_expected_values.png')
-                writer.add_image(
-                    'expected_value',
-                    skimage.io.imread(
-                        os.path.join(path, 'wythoff_expected_values.png')))
+                # _np_plot_wythoff_expected_values(
+                #     m, n, model, path=path, name='wythoff_expected_values.png')
+                # writer.add_image(
+                #     'expected_value',
+                #     skimage.io.imread(
+                #         os.path.join(path, 'wythoff_expected_values.png')))
 
-                _np_plot_wythoff_min_values(
-                    m, n, model, path=path, name='wythoff_min_values.png')
-                writer.add_image(
-                    'min_value',
-                    skimage.io.imread(
-                        os.path.join(path, 'wythoff_min_values.png')))
+                # _np_plot_wythoff_min_values(
+                #     m, n, model, path=path, name='wythoff_min_values.png')
+                # writer.add_image(
+                #     'min_value',
+                #     skimage.io.imread(
+                #         os.path.join(path, 'wythoff_min_values.png')))
 
                 _np_plot_wythoff_max_values(
                     m, n, model, path=path, name='wythoff_max_values.png')
@@ -293,8 +321,12 @@ def wythoff_stumbler(path,
                 move_i = epsilon_greedy(Qs, epsilon, index=moves_index)
                 move = all_possible_moves[move_i]
 
+                if debug:
+                    from copy import deepcopy
+                    grad_i = deepcopy(move_i)
+
             # Get Q(s, ....)
-            Q = Qs.gather(0, torch.tensor(move_i))
+            Q = Qs.gather(0, torch.tensor(move_i).clone())
 
             # Play
             (x, y, board, moves), reward, done, _ = env.step(move)
@@ -337,7 +369,9 @@ def wythoff_stumbler(path,
             max_Q = next_Qs.max()
 
             next_Q = (reward + (gamma * max_Q))
-            loss = next_Q - Q
+            loss = F.l1_loss(Q, next_Q.unsqueeze(0))
+            # loss = next_Q - Q
+            # loss = loss.unsqueeze(0)
 
             optimizer.zero_grad()
             loss.backward()
@@ -347,7 +381,10 @@ def wythoff_stumbler(path,
             if debug:
                 print(">>> Reward {}; Loss(Q {}, next_Q {}) -> {}".format(
                     reward, float(Q.detach().numpy()), next_Q, loss))
-
+                print(">>> Bias grad: {}".format(model.fc1.bias.grad))
+                print(">>> Grad index: {}, with grad {}".format(
+                    grad_i, model.fc1.bias.grad[grad_i]))
+                print(">>> W grad: {}".format(model.fc1.weight.grad))
                 if done and (reward > 0):
                     print("*** WIN ***")
                 if done and (reward < 0):
