@@ -310,23 +310,28 @@ def wythoff_stumbler(path,
             # ----------------------------------------------------------------
             # PLAYER
 
+            # Freeze s for Q(s,a) updating after the opponent moves
+            grad_board = board.clone()
+
             # Get all the values
-            Qs = model(board)
+            Qs = model(grad_board)
 
             # Bias Q?
             # Qs.add_(create_Q_bias(x, y, bias_board, Qs, possible_index))
 
             # Move!
             with torch.no_grad():
+                # Get move index
                 move_i = epsilon_greedy(Qs, epsilon, index=moves_index)
-                move = all_possible_moves[move_i]
 
-                if debug:
-                    from copy import deepcopy
-                    grad_i = deepcopy(move_i)
+                # Freeze it, so can update Q(s,a) after the opponent moves.
+                grad_i = deepcopy(move_i)
+
+                # act
+                move = all_possible_moves[grad_i]
 
             # Get Q(s, ....)
-            Q = Qs.gather(0, torch.tensor(move_i).clone())
+            Q = Qs.gather(0, torch.tensor(grad_i))
 
             # Play
             (x, y, board, moves), reward, done, _ = env.step(move)
