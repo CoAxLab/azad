@@ -302,7 +302,6 @@ def wythoff_stumbler(path,
             print(">>> NEW GAME ({}).".format(trial))
             print(">>> Initial position ({}, {})".format(x, y))
             print(">>> Initial moves {}".format(moves))
-            print("---------------------------------------")
 
         # --------------------------------------------------------------------
         done = False
@@ -310,11 +309,8 @@ def wythoff_stumbler(path,
             # ----------------------------------------------------------------
             # PLAYER
 
-            # Freeze s for Q(s,a) updating after the opponent moves
-            grad_board = board.clone()
-
             # Get all the values
-            Qs = model(grad_board)
+            Qs = model(board)
 
             # Bias Q?
             # Qs.add_(create_Q_bias(x, y, bias_board, Qs, possible_index))
@@ -333,6 +329,10 @@ def wythoff_stumbler(path,
             # Get Q(s, ....)
             Q = Qs.gather(0, torch.tensor(grad_i))
 
+            if debug:
+                print(">>> Possible moves {}".format(moves))
+                print(">>> PLAYER move {}".format(move))
+
             # Play
             (x, y, board, moves), reward, done, _ = env.step(move)
 
@@ -342,15 +342,16 @@ def wythoff_stumbler(path,
             # Count player moves
             steps += 1
 
-            if debug:
-                print(">>> PLAYER move {}".format(move))
-
             # ----------------------------------------------------------------
             # Greedy opponent plays?
             if not done:
                 with torch.no_grad():
                     move_i = greedy(model(board), index=moves_index)
                     move = all_possible_moves[move_i]
+
+                if debug:
+                    print(">>> Possible moves {}".format(moves))
+                    print(">>> OPPONENT move {}".format(move))
 
                 # Play
                 (x, y, board, moves), reward, done, _ = env.step(move)
@@ -364,9 +365,6 @@ def wythoff_stumbler(path,
                 # Flip reward
                 reward *= -1
 
-                if debug:
-                    print(">>> OPPONENT move {}".format(move))
-
             # ----------------------------------------------------------------
             # Learn!
             next_Qs = model(board).detach()
@@ -374,9 +372,7 @@ def wythoff_stumbler(path,
             max_Q = next_Qs.max()
 
             next_Q = (reward + (gamma * max_Q))
-            loss = F.l1_loss(Q, next_Q.unsqueeze(0))
             # loss = next_Q - Q
-            # loss = loss.unsqueeze(0)
 
             optimizer.zero_grad()
             loss.backward()
@@ -385,11 +381,11 @@ def wythoff_stumbler(path,
             # ----------------------------------------------------------------
             if debug:
                 print(">>> Reward {}; Loss(Q {}, next_Q {}) -> {}".format(
-                    reward, float(Q.detach().numpy()), next_Q, loss))
+                    reward, float(Q.detach().numpy()), next_Q, loss.data[0]))
                 print(">>> Bias grad: {}".format(model.fc1.bias.grad))
                 print(">>> Grad index: {}, with grad {}".format(
                     grad_i, model.fc1.bias.grad[grad_i]))
-                print(">>> W grad: {}".format(model.fc1.weight.grad))
+                # print(">>> W grad: {}".format(model.fc1.weight.grad))
                 if done and (reward > 0):
                     print("*** WIN ***")
                 if done and (reward < 0):
