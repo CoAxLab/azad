@@ -32,6 +32,7 @@ from azad.local_gym.wythoff import locate_moves
 from azad.local_gym.wythoff import create_cold_board
 from azad.local_gym.wythoff import create_board
 
+from azad.models import Table
 from azad.models import LinQN1
 from azad.models import HotCold2
 from azad.models import HotCold3
@@ -280,7 +281,10 @@ def wythoff_stumbler(path,
 
     # Init the model
     if model is None:
-        model = LinQN1(m * n, len(all_possible_moves))
+        # Init
+        model = Table(m * n, len(all_possible_moves))
+
+    # SGD init
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     # ------------------------------------------------------------------------
@@ -310,6 +314,7 @@ def wythoff_stumbler(path,
             # PLAYER
 
             # Get all the values
+            grad_board = board.clone()
             Qs = model(board)
 
             # Bias Q?
@@ -372,8 +377,8 @@ def wythoff_stumbler(path,
             max_Q = next_Qs.max()
 
             next_Q = (reward + (gamma * max_Q))
+            # loss = F.mse_loss(Q, next_Q)
             loss = F.l1_loss(Q, next_Q)
-            # loss = next_Q - Q
 
             optimizer.zero_grad()
             loss.backward()
@@ -381,18 +386,22 @@ def wythoff_stumbler(path,
 
             # ----------------------------------------------------------------
             if debug:
-                print(">>> Reward {}; Loss(Q {}, next_Q {}) -> {}".format(
-                    reward, float(Q.detach().numpy()), next_Q, loss.data[0]))
-                print(">>> Bias grad: {}".format(model.fc1.bias.grad))
-                print(">>> Grad index: {}, with grad {}".format(
-                    grad_i, model.fc1.bias.grad[grad_i]))
-                # print(">>> W grad: {}".format(model.fc1.weight.grad))
+                print(">>> Reward {}; max_Q {}; Loss(Q {}, next_Q {}) -> {}".
+                      format(reward, max_Q, float(Q.detach().numpy()), next_Q,
+                             loss.data[0]))
+                # print(">>> Bias grad: {}".format(model.fc1.bias.grad))
+                # print(">>> Grad index: {}, with grad {}".format(
+                # grad_i, model.fc1.bias.grad[grad_i]))
+                print(">>> Board grad: {}".format(grad_board))
+                print(">>> W grad: {}".format(model.fc1.weight.grad))
                 if done and (reward > 0):
                     print("*** WIN ***")
                 if done and (reward < 0):
                     print("*** OPPONENT WIN ***")
 
             if tensorboard and (int(trial) % 50) == 0:
+                writer.add_graph(model, (board, ))
+
                 writer.add_scalar(os.path.join(path, 'reward'), reward, trial)
                 writer.add_scalar(os.path.join(path, 'Q'), Q, trial)
                 writer.add_scalar(os.path.join(path, 'error'), loss, trial)
@@ -416,6 +425,10 @@ def wythoff_stumbler(path,
     # The end
     if tensorboard:
         writer.close()
+
+    if debug:
+        # print(">>> Final bias: {}".format(model.fc1.bias))
+        print(">>> Final W: {}".format(model.fc1.weight))
 
     return model, env
 
