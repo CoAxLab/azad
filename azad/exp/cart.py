@@ -1,5 +1,7 @@
 import os
 import errno
+import pudb
+
 from math import exp
 
 import gym
@@ -10,10 +12,11 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
 from tensorboardX import SummaryWriter
+# from torchviz import make_dot
 
 from azad.models import QN2
 from azad.policy import epsilon_greedy
-from azad.util import ReplayMemory
+from azad.models import ReplayMemory
 
 import matplotlib.pyplot as plt
 
@@ -102,7 +105,8 @@ def cart_stumbler(path,
             # Make a decision.
             epsilon_step = epsilon_min + (epsilon - epsilon_min) * exp(
                 -1.0 * steps / epsilon_tau)
-            action = epsilon_greedy(Q, epsilon_step)
+            action = torch.tensor(
+                epsilon_greedy(Q, epsilon_step), dtype=torch.float)
             next_state, reward, done, _ = env.step(int(action))
 
             # Punishment, at the end of the world.
@@ -156,8 +160,9 @@ def cart_stumbler(path,
             t_next_states = Variable(torch.cat(t_next_states))
 
             # Possible Qs for actions
-            Qs = model(t_states).gather(1, t_actions.type(
-                torch.LongTensor)).squeeze()
+            Qs = model(t_states).gather(
+                1,
+                t_actions.unsqueeze(1).type(torch.LongTensor)).squeeze()
 
             # In Q learning we use the max Q of the next state,
             # and the reward, to estimate future Qs value
@@ -166,6 +171,7 @@ def cart_stumbler(path,
 
             # Want to min the loss between predicted Qs
             # and the observed
+            pu.db
             loss = F.smooth_l1_loss(Qs, future_Qs)
             writer.add_scalar(
                 os.path.join(log_path, 'error'), loss.data[0].mean(), episode)
