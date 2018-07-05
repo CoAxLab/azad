@@ -171,7 +171,6 @@ def cart_stumbler(path,
 
             # Want to min the loss between predicted Qs
             # and the observed
-            pu.db
             loss = F.smooth_l1_loss(Qs, future_Qs)
             writer.add_scalar(
                 os.path.join(log_path, 'error'), loss.data[0].mean(), episode)
