@@ -84,16 +84,17 @@ def expected_value(m, n, model):
     values = np.zeros((m, n))
     all_possible_moves = create_all_possible_moves(m, n)
 
-    for i in range(m):
-        for j in range(n):
-            board = flatten_board(create_board(i, j, m, n))
-            if i == 0 and j == 0:
-                moves = [(0, 0)]
-            else:
-                moves = create_moves(i, j)
+    with torch.no_grad():
+        for i in range(m):
+            for j in range(n):
+                board = flatten_board(create_board(i, j, m, n))
+                if i == 0 and j == 0:
+                    moves = [(0, 0)]
+                else:
+                    moves = create_moves(i, j)
 
-            index = locate_moves(moves, all_possible_moves)
-            values[i, j] = np.max(model(board).detach().numpy()[index])
+                index = locate_moves(moves, all_possible_moves)
+                values[i, j] = np.max(model(board).detach().numpy()[index])
 
     return values
 
@@ -128,10 +129,11 @@ def estimate_strategic_value(m, n, hotcold):
     """Create a board to bias a stumblers moves."""
 
     strategic_value = np.zeros((m, n))
-    for i in range(m):
-        for j in range(n):
-            coord = torch.tensor([i, j], dtype=torch.float)
-            strategic_value[i, j] = hotcold(coord)
+    with torch.no_grad():
+        for i in range(m):
+            for j in range(n):
+                coord = torch.tensor([i, j], dtype=torch.float)
+                strategic_value[i, j] = hotcold(coord)
 
     return strategic_value
 
@@ -166,11 +168,9 @@ def balance_ijv(ijv_data, null_value):
 
     # Sanity?
     if N_null == 0:
-        raise ValueError("No null data to balance against.")
-
-    # Nothing to do if there is no other data, so just return I
+        return None
     if N_other == 0:
-        return ijv_data
+        return None
 
     np.random.shuffle(null)
     np.random.shuffle(other)
@@ -211,7 +211,7 @@ def estimate_hot(m, n, model, threshold=0.5):
     return hot
 
 
-def estimate_hot_cold(m, n, model, hot_threshold=0.75, cold_threshold=0.25):
+def estimate_hot_cold(m, n, model, hot_threshold=0.5, cold_threshold=0.25):
     """Estimate hot and cold positions"""
     hot = estimate_hot(m, n, model, hot_threshold)
     cold = estimate_cold(m, n, model, cold_threshold)
@@ -250,12 +250,40 @@ def estimate_alp_hot_cold(m, n, model, conf=0.05, default=0.5):
     return hotcold
 
 
+def create_bias_board(m, n, strategist_model, default=0.0):
+    """"Sample all positions' value in a strategist model"""
+    bias_board = torch.ones((m, n), dtype=torch.float) * default
+
+    with torch.no_grad():
+        for i in range(m):
+            for j in range(n):
+                coords = torch.tensor([i, j], dtype=torch.float)
+                bias_board[i, j] = strategist_model(coords)
+
+    return bias_board
+
+
+def create_q_table(m, n, a, model, default=0.0):
+    """Estimate the expected value of each board position"""
+    # Build the matrix a values for each (i, j) board
+    qs = torch.zeros((m, n, a), dtype=torch.float)
+
+    with torch.no_grad():
+        for i in range(m):
+            for j in range(n):
+                board = create_board(i, j, m, n)
+                board = torch.tensor(board.reshape(m * n), dtype=torch.float)
+                qs[i, j, :] = model(board)
+
+    return qs
+
+
 def evaluate_models(stumbler,
                     strategist,
                     stumbler_env,
                     strategist_env,
                     num_eval=100,
-                    possible_actions=[(-1, 0), (0, -1), (-1, -1)]):
+                    debug=False):
     """Compare stumblers to strategists.
     
     Returns 
@@ -263,65 +291,86 @@ def evaluate_models(stumbler,
     wins : float
         the fraction of games won by the strategist.
     """
-    # -------------------------------------------
+    # ------------------------------------------------------------------------
     # Init boards, etc
-
     # Stratgist
-    x, y, board = strategist_env.reset()
-    strategist_env.close()
-    m, n = board.shape
-
-    strategy_values = estimate_strategic_value(m, n, strategist)
+    m, n, board, _ = peek(strategist_env)
+    all_strategist_moves = create_all_possible_moves(m, n)
+    all_strategist_moves_index = np.arange(0, len(all_strategist_moves))
+    hot_cold_table = create_bias_board(m, n, strategist)
 
     # Stumbler
-    _, _, little_board = stumbler_env.reset()
-    o, p = little_board.shape
-    stumbler_env.close()
+    o, p, board, _ = peek(stumbler_env)
+    all_stumbler_moves = create_all_possible_moves(o, p)
+    all_stumbler_moves_index = np.arange(0, len(all_stumbler_moves))
+    q_table = create_q_table(o, p, len(all_stumbler_moves), stumbler)
 
-    q_values = create_Q_tensor(o, p, len(possible_actions), stumbler)
-
-    # -------------------------------------------
-    # a stumbler and a strategist take turns
-    # playing a game....
+    # ------------------------------------------------------------------------
+    # A stumbler and a strategist take turns playing a (m,n) game of wythoffs
     wins = 0.0
-    for _ in range(num_eval):
-        # (re)init
-        x, y, board = strategist_env.reset()
-        board = torch.tensor(board.reshape(m * n))
+    for trial in range(num_eval):
+        # --------------------------------------------------------------------
+        # Re-init
+        steps = 0
 
-        while True:
-            # -------------------------------------------
-            # The stumbler goes first (the polite and
-            # coservative thing to do).
-            # (Adj for board size differences)
+        # Start the game, and process the result
+        x, y, board, moves = strategist_env.reset()
+        board = flatten_board(board)
+
+        if debug:
+            print("---------------------------------------")
+            print(">>> NEW MODEL EVALUATION ({}).".format(trial))
+            print(">>> Initial position ({}, {})".format(x, y))
+            print(">>> Initial moves {}".format(moves))
+
+        done = False
+        while not done:
+            # ------------------------------------------------------------
+            # STUMBLER
+
+            # Choose a move
             if (x < o) and (y < p):
-                Qs = q_values[x, y, :]
-                Qs = torch.tensor(Qs)
-
-                action_index = greedy(Qs)
+                moves_index = locate_moves(moves, all_stumbler_moves)
+                move_i = greedy(q_table[x, y, :], index=moves_index)
+                move = all_stumbler_moves[move_i]
             else:
-                action_index = np.random.randint(0, len(possible_actions))
+                moves_index = locate_moves(moves, all_strategist_moves)
+                move_i = np.random.choice(moves_index)
+                move = all_strategist_moves[move_i]
 
-            action = possible_actions[int(action_index)]
+            if debug:
+                print(">>> STUMBLER move {}".format(move))
 
-            (x, y, _), reward, done, _ = strategist_env.step(action)
+            # Make a move
+            (x, y, board, moves), reward, done, _ = strategist_env.step(move)
+            board = flatten_board(board)
+            moves_index = locate_moves(moves, all_strategist_moves)
+
+            # Die early if the stumbler wins
             if done:
+                if debug: print("*** STUMBLER WIN ***")
                 break
 
-            # Now the strategist
-            Vs = []
-            for a in possible_actions:
-                Vs.append(strategy_values[x + a[0], y + a[1]])
+            # ------------------------------------------------------------
+            # STRATEGIST
 
-            action_index = greedy(torch.tensor(Vs))
-            action = possible_actions[int(action_index)]
+            # Choose a move
+            move_i = greedy(flatten_board(hot_cold_table), index=moves_index)
+            move = all_strategist_moves[move_i]
 
-            (x, y, _), reward, done, _ = strategist_env.step(action)
+            if debug:
+                print(">>> STRATEGIST move {}".format(move))
+
+            # Make a move
+            (x, y, board, moves), reward, done, _ = strategist_env.step(move)
+            board = flatten_board(board)
+            moves_index = locate_moves(moves, all_strategist_moves)
+
             if done:
-                wins += 1  # We care when the strategist wins
-                break
+                wins += 1.0
+                if debug: print("*** STRATEGIST WIN ***")
 
-    return float(wins)
+    return wins / num_eval
 
 
 def peek(env):
