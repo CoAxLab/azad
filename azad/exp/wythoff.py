@@ -289,7 +289,7 @@ def wythoff_stumbler(path,
         # Re-init
         steps = 0
 
-        # Start the game, the process the result
+        # Start the game, and process the result
         x, y, board, moves = env.reset()
         board = flatten_board(board)
         moves_index = locate_moves(moves, all_possible_moves)
@@ -305,7 +305,8 @@ def wythoff_stumbler(path,
         while not done:
             # ----------------------------------------------------------------
             # PLAYER
-            # Get all the values
+
+            # Create values
             grad_board = board.clone()
             Qs = model(board)
 
@@ -318,7 +319,7 @@ def wythoff_stumbler(path,
                 grad_i = deepcopy(move_i)
                 move = all_possible_moves[grad_i]
 
-            # Get Q(s, ....)
+            # Get Q(s, a)
             Q = Qs.gather(0, torch.tensor(grad_i))
 
             if debug:
@@ -330,7 +331,7 @@ def wythoff_stumbler(path,
             board = flatten_board(board)
             moves_index = locate_moves(moves, all_possible_moves)
 
-            # Count player moves
+            # Count moves
             steps += 1
 
             # ----------------------------------------------------------------
@@ -349,7 +350,7 @@ def wythoff_stumbler(path,
                 board = flatten_board(board)
                 moves_index = locate_moves(moves, all_possible_moves)
 
-                # Count opponent moves
+                # Count moves
                 steps += 1
 
                 # Flip reward
