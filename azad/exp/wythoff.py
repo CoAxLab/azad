@@ -256,8 +256,6 @@ def wythoff_stumbler(path,
     """Train a NN-based Q-agent to play Wythoff's game, using SGD."""
     # -------------------------------------------
     # Setup
-    env.seed(seed)
-    np.random.seed(seed)
 
     # Create path
     try:
@@ -271,6 +269,8 @@ def wythoff_stumbler(path,
 
     # Crate env
     env = create_env(game)
+    env.seed(seed)
+    np.random.seed(seed)
 
     # ------------------------------------------------------------------------
     # Build a Q agent, and its optimizer
