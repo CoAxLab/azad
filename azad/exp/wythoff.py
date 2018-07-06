@@ -251,6 +251,7 @@ def wythoff_stumbler(path,
                      bias_board=None,
                      tensorboard=False,
                      debug=False,
+                     model_name=None,
                      seed=None):
     """Train a NN-based Q-agent to play Wythoff's game, using SGD."""
     # -------------------------------------------
@@ -389,9 +390,6 @@ def wythoff_stumbler(path,
                 print(">>> Reward {}; max_Q {}; Loss(Q {}, next_Q {}) -> {}".
                       format(reward, max_Q, float(Q.detach().numpy()), next_Q,
                              loss.data[0]))
-                # print(">>> Bias grad: {}".format(model.fc1.bias.grad))
-                # print(">>> Grad index: {}, with grad {}".format(
-                # grad_i, model.fc1.bias.grad[grad_i]))
                 print(">>> Board grad: {}".format(grad_board))
                 print(">>> W grad: {}".format(model.fc1.weight.grad))
                 if done and (reward > 0):
@@ -426,8 +424,19 @@ def wythoff_stumbler(path,
     if tensorboard:
         writer.close()
 
+    if model_name is not None:
+        state = {
+            'trial': trial,
+            'game': game,
+            'epsilon': epsilon,
+            'gamma': gamma,
+            'learning_rate': learning_rate,
+            'state_dict': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+        }
+        torch.save(state, os.path.join(path, model_name))
+
     if debug:
-        # print(">>> Final bias: {}".format(model.fc1.bias))
         print(">>> Final W: {}".format(model.fc1.weight))
 
     return model, env
@@ -596,6 +605,7 @@ def wythoff_optimal(
         stumbler_game='Wythoff50x50',
         strategist_game='Wythoff50x50',
         log=False,
+        name=None,
         seed=None):
     """A minimal example."""
 
