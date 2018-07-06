@@ -256,6 +256,8 @@ def wythoff_stumbler(path,
     """Train a NN-based Q-agent to play Wythoff's game, using SGD."""
     # -------------------------------------------
     # Setup
+    env.seed(seed)
+    np.random.seed(seed)
 
     # Create path
     try:
@@ -264,28 +266,20 @@ def wythoff_stumbler(path,
         if exception.errno != errno.EEXIST:
             raise
 
-    # Do tensorboard?
     if tensorboard:
         writer = SummaryWriter(log_dir=path)
 
     # Crate env
     env = create_env(game)
 
-    # Control randomness
-    env.seed(seed)
-    np.random.seed(seed)
-
     # ------------------------------------------------------------------------
     # Build a Q agent, and its optimizer
     m, n, board, _ = peek(env)
     all_possible_moves = create_all_possible_moves(m, n)
 
-    # Init the model
+    # Init the model and top
     if model is None:
-        # Init
         model = Table(m * n, len(all_possible_moves))
-
-    # SGD init
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     # ------------------------------------------------------------------------
@@ -295,10 +289,8 @@ def wythoff_stumbler(path,
         # Re-init
         steps = 0
 
-        # Start the game
+        # Start the game, the process the result
         x, y, board, moves = env.reset()
-
-        # Post-process play
         board = flatten_board(board)
         moves_index = locate_moves(moves, all_possible_moves)
 
@@ -313,7 +305,6 @@ def wythoff_stumbler(path,
         while not done:
             # ----------------------------------------------------------------
             # PLAYER
-
             # Get all the values
             grad_board = board.clone()
             Qs = model(board)
@@ -323,13 +314,8 @@ def wythoff_stumbler(path,
 
             # Move!
             with torch.no_grad():
-                # Get move index
                 move_i = epsilon_greedy(Qs, epsilon, index=moves_index)
-
-                # Freeze it, so can update Q(s,a) after the opponent moves.
                 grad_i = deepcopy(move_i)
-
-                # act
                 move = all_possible_moves[grad_i]
 
             # Get Q(s, ....)
@@ -341,7 +327,6 @@ def wythoff_stumbler(path,
 
             # Play
             (x, y, board, moves), reward, done, _ = env.step(move)
-
             board = flatten_board(board)
             moves_index = locate_moves(moves, all_possible_moves)
 
@@ -361,7 +346,6 @@ def wythoff_stumbler(path,
 
                 # Play
                 (x, y, board, moves), reward, done, _ = env.step(move)
-
                 board = flatten_board(board)
                 moves_index = locate_moves(moves, all_possible_moves)
 
@@ -378,7 +362,6 @@ def wythoff_stumbler(path,
             max_Q = next_Qs.max()
 
             next_Q = (reward + (gamma * max_Q))
-            # loss = F.mse_loss(Q, next_Q)
             loss = F.l1_loss(Q, next_Q)
 
             optimizer.zero_grad()
