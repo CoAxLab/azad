@@ -33,7 +33,7 @@ from azad.local_gym.wythoff import create_cold_board
 from azad.local_gym.wythoff import create_board
 
 from azad.models import Table
-from azad.models import LinQN1
+from azad.models import DeepTable3
 from azad.models import HotCold2
 from azad.models import HotCold3
 from azad.models import ReplayMemory
@@ -211,21 +211,6 @@ def wythoff_agent(path,
                     'cold_positions',
                     skimage.io.imread(os.path.join(path, 'cold_board.png')))
 
-                # EV:
-                # _np_plot_wythoff_expected_values(
-                #     m, n, model, path=path, name='wythoff_expected_values.png')
-                # writer.add_image(
-                #     'expected_value',
-                #     skimage.io.imread(
-                #         os.path.join(path, 'wythoff_expected_values.png')))
-
-                # _np_plot_wythoff_min_values(
-                #     m, n, model, path=path, name='wythoff_min_values.png')
-                # writer.add_image(
-                #     'min_value',
-                #     skimage.io.imread(
-                #         os.path.join(path, 'wythoff_min_values.png')))
-
                 _np_plot_wythoff_max_values(
                     m, n, model, path=path, name='wythoff_max_values.png')
                 writer.add_image(
@@ -251,7 +236,7 @@ def wythoff_stumbler(path,
                      bias_board=None,
                      tensorboard=False,
                      debug=False,
-                     model_name=None,
+                     save=False,
                      seed=None):
     """Train a NN-based Q-agent to play Wythoff's game, using SGD."""
     # -------------------------------------------
@@ -280,6 +265,9 @@ def wythoff_stumbler(path,
     # Init the model and top
     if model is None:
         model = Table(m * n, len(all_possible_moves))
+        # model = DeepTable3(
+        #     m * n, len(all_possible_moves), num_hidden1=1000, num_hidden2=250)
+
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
 
     # ------------------------------------------------------------------------
@@ -408,7 +396,7 @@ def wythoff_stumbler(path,
     if tensorboard:
         writer.close()
 
-    if model_name is not None:
+    if save:
         state = {
             'trial': trial,
             'game': game,
@@ -418,7 +406,7 @@ def wythoff_stumbler(path,
             'state_dict': model.state_dict(),
             'optimizer': optimizer.state_dict(),
         }
-        torch.save(state, os.path.join(path, model_name))
+        torch.save(state, os.path.join(path + ".pth"))
 
     if debug:
         print(">>> Final W: {}".format(model.fc1.weight))
