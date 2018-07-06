@@ -52,8 +52,11 @@ def create_moves(x, y):
 def locate_moves(moves, all_possible_moves):
     index = []
     for m in moves:
-        i = all_possible_moves.index(m)
-        index.append(i)
+        try:
+            i = all_possible_moves.index(m)
+            index.append(i)
+        except ValueError:
+            pass
 
     return index
 
