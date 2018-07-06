@@ -14,7 +14,7 @@ from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 # from torchviz import make_dot
 
-from azad.models import QN2
+from azad.models import ReLu2
 from azad.policy import epsilon_greedy
 from azad.models import ReplayMemory
 
@@ -80,7 +80,7 @@ def cart_stumbler(path,
     # -------------------------------------------
     # Init the DQN, it's memory, and its optim
     # model = ThreeQN(4, 2, num_hidden1=1000, num_hidden2=200)
-    model = QN2(4, 2, num_hidden=num_hidden)
+    model = ReLu2(4, 2, num_hidden=num_hidden)
     memory = ReplayMemory(10000)
     optimizer = optim.Adam(model.parameters(), learning_rate)
 
