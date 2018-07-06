@@ -64,11 +64,11 @@ class DQN(nn.Module):
         return self.fc5(x)
 
 
-class QN2(nn.Module):
-    """Simple 1-layer Q Network"""
+class ReLu2(nn.Module):
+    """2-layer ReLu Network"""
 
     def __init__(self, in_channels, num_actions, num_hidden=200):
-        super(QN2, self).__init__()
+        super(ReLu2, self).__init__()
         self.fc1 = nn.Linear(in_channels, num_hidden)
         self.fc2 = nn.Linear(num_hidden, num_actions)
 
@@ -77,15 +77,15 @@ class QN2(nn.Module):
         return F.relu(self.fc2(x))
 
 
-class QN3(nn.Module):
-    """Simple 1-layer Q Network"""
+class ReLu3(nn.Module):
+    """3-layer ReLu Network"""
 
     def __init__(self,
                  in_channels,
                  num_actions,
                  num_hidden1=200,
                  num_hidden2=100):
-        super(QN3, self).__init__()
+        super(ReLu3, self).__init__()
         self.fc1 = nn.Linear(in_channels, num_hidden1)
         self.fc2 = nn.Linear(num_hidden1, num_hidden2)
         self.fc3 = nn.Linear(num_hidden2, num_actions)
@@ -93,13 +93,36 @@ class QN3(nn.Module):
     def forward(self, x):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        return F.relu(self.fc3(x))
+        return self.fc3(x)
+
+
+class DeepTable3(nn.Module):
+    """A deep differentialable 'Table' for learning one-hot input and output.
+    """
+
+    def __init__(self,
+                 in_channels,
+                 out_channels,
+                 num_hidden1=200,
+                 num_hidden2=100):
+        super(DeepTable3, self).__init__()
+        self.fc1 = nn.Linear(in_channels, num_hidden1, bias=False)
+        self.fc2 = nn.Linear(num_hidden1, num_hidden2, bias=False)
+        self.fc3 = nn.Linear(num_hidden2, out_channels, bias=False)
+
+        self.fc1.weight.data.uniform_(0.0, 0.0)
+        self.fc3.weight.data.uniform_(0.0, 0.0)
+        # self.fc3.bias.data.uniform_(0, 0)
+
+    def forward(self, x):
+        x = self.fc1(x)
+        x = F.softmax(self.fc2(x))
+        return self.fc3(x)
 
 
 class Table(nn.Module):
     def __init__(self, in_channels=4, out_channels=2):
-        """A linear model, tuned to act as lookup table learned by SGD.
-        """
+        """A differentialable 'Table' for learning one-hot input and output."""
 
         super(Table, self).__init__()
         self.fc1 = nn.Linear(in_channels, out_channels, bias=False)
