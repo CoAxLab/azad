@@ -475,7 +475,7 @@ def wythoff_strategist(
     np.random.seed(seed)
 
     # Working mem size
-    batch_size = 12
+    batch_size = 64
 
     if tensorboard:
         writer = SummaryWriter(log_dir=path)
@@ -515,8 +515,6 @@ def wythoff_strategist(
         # project it and remember that
         strategic_default_value = 0.0
         strategic_value = estimate_cold(o, p, stumbler_model, threshold=0.0)
-        strategic_value = pad_board(m, n, strategic_value,
-                                    strategic_default_value)
 
         # strategic_value = estimate_hot_cold(
         #     o, p, stumbler_model, hot_threshold=0.5, cold_threshold=0.0)
@@ -524,7 +522,6 @@ def wythoff_strategist(
         # ...Into tuples
         s_data = convert_ijv(strategic_value)
         s_data = balance_ijv(s_data, strategic_default_value)
-
         if s_data is not None:
             for d in s_data:
                 memory.push(*d)
@@ -567,7 +564,7 @@ def wythoff_strategist(
 
         # --------------------------------------------------------------------
         # Use the trained strategist to generate a bias_board,
-        bias_board = estimate_strategic_value(m, n, model)
+        bias_board = create_bias_board(m, n, model)
 
         # Est performance. Count strategist wins.
         win = evaluate_models(
@@ -613,7 +610,7 @@ def wythoff_strategist(
                 skimage.io.imread(os.path.join(path, 'est_hc_board.png')))
 
             plot_wythoff_board(
-                bias_board, vmin=0, vmax=1, path=path, name='bias_board.png')
+                bias_board, vmin=-1, vmax=0, path=path, name='bias_board.png')
             writer.add_image(
                 'Strategist learning',
                 skimage.io.imread(os.path.join(path, 'bias_board.png')))
@@ -633,49 +630,42 @@ def wythoff_optimal(
         num_hidden1=15,
         # num_hidden1=100,
         # num_hidden2=25,
-        stumbler_game='Wythoff50x50',
+        stumbler_game='Wythoff10x10',
         strategist_game='Wythoff50x50',
-        log=False,
-        name=None,
+        tensorboard=False,
+        debug=False,
         seed=None):
     """A minimal example."""
 
-    # -------------------------------------------
+    # ------------------------------------------------------------------------
     # Setup
-    # -------------------------------------------
-    # sCreate path
     try:
         os.makedirs(path)
     except OSError as exception:
         if exception.errno != errno.EEXIST:
             raise
 
-    env = gym.make('{}-v0'.format(strategist_game))
-    env = wrappers.Monitor(
-        env, './tmp/{}-v0-1'.format(strategist_game), force=True)
+    m, n, board, _ = peek(create_env(strategist_game))
+    o, p, _, _ = peek(create_env(stumbler_game))
 
-    possible_actions = [(-1, 0), (0, -1), (-1, -1)]
+    if debug:
+        print(">>> TRANING AN OPTIMAL STRATEGIST.")
+        print(">>> Train board {}".format(o, p))
+        print(">>> Test board {}".format(m, n))
+
+    # Log setup
+    if tensorboard:
+        writer = SummaryWriter(log_dir=path)
+
+    # Seeding...
+    np.random.seed(seed)
 
     # Train params
     strategic_default_value = 0.0
     batch_size = 12
 
-    # -------------------------------------------
-    # Log setup
-    if log:
-        writer = SummaryWriter(log_dir=path)
-
-    # -------------------------------------------
-    # Seeding...
-    env.seed(seed)
-    np.random.seed(seed)
-
-    # -------------------------------------------
+    # ------------------------------------------------------------------------
     # Build a Strategist, its memory, and its optimizer
-
-    # How big are the boards?
-    m, n, board = peek(env)
-    o, p, _ = peek(env)
 
     # Create a model, of the right size.
     model = HotCold2(2, num_hidden1=num_hidden1)
@@ -722,9 +712,15 @@ def wythoff_optimal(
         optimizer.step()
 
         # Use the trained strategist to generate a bias_board,
-        bias_board = estimate_strategic_value(m, n, model)
+        bias_board = create_bias_board(m, n, model)
 
-        if tensorboard:
+        if debug:
+            print(">>> Coords: {}".format(coords))
+            print(">>> Values: {}".format(values))
+            print(">>> Predicted values: {}".format(values))
+            print(">>> Loss {}".format(loss))
+
+        if tensorboard and (int(trial) % 50) == 0:
             writer.add_scalar(os.path.join(path, 'error'), loss.data[0], trial)
 
             plot_wythoff_board(
@@ -744,7 +740,7 @@ def wythoff_optimal(
                 skimage.io.imread(os.path.join(path, 'bias_board.png')))
 
     # The end
-    if log:
+    if tensorboard:
         writer.close()
 
     return model, env,
