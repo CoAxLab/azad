@@ -283,6 +283,7 @@ def evaluate_models(stumbler,
                     stumbler_env,
                     strategist_env,
                     num_eval=100,
+                    mode='random',
                     debug=False):
     """Compare stumblers to strategists.
     
@@ -300,7 +301,7 @@ def evaluate_models(stumbler,
     hot_cold_table = create_bias_board(m, n, strategist)
 
     # Stumbler
-    o, p, board, _ = peek(stumbler_env)
+    o, p, _, _ = peek(stumbler_env)
     all_stumbler_moves = create_all_possible_moves(o, p)
     all_stumbler_moves_index = np.arange(0, len(all_stumbler_moves))
     q_table = create_q_table(o, p, len(all_stumbler_moves), stumbler)
@@ -329,14 +330,21 @@ def evaluate_models(stumbler,
             # STUMBLER
 
             # Choose a move
-            if (x < o) and (y < p):
-                moves_index = locate_moves(moves, all_stumbler_moves)
-                move_i = greedy(q_table[x, y, :], index=moves_index)
-                move = all_stumbler_moves[move_i]
+            # Random
+            if mode == 'random':
+                move_i = np.random.randint(0, len(moves))
+                move = moves[move_i]
+            elif mode == 'greedy':
+                if (x < o) and (y < p):
+                    moves_index = locate_moves(moves, all_stumbler_moves)
+                    move_i = greedy(q_table[x, y, :], index=moves_index)
+                    move = all_stumbler_moves[move_i]
+                else:
+                    moves_index = locate_moves(moves, all_strategist_moves)
+                    move_i = np.random.choice(moves_index)
+                    move = all_strategist_moves[move_i]
             else:
-                moves_index = locate_moves(moves, all_strategist_moves)
-                move_i = np.random.choice(moves_index)
-                move = all_strategist_moves[move_i]
+                raise ValueError("mode was not understood")
 
             if debug:
                 print(">>> STUMBLER move {}".format(move))
