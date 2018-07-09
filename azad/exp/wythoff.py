@@ -627,9 +627,9 @@ def wythoff_optimal(
         path,
         num_trials=1000,
         learning_rate=0.01,
-        num_hidden1=15,
-        # num_hidden1=100,
-        # num_hidden2=25,
+        # num_hidden1=15,
+        num_hidden1=100,
+        num_hidden2=25,
         stumbler_game='Wythoff10x10',
         strategist_game='Wythoff50x50',
         tensorboard=False,
@@ -668,8 +668,8 @@ def wythoff_optimal(
     # Build a Strategist, its memory, and its optimizer
 
     # Create a model, of the right size.
-    model = HotCold2(2, num_hidden1=num_hidden1)
-    # model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
+    # model = HotCold2(2, num_hidden1=num_hidden1)
+    model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
 
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     memory = ReplayMemory(10000)
@@ -730,13 +730,13 @@ def wythoff_optimal(
                 path=path,
                 name='strategy_board.png')
             writer.add_image(
-                'Expected value board',
+                'Training board',
                 skimage.io.imread(os.path.join(path, 'strategy_board.png')))
 
             plot_wythoff_board(
                 bias_board, vmin=0, vmax=1, path=path, name='bias_board.png')
             writer.add_image(
-                'Strategist learning',
+                'Testing board',
                 skimage.io.imread(os.path.join(path, 'bias_board.png')))
 
     # The end
