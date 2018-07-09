@@ -32,23 +32,23 @@ bandit_exp1:
 
 # ----------------------------------------------------------------------------
 # 5-16-2018
-# Testing wythoff 
+# Testing wythoff stumbler 
 wythoff_exp0:
 	-rm -rf $(DATA_PATH)/wythoff/exp0
 	sleep 5  # Wait for tensorboard to notice the deletion
 	python run_azad.py wythoff_stumbler $(DATA_PATH)/wythoff/exp0 --model_name=exp0.pth --num_trials=50000 --learning_rate=0.1 --epsilon=0.1 --gamma=0.99 --game=Wythoff10x10 --tensorboard=True --debug=False
 
-# Testing wythoff 
+# Testing wythoff strategist 
 wythoff_exp1:
 	-rm -rf $(DATA_PATH)/wythoff/exp1
 	sleep 5  # Wait for tensorboard to notice the deletion
 	python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp1 --num_trials=50000 --num_stumble=100 --num_evals=1 --stumbler_learning_rate=0.2 --strategist_learning_rate=0.01 --epsilon=0.1 --stumbler_game='Wythoff10x10' --strategist_game='Wythoff15x15' --tensorboard=True --debug=True
 
-# Strategist learning directly from the opt. cold board
+# Strategist learning, directly from the opt. cold board
 wythoff_exp2:
 	-rm -rf $(DATA_PATH)/wythoff/exp2
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_optimal $(DATA_PATH)/wythoff/exp2 --num_trials=5000 --learning_rate=0.1 --stumbler_game=Wythoff10x10 --strategist_game=Wythoff50x50 --debug=False --tensorboard=True
+	python run_azad.py wythoff_optimal $(DATA_PATH)/wythoff/exp2 --num_trials=10000 --learning_rate=0.01 --stumbler_game=Wythoff10x10 --strategist_game=Wythoff50x50 --debug=False --tensorboard=True
 
 # ----------------------------------------------------------------------------
 # 6-26-2018
