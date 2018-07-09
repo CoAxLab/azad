@@ -431,23 +431,19 @@ def wythoff_stumbler(path,
     return model, env
 
 
-def wythoff_strategist(
-        path,
-        num_trials=1000,
-        num_stumbles=1,
-        num_evals=1,
-        epsilon=0.2,
-        gamma=0.8,
-        strategist_learning_rate=0.01,
-        stumbler_learning_rate=0.1,
-        stumbler_game='Wythoff15x15',
-        strategist_game='Wythoff50x50',
-        num_hidden1=15,
-        #    num_hidden1=25,
-        #    num_hidden2=100,
-        tensorboard=False,
-        debug=False,
-        seed=None):
+def wythoff_strategist(path,
+                       num_trials=1000,
+                       num_stumbles=1,
+                       num_evals=1,
+                       epsilon=0.2,
+                       gamma=0.98,
+                       stumbler_learning_rate=0.1,
+                       strategist_learning_rate=0.01,
+                       stumbler_game='Wythoff15x15',
+                       strategist_game='Wythoff50x50',
+                       tensorboard=False,
+                       debug=False,
+                       seed=None):
 
     # ------------------------------------------------------------------------
     # Setup
@@ -482,7 +478,10 @@ def wythoff_strategist(
 
     # ------------------------------------------------------------------------
     # Build a Strategist, its memory, and its optimizer
-    model = HotCold2(2, num_hidden1=num_hidden1)
+    num_hidden1 = 100
+    num_hidden2 = 25
+    model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
+
     optimizer = optim.Adam(model.parameters(), lr=strategist_learning_rate)
     memory = ReplayMemory(10000)
 
@@ -623,18 +622,16 @@ def wythoff_strategist(
     return (model, env, influence)
 
 
-def wythoff_optimal(
-        path,
-        num_trials=1000,
-        learning_rate=0.01,
-        # num_hidden1=15,
-        num_hidden1=100,
-        num_hidden2=25,
-        stumbler_game='Wythoff10x10',
-        strategist_game='Wythoff50x50',
-        tensorboard=False,
-        debug=False,
-        seed=None):
+def wythoff_optimal(path,
+                    num_trials=1000,
+                    learning_rate=0.01,
+                    num_hidden1=100,
+                    num_hidden2=25,
+                    stumbler_game='Wythoff10x10',
+                    strategist_game='Wythoff50x50',
+                    tensorboard=False,
+                    debug=False,
+                    seed=None):
     """A minimal example."""
 
     # ------------------------------------------------------------------------
@@ -662,7 +659,7 @@ def wythoff_optimal(
 
     # Train params
     strategic_default_value = 0.0
-    batch_size = 12
+    batch_size = 64
 
     # ------------------------------------------------------------------------
     # Build a Strategist, its memory, and its optimizer
@@ -687,41 +684,44 @@ def wythoff_optimal(
         for d in s_data:
             memory.push(*d)
 
-        # Sample data....
-        coords = []
-        values = []
-        samples = memory.sample(batch_size)
+        loss = 0.0
+        if len(memory) > batch_size:
+            # Sample data....
+            coords = []
+            values = []
+            samples = memory.sample(batch_size)
 
-        for c, v in samples:
-            coords.append(c)
-            values.append(v)
+            for c, v in samples:
+                coords.append(c)
+                values.append(v)
 
-        coords = torch.tensor(
-            np.vstack(coords), requires_grad=True, dtype=torch.float)
-        values = torch.tensor(values, requires_grad=False, dtype=torch.float)
+            coords = torch.tensor(
+                np.vstack(coords), requires_grad=True, dtype=torch.float)
+            values = torch.tensor(
+                values, requires_grad=False, dtype=torch.float)
 
-        # Making some preditions,
-        predicted_values = model(coords).squeeze()
+            # Making some preditions,
+            predicted_values = model(coords).squeeze()
 
-        # and find their loss.
-        loss = F.mse_loss(predicted_values, values)
+            # and find their loss.
+            loss = F.mse_loss(predicted_values, values)
 
-        # Walk down the hill of righteousness!
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+            # Walk down the hill of righteousness!
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            if debug:
+                print(">>> Coords: {}".format(coords))
+                print(">>> Values: {}".format(values))
+                print(">>> Predicted values: {}".format(values))
+                print(">>> Loss {}".format(loss))
 
         # Use the trained strategist to generate a bias_board,
         bias_board = create_bias_board(m, n, model)
 
-        if debug:
-            print(">>> Coords: {}".format(coords))
-            print(">>> Values: {}".format(values))
-            print(">>> Predicted values: {}".format(values))
-            print(">>> Loss {}".format(loss))
-
         if tensorboard and (int(trial) % 50) == 0:
-            writer.add_scalar(os.path.join(path, 'error'), loss.data[0], trial)
+            writer.add_scalar(os.path.join(path, 'error'), loss, trial)
 
             plot_wythoff_board(
                 strategic_value,
