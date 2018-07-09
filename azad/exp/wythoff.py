@@ -500,7 +500,7 @@ def wythoff_strategist(path,
             game=stumbler_game,
             model=stumbler_model,
             env=stumbler_env,
-            bias_board=None,
+            bias_board=None,  # bias_board * influence
             learning_rate=stumbler_learning_rate,
             tensorboard=False,
             debug=debug,
@@ -579,9 +579,7 @@ def wythoff_strategist(path,
             influence += strategist_learning_rate
         else:
             influence -= strategist_learning_rate
-
         influence = np.clip(influence, 0, 1)
-        bias_board *= influence
 
         # --------------------------------------------------------------------
         if tensorboard and (int(trial) % 50) == 0:
