@@ -36,13 +36,13 @@ bandit_exp1:
 wythoff_exp0:
 	-rm -rf $(DATA_PATH)/wythoff/exp0
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_stumbler $(DATA_PATH)/wythoff/exp0 --model_name=exp0.pth --num_trials=50000 --learning_rate=0.1 --epsilon=0.1 --gamma=0.99 --game=Wythoff10x10 --tensorboard=True --debug=False
+	python run_azad.py wythoff_stumbler $(DATA_PATH)/wythoff/exp0 --model_name=exp0.pth --num_trials=50000 --learning_rate=0.5 --epsilon=0.2 --gamma=0.98 --game=Wythoff10x10 --tensorboard=True --debug=False
 
 # Testing wythoff strategist 
 wythoff_exp1:
 	-rm -rf $(DATA_PATH)/wythoff/exp1
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp1 --num_trials=50000 --num_stumble=100 --num_evals=1 --stumbler_learning_rate=0.2 --strategist_learning_rate=0.01 --epsilon=0.1 --stumbler_game='Wythoff10x10' --strategist_game='Wythoff15x15' --tensorboard=True --debug=True
+	python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp1 --num_trials=5 --num_stumble=10 --num_evals=1 --stumbler_learning_rate=0.2 --strategist_learning_rate=0.01 --epsilon=0.1 --stumbler_game='Wythoff10x10' --strategist_game='Wythoff50x50' --tensorboard=True --debug=False --save=True
 
 # Strategist learning, directly from the opt. cold board
 wythoff_exp2:
@@ -57,3 +57,14 @@ wythoff_exp3:
 	-rm -rf $(DATA_PATH)/wythoff/exp3
 	sleep 5  # Wait for tensorboard to notice the deletion
 	python run_azad.py wythoff_agent $(DATA_PATH)/wythoff/exp3 --num_trials=50000 --learning_rate=0.25 --epsilon=0.1 --gamma=0.99 --game=Wythoff10x10 --tensorboard=True --debug=True
+
+# ----------------------------------------------------------------------------
+# Grid-hyper param search for the wythoff_strategist
+wythoff_exp4:
+	-rm -rf $(DATA_PATH)/wythoff/exp4*
+	sleep 5  # Wait for tensorboard to notice the deletion
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/osc1000.parallel.log' \
+		--nice 19 --delay 2 --colsep ',' \
+		'python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp4_n{1}_stb{2}_str{3}_ep{4} --num_trials=15000 --num_stumble={1} --num_evals=1 --stumbler_learning_rate={2} --strategist_learning_rate={3} --epsilon={4} --stumbler_game='Wythoff10x10' --strategist_game='Wythoff50x50' --tensorboard=True --debug=False' ::: \
+		1 10 100 200 ::: 0.01 0.1 0.2 0.4 ::: 0.1 0.01 0.001 ::: 0 0.1 0.2 0.4
