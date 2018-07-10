@@ -308,7 +308,8 @@ def wythoff_stumbler(path,
             Qs = model(board)
 
             # Bias Q?
-            Qs.add_(flatten_board(bias_board[0:m, 0:n]))
+            if bias_board is not None:
+                Qs.add_(flatten_board(bias_board[0:m, 0:n]))
 
             # Move!
             with torch.no_grad():
