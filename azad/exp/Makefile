@@ -60,6 +60,7 @@ wythoff_exp3:
 	python run_azad.py wythoff_agent $(DATA_PATH)/wythoff/exp3 --num_trials=50000 --learning_rate=0.25 --epsilon=0.1 --gamma=0.99 --game=Wythoff10x10 --tensorboard=True --debug=True
 
 # ----------------------------------------------------------------------------
+# 7-8-2018
 # Grid-hyper param search for the wythoff_strategist
 wythoff_exp4:
 	-rm -rf $(DATA_PATH)/wythoff/exp4*
