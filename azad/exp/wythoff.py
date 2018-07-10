@@ -308,7 +308,7 @@ def wythoff_stumbler(path,
             Qs = model(board)
 
             # Bias Q?
-            # Qs.add_(create_Q_bias(x, y, bias_board, Qs, possible_index))
+            Qs.add_(flatten_board(bias_board[0:m, 0:n]))
 
             # Move!
             with torch.no_grad():
@@ -486,10 +486,16 @@ def wythoff_strategist(path,
     memory = ReplayMemory(10000)
 
     # ------------------------------------------------------------------------
+    # Train over trials:
+
+    # Init
     stumbler_model = None
     stumbler_env = None
-    bias_board = None
+
     influence = 0.0
+    bias_board = torch.zeros((m, n), dtype=torch.float)
+
+    # Run
     for trial in range(num_trials):
         # --------------------------------------------------------------------
         stumbler_model, stumbler_env = wythoff_stumbler(
@@ -500,7 +506,7 @@ def wythoff_strategist(path,
             game=stumbler_game,
             model=stumbler_model,
             env=stumbler_env,
-            bias_board=None,  # bias_board * influence
+            bias_board=bias_board * influence,  # None
             learning_rate=stumbler_learning_rate,
             tensorboard=False,
             debug=debug,
