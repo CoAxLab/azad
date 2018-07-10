@@ -423,7 +423,7 @@ def wythoff_stumbler(path,
             'state_dict': model.state_dict(),
             'optimizer': optimizer.state_dict(),
         }
-        torch.save(state, os.path.join(path + ".pth"))
+        torch.save(state, os.path.join(path + ".pytorch"))
 
     if debug:
         print(">>> Final W: {}".format(model.fc1.weight))
@@ -437,13 +437,16 @@ def wythoff_strategist(path,
                        num_evals=1,
                        epsilon=0.2,
                        gamma=0.98,
+                       cold_threshold=0.0,
                        stumbler_learning_rate=0.1,
                        strategist_learning_rate=0.01,
                        stumbler_game='Wythoff15x15',
                        strategist_game='Wythoff50x50',
                        tensorboard=False,
                        debug=False,
+                       save=False,
                        seed=None):
+    """A stumbler-strategist netowrk"""
 
     # ------------------------------------------------------------------------
     # Setup
@@ -519,7 +522,8 @@ def wythoff_strategist(path,
         # Extract strategic data from the stumber,
         # project it and remember that
         strategic_default_value = 0.0
-        strategic_value = estimate_cold(o, p, stumbler_model, threshold=0.0)
+        strategic_value = estimate_cold(
+            o, p, stumbler_model, threshold=cold_threshold)
 
         # strategic_value = estimate_hot_cold(
         #     o, p, stumbler_model, hot_threshold=0.5, cold_threshold=0.0)
@@ -622,6 +626,26 @@ def wythoff_strategist(path,
     # The end
     if tensorboard:
         writer.close()
+
+    if save:
+        state = {
+            'trial': trial,
+            'epsilon': epsilon,
+            'gamma': gamma,
+            'num_trials': num_trials,
+            'num_stumbles': num_stumbles,
+            'num_evals': num_evals,
+            'influence': influence,
+            'stumbler_game': stumbler_game,
+            'strategist_game': strategist_game,
+            'cold_threshold': cold_threshold,
+            'stumbler_learning_rate': stumbler_learning_rate,
+            'stumbler_state_dict': stumbler_model.state_dict(),
+            'strategist_learning_rate': strategist_learning_rate,
+            'strategist_state_dict': model.state_dict(),
+            'strategist_optimizer': optimizer.state_dict(),
+        }
+        torch.save(state, os.path.join(path, "model_state.pytorch"))
 
     return (model, env, influence)
 
