@@ -68,5 +68,5 @@ wythoff_exp4:
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/exp4.parallel.log' \
 		--nice 19 --delay 2 --colsep ',' \
-		'python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp4/exp4_n{1}_stb{2}_str{3}_ep{4} --num_trials=15000 --num_stumble={1} --num_evals=1 --stumbler_learning_rate={2} --strategist_learning_rate={3} --epsilon={4} --stumbler_game='Wythoff10x10' --strategist_game='Wythoff50x50' --tensorboard=True --debug=False' ::: \
+		'python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp4/exp4_n{1}_stb{2}_str{3}_ep{4} --num_trials=15000 --num_stumbles={1} --num_evals=1 --stumbler_learning_rate={2} --strategist_learning_rate={3} --epsilon={4} --stumbler_game=Wythoff10x10 --strategist_game=Wythoff50x50 --tensorboard=True --debug=False' ::: \
 		10 100 200 400 ::: 0.01 0.1 0.2 0.4 ::: 0.1 0.01 0.001 ::: 0 0.1 0.2 0.4
