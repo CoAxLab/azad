@@ -487,7 +487,7 @@ def wythoff_strategist(path,
     model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
 
     optimizer = optim.Adam(model.parameters(), lr=strategist_learning_rate)
-    memory = ReplayMemory(10000)
+    memory = ReplayMemory(500)
 
     # ------------------------------------------------------------------------
     # Train over trials:
