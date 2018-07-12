@@ -648,6 +648,18 @@ def wythoff_strategist(path,
         }
         torch.save(state, os.path.join(path, "model_state.pytorch"))
 
+        # Save final images
+        plot_wythoff_expected_values(
+                o, p, stumbler_model, vmin=-2, vmax=2, path=path)
+
+        est_hc_board = estimate_hot_cold(
+                o, p, stumbler_model, hot_threshold=0.5, cold_threshold=0.0)
+            plot_wythoff_board(
+                est_hc_board, path=path, name='est_hc_board.png')
+
+        plot_wythoff_board(
+                bias_board, vmin=-1, vmax=0, path=path, name='bias_board.png')
+
     return (model, env, influence)
 
 
