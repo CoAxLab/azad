@@ -43,7 +43,7 @@ wythoff_exp0:
 wythoff_exp1:
 	-rm -rf $(DATA_PATH)/wythoff/exp1
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp1 --num_trials=5 --num_stumble=10 --num_evals=1 --stumbler_learning_rate=0.2 --strategist_learning_rate=0.01 --epsilon=0.1 --stumbler_game='Wythoff10x10' --strategist_game='Wythoff50x50' --tensorboard=True --debug=False --save=True
+	python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp1 --num_trials=5 --num_stumbles=10 --num_evals=1 --stumbler_learning_rate=0.2 --strategist_learning_rate=0.01 --epsilon=0.1 --stumbler_game=Wythoff10x10 --strategist_game=Wythoff50x50 --tensorboard=False --debug=False --save=True
 
 # Strategist learning, directly from the opt. cold board
 wythoff_exp2:
@@ -69,4 +69,4 @@ wythoff_exp4:
 		--joblog '$(DATA_PATH)/exp4.parallel.log' \
 		--nice 19 --delay 2 --colsep ',' \
 		'python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp4/exp4_n{1}_stb{2}_str{3}_ep{4} --num_trials=15000 --num_stumbles={1} --num_evals=1 --stumbler_learning_rate={2} --strategist_learning_rate={3} --epsilon={4} --stumbler_game=Wythoff10x10 --strategist_game=Wythoff50x50 --tensorboard=False --save=True --debug=False' ::: \
-		10 100 200 400 ::: 0.01 0.1 0.2 0.4 ::: 0.1 0.01 0.001 ::: 0 0.1 0.2 0.4
+		1 100 ::: 0.01 0.1 0.5 ::: 0.1 0.01 ::: 0 0.1
