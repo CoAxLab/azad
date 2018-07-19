@@ -1,3 +1,4 @@
+from copy import deepcopy
 from scipy.constants import golden
 
 import numpy as np
@@ -5,6 +6,7 @@ import gym
 
 
 def create_board(i, j, m, n):
+    """Create a binary board, with position (i, j) marked."""
     board = np.zeros((m, n))
     board[i, j] = 1.0
 
@@ -12,6 +14,7 @@ def create_board(i, j, m, n):
 
 
 def create_cold_board(m, n):
+    """Create a (m, n) binary board with cold moves as '1'"""
     cold_board = np.zeros((m, n))
     for k in range(m - 1):
         mk = int(k * golden)
@@ -23,7 +26,46 @@ def create_cold_board(m, n):
     return cold_board
 
 
+def locate_cold_moves(m, n):
+    """Locate all the cold moves"""
+    moves = []
+    for k in range(m - 1):
+        mk = int(k * golden)
+        nk = int(k * golden**2)
+        if (nk < m) and (mk < n):
+            moves.append((mk, nk))
+            moves.append((nk, mk))
+
+    return moves
+
+
+def locate_best_move(x, y, moves):
+    """Locate possible cold moves"""
+    cold_moves = locate_cold_moves(x, y)
+    for move in moves:
+        if move in cold_moves:
+            return move
+
+    return None
+
+
+def locate_closest(moves):
+    """Find the move closest to the winning position (0,0)."""
+
+    # If the origin is available, take it
+    if (0, 0) in moves:
+        return (0, 0)
+
+    closest = (np.inf, np.inf)  # HUGE initial value
+    for move in moves:
+        if (move[0] < closest[0]) or (move[1] < closest[1]):
+            closest = deepcopy(move)
+
+    return closest
+
+
 def create_all_possible_moves(m, n):
+    """Create all moves on a (m,n) board."""
     moves = []
     for i in range(m):
         for j in range(n):
@@ -33,6 +75,7 @@ def create_all_possible_moves(m, n):
 
 
 def create_moves(x, y):
+    """Create all valid moves from (x, y)"""
     if (x == 0) and (y == 0):
         return list([(0, 0)])
 
@@ -50,6 +93,7 @@ def create_moves(x, y):
 
 
 def locate_moves(moves, all_possible_moves):
+    """Index moves into the total possible set of moves."""
     index = []
     for m in moves:
         try:

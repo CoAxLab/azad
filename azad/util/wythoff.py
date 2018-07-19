@@ -30,7 +30,7 @@ from azad.models import LinQN1
 from azad.models import HotCold2
 from azad.models import HotCold3
 from azad.policy import epsilon_greedy
-from azad.policy import greedy
+from azad.policy import softmax
 from azad.local_gym.wythoff import create_moves
 from azad.local_gym.wythoff import create_all_possible_moves
 from azad.local_gym.wythoff import locate_moves
