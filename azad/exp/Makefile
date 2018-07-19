@@ -34,10 +34,11 @@ bandit_exp1:
 # ----------------------------------------------------------------------------
 # 5-16-2018
 # Testing wythoff stumbler 
+# To learn the COLD spots seems to need shared value, greedy opp. WHY?
 wythoff_exp0:
 	-rm -rf $(DATA_PATH)/wythoff/exp0
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_stumbler $(DATA_PATH)/wythoff/exp0 --model_name=exp0.pth --num_trials=50000 --learning_rate=0.5 --epsilon=0.2 --gamma=0.98 --game=Wythoff10x10 --tensorboard=True --debug=False
+	python run_azad.py wythoff_stumbler $(DATA_PATH)/wythoff/exp0 --num_trials=50000 --learning_rate=0.2 --epsilon=0.0 --gamma=0.98 --game=Wythoff10x10 --tensorboard=True --debug=False --independent_opp=False
 
 # Testing wythoff strategist 
 wythoff_exp1:

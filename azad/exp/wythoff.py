@@ -31,6 +31,9 @@ from azad.local_gym.wythoff import create_all_possible_moves
 from azad.local_gym.wythoff import locate_moves
 from azad.local_gym.wythoff import create_cold_board
 from azad.local_gym.wythoff import create_board
+from azad.local_gym.wythoff import locate_cold_moves
+from azad.local_gym.wythoff import locate_best_move
+from azad.local_gym.wythoff import locate_closest
 
 from azad.models import Table
 from azad.models import DeepTable3
@@ -38,7 +41,8 @@ from azad.models import HotCold2
 from azad.models import HotCold3
 from azad.models import ReplayMemory
 from azad.policy import epsilon_greedy
-from azad.policy import greedy
+from azad.policy import softmax
+# from azad.policy import greedy
 
 from azad.util.wythoff import peek
 from azad.util.wythoff import pad_board
@@ -80,9 +84,10 @@ class Game(object):
         self.player = Player(**kwargs)
 
     def create_opponent(self, name, **kwargs):
-        thismodule = sys.modules[__name__]
-        Opp = getattr(thismodule, name)
-        self.opponent = Opp(**kwargs)
+        # thismodule = sys.modules[__name__]
+        # Opp = getattr(thismodule, name)
+        # self.opponent = Opp(**kwargs)
+        self.opponent = self.player
 
     def play(self, N=10, game='Wythoff3x3', path=None):
         """Play N game(s)."""
@@ -111,14 +116,17 @@ class Game(object):
                 # If player doesn't win, opponent plays
                 if not done:
                     state, done, self.env = self.opponent.step(
-                        state, done, self.env)
+                        state, done, self.env, learn=False)
 
                 # If opp wins, let the player learn from that
                 if done and (self.opponent.reward > 0):
-                    self.player.backward(self.player.grad_board,
-                                         self.player.grad_move_index,
-                                         self.player.Q, self.player.max_Q,
-                                         self.opponent.reward * -1)
+                    x, y, board, moves = state
+                    self.player.backward(
+                        self.player.grad_board,
+                        self.player.grad_move_index,
+                        self.player.Q,
+                        self.player.max_Q,  # ? TOOD
+                        -1)
 
         if path is not None:
             self.player.save(os.path.join(path, "player"))
@@ -192,7 +200,7 @@ class WythoffQTable(object):
         self.loss = next_Q - Q
         self.model[board][move] = Q + (self.learning_rate * self.loss)
 
-    def step(self, state, done, env):
+    def step(self, state, done, env, learn=True):
         """Take a step in the `env`"""
 
         # --------------------------------------------------------------------
@@ -242,13 +250,14 @@ class WythoffQTable(object):
             self.model[board] = np.ones(len(moves)) * self.default_Q
             self.max_Q = self.model[board].max()
 
-        self.backward(
-            self.grad_board,
-            self.grad_move_index,
-            self.Q,
-            self.max_Q,
-            self.reward,
-        )
+        if learn:
+            self.backward(
+                self.grad_board,
+                self.grad_move_index,
+                self.Q,
+                self.max_Q,
+                self.reward,
+            )
 
         # --------------------------------------------------------------------
         # Deliver result
@@ -261,13 +270,13 @@ def wythoff_agent(path,
                   epsilon=0.1,
                   gamma=0.8,
                   learning_rate=0.1,
-                  game='Wythoff3x3',
+                  game='Wythoff10x10',
                   model=None,
                   bias_board=None,
                   tensorboard=False,
                   debug=False,
                   seed=None):
-    """Train a Q-agent to play Wythoff's game, using SGD."""
+    """Train a Q-agent to play Wythoff's game, using a lookup table."""
     # ------------------------------------------------------------------------
     # Setup
 
@@ -434,6 +443,8 @@ def wythoff_stumbler(path,
                      bias_board=None,
                      tensorboard=False,
                      debug=False,
+                     update_every=100,
+                     independent_opp=False,
                      save=False,
                      seed=None):
     """Train a NN-based Q-agent to play Wythoff's game, using SGD."""
@@ -465,10 +476,11 @@ def wythoff_stumbler(path,
     # Init the model and top
     if model is None:
         model = Table(m * n, len(all_possible_moves))
-        # model = DeepTable3(
-        #     m * n, len(all_possible_moves), num_hidden1=1000, num_hidden2=250)
-
     optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+
+    if independent_opp:
+        opp_model = Table(m * n, len(all_possible_moves))
+        opp_optimizer = optim.SGD(opp_model.parameters(), lr=learning_rate)
 
     # ------------------------------------------------------------------------
     # Run some trials
@@ -476,6 +488,7 @@ def wythoff_stumbler(path,
         # --------------------------------------------------------------------
         # Re-init
         steps = 0
+        good_plays = 0
 
         # Start the game, and process the result
         x, y, board, moves = env.reset()
@@ -504,9 +517,19 @@ def wythoff_stumbler(path,
 
             # Move!
             with torch.no_grad():
-                move_i = epsilon_greedy(Qs, epsilon, index=moves_index)
+                # move_i = epsilon_greedy(Qs, epsilon, index=moves_index)
+                move_i = softmax(Qs, index=moves_index)
                 grad_i = deepcopy(move_i)
                 move = all_possible_moves[grad_i]
+
+            best = locate_best_move(x, y, moves)
+            if best is not None:
+                steps += 1
+            if move == best:
+                good_plays += 1
+
+            if best is None:
+                best = locate_closest(moves)
 
             # Get Q(s, a)
             Q = Qs.gather(0, torch.tensor(grad_i))
@@ -521,14 +544,25 @@ def wythoff_stumbler(path,
             moves_index = locate_moves(moves, all_possible_moves)
 
             # Count moves
-            steps += 1
+            # steps += 1
 
             # ----------------------------------------------------------------
             # Greedy opponent plays?
+            if done:
+                if independent_opp:
+                    opp_reward = -1 * reward
             if not done:
-                with torch.no_grad():
-                    move_i = greedy(model(board), index=moves_index)
-                    move = all_possible_moves[move_i]
+                if independent_opp:
+                    with torch.no_grad():
+                        move_i = epsilon_greedy(
+                            opp_model(board), epsilon=0.0, index=moves_index)
+                        move = all_possible_moves[move_i]
+                else:
+                    with torch.no_grad():
+                        # move_i = np.random.choice(moves_index)
+                        move_i = epsilon_greedy(
+                            model(board), epsilon=0.0, index=moves_index)
+                        move = all_possible_moves[move_i]
 
                 if debug:
                     print(">>> Possible moves {}".format(moves))
@@ -539,11 +573,26 @@ def wythoff_stumbler(path,
                 board = flatten_board(board)
                 moves_index = locate_moves(moves, all_possible_moves)
 
-                # Count moves
-                steps += 1
+                if independent_opp:
+                    opp_reward = deepcopy(reward)
 
-                # Flip reward
+                # Flip reward for player update
                 reward *= -1
+
+                # Count moves
+                # steps += 1
+
+            if independent_opp:
+                opp_next_Qs = opp_model(board).detach()
+                opp_next_Qs.gather(0, torch.tensor(moves_index))
+                opp_max_Q = opp_next_Qs.max()
+
+                opp_next_Q = (opp_reward + (gamma * opp_max_Q))
+                opp_loss = F.l1_loss(Q, opp_next_Q)
+
+                opp_optimizer.zero_grad()
+                opp_loss.backward(retain_graph=True)
+                opp_optimizer.step()
 
             # ----------------------------------------------------------------
             # Learn!
@@ -570,13 +619,19 @@ def wythoff_stumbler(path,
                 if done and (reward < 0):
                     print("*** OPPONENT WIN ***")
 
-            if tensorboard:  # and (int(trial) % 50) == 0:
+            if tensorboard and (int(trial) % update_every) == 0:
                 writer.add_graph(model, (board, ))
 
                 writer.add_scalar(os.path.join(path, 'reward'), reward, trial)
                 writer.add_scalar(os.path.join(path, 'Q'), Q, trial)
                 writer.add_scalar(os.path.join(path, 'error'), loss, trial)
                 writer.add_scalar(os.path.join(path, 'steps'), steps, trial)
+
+                frac = 0.0
+                if steps > 0:
+                    frac = good_plays / float(steps)
+                writer.add_scalar(
+                    os.path.join(path, 'good_plays'), frac, trial)
 
                 # Optimal ref:
                 plot_cold_board(m, n, path=path, name='cold_board.png')

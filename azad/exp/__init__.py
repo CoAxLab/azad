@@ -5,3 +5,4 @@ from azad.exp.wythoff import wythoff_stumbler
 from azad.exp.wythoff import wythoff_agent
 from azad.exp.wythoff import wythoff_optimal
 from azad.exp.wythoff import wythoff_strategist
+from azad.exp.wythoff2 import two_agents
