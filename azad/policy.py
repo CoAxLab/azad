@@ -1,21 +1,6 @@
 import torch
-
-
-def greedy(x, index=None):
-    """Pick the biggest"""
-    # Filter x using index, but first ensure we can
-    # map the action back to x' orignal 'space'
-    if index is not None:
-        x = x[index]
-
-    action = torch.argmax(x).unsqueeze(0)
-    action = int(action)
-
-    # Map back to x's original space
-    if index is not None:
-        action = index[action]
-
-    return action
+import torch.nn.functional as F
+from torch.distributions import Categorical
 
 
 def epsilon_greedy(x, epsilon, index=None):
@@ -32,6 +17,24 @@ def epsilon_greedy(x, epsilon, index=None):
         action = torch.argmax(x).unsqueeze(0)
 
     action = int(action)
+
+    # Map back to x's original space
+    if index is not None:
+        action = index[action]
+
+    return action
+
+
+def softmax(x, beta=0.98, index=None):
+    """Softmax policy"""
+    # Filter x using index, but first ensure we can
+    # map the action back to x' orignal 'space'
+    if index is not None:
+        x = x[index]
+
+    probs = F.softmax(x * beta)
+    m = Categorical(probs)
+    action = m.sample()
 
     # Map back to x's original space
     if index is not None:
