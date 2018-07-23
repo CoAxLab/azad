@@ -42,9 +42,9 @@ def locate_cold_moves(m, n):
 def locate_best_move(x, y, moves):
     """Locate possible cold moves"""
     cold_moves = locate_cold_moves(x, y)
-    for move in moves:
-        if move in cold_moves:
-            return move
+    for cold in cold_moves:
+        if cold in moves:
+            return cold
 
     return None
 
