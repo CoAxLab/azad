@@ -72,7 +72,27 @@ from azad.util.wythoff import plot_wythoff_board
 from azad.util.wythoff import plot_wythoff_expected_values
 
 
-class Jumpy(object):
+def epsilon_greedy(x, epsilon, index=None):
+    """Pick the biggest, with probability epsilon"""
+
+    # Filter x using index, but first ensure we can
+    # map the action back to x' orignal 'space'
+    if index is not None:
+        x = x[index]
+
+    if np.random.rand() < epsilon:
+        action = np.random.randint(0, x.shape[0])
+    else:
+        action = np.argmax(x)
+
+    # Map back to x's original space
+    if index is not None:
+        action = index[action]
+
+    return action
+
+
+class WythoffJumpy(object):
     """A Wythoff-specific implementation of Policy Hill Climbing (PHC).
 
     Citation
@@ -83,36 +103,32 @@ class Jumpy(object):
     """
 
     def __init__(self,
-                 game,
+                 game="Wythoff10x10",
                  delta=1.0,
                  gamma=0.98,
+                 epsilon=0.1,
                  learning_rate=1e-3,
                  seed_value=None):
+
+        # --------------------------------------------------------------------
         # Init params
+        self.initialize_game(game, seed_value)
+
         self.delta = delta
         self.gamma = gamma
+        self.epsilon = epsilon
         self.learning_rate = learning_rate
 
-        # Build the world
-        self.game = game
-        self.env = gym.envs.make(self.game)
-
-        self.seed_value = seed_value
-        self.env.seed(self.seed_value)
-
-        self.m, self.n, _, _ = peek(env)
-        self.all_possible_moves = create_all_possible_moves(m, n)
-
         # Build agents, and its optimizer
-        default_Q = 0.0
-        default_policy = 0.0
+        self.default_Q = 0.0
+        self.default_policy = 0.0
         self.player = {}
         self.oppenent = {}
         self.player_policy = {}
-        self.oppenent_polcy = {}
+        self.oppenent_policy = {}
 
-        # Saved attrs
-        self.done = None
+        # Setup up saved attrs
+        self.reset()
 
     def _init_writer(self, tensorboard):
         if tensorboard is not None:
@@ -124,10 +140,31 @@ class Jumpy(object):
 
             self.writer = SummaryWriter(log_dir=tensorboard)
 
+    def initialize_game(self, game, seed_value):
+        self.game = game
+        self.seed_value = seed_value
+        self.env = create_env(game)
+        self.env.seed(seed_value)
+
+        self.m, self.n, _, _ = peek(self.env)
+        self.all_possible_moves = create_all_possible_moves(self.m, self.n)
+
     def reset(self):
-        """Reset the model and the env"""
+        """Reset the model and the env."""
         self.good = 0
         self.steps = 0
+
+        self.move = None
+        self.move_i = None
+        self.grad_i = None
+        self.grad_board = None
+        self.board = None
+
+        self.Q = None
+        self.max_Q = None
+        self.next_Q = None
+        self.reward = None
+        self.loss = None
 
         x, y, board, moves = self.env.reset()
 
@@ -142,71 +179,43 @@ class Jumpy(object):
         else:
             return False
 
-    def player_step(self, board, moves):
+    def player_step(self, x, y, board, moves):
         """Player makes a move, and learns from it"""
-        # --------------------------------------------------------------------
-        # Get Q(s, ...)
-        try:
-            Qs = self.player[board]
-        except KeyError:
-            self.player[board] = np.ones(len(moves)) * default_Q
-            Qs = self.player[board]
 
-        # Decide
-        move_i = _np_softmax(Qs)
-        move = moves[move_i]
+        self.mover = self.player
+        self.mover_policy = self.player_policy
+        x, y, board, moves, done = self._step(x, y, board, moves)
 
-        if self.good_move(move, x, y):
-            self.good += 1
+        return x, y, board, moves, done
 
-        # Freeze these
-        grad_i = deepcopy(move_i)
-        grad_board = deepcopy(board)
-        Q = Qs[grad_i]
-
-        # --------------------------------------------------------------------
-        # Play, leading to s'
-        (x, y, board, moves), reward, done, _ = env.step(move)
-        board = tuple(flatten_board(board).numpy())
-
-        # --------------------------------------------------------------------
-        # Get max Q(s', a)
-        try:
-            max_Q = self.player[board].max()
-            max_i = self.player[board].argmax()
-        except KeyError:
-            self.player[board] = np.ones(len(moves)) * default_Q
-            max_Q = self.player[board].max()
-            max_i = self.player[board].argmax()
-
-        # Q update
-        next_Q = reward + (self.gamma * max_Q)
-        loss = next_Q - Q
-        self.player[grad_board][grad_i] = Q + (self.learning_rate * loss)
-
-        # Policy update
-        if grad_i == max_i:
-            self.player_policy[grad_board][grad_i] += self.delta
-        else:
-            self.player_policy[grad_board][
-                grad_i] -= self.delta / (len(moves) - 1.0)
-
-        self.steps += 1
-
-        return board, moves, done
-
-    def opponent_step(self, board, moves):
+    def opponent_step(self, x, y, board, moves):
         """Opponent makes a move, and learns from it"""
+
+        self.mover = self.oppenent
+        self.mover_policy = self.oppenent_policy
+        x, y, board, moves, done = self._step(x, y, board, moves)
+
+        return x, y, board, moves, done
+
+    def _step(self, x, y, board, moves):
+        """A private method for steppin'."""
         # --------------------------------------------------------------------
         # Get Q(s, ...)
         try:
-            Qs = self.opponent[board]
+            Qs = self.mover[board]
         except KeyError:
-            self.opponent[board] = np.ones(len(moves)) * default_Q
-            Qs = self.opponent[board]
+            self.mover[board] = np.ones(len(moves)) * self.default_Q
+            Qs = self.mover[board]
+
+        try:
+            pis = self.mover_policy[board]
+        except KeyError:
+            self.mover_policy[board] = np.ones(
+                len(moves)) * self.default_policy
+            pis = self.mover_policy[board]
 
         # Decide
-        move_i = _np_softmax(Qs)
+        move_i = epsilon_greedy(pis, self.epsilon)
         move = moves[move_i]
 
         if self.good_move(move, x, y):
@@ -219,71 +228,145 @@ class Jumpy(object):
 
         # --------------------------------------------------------------------
         # Play, leading to s'
-        (x, y, board, moves), reward, done, _ = env.step(move)
+        (x, y, board, moves), reward, done, _ = self.env.step(move)
         board = tuple(flatten_board(board).numpy())
 
         # --------------------------------------------------------------------
         # Get max Q(s', a)
         try:
-            max_Q = self.opponent[board].max()
-            max_i = self.opponent[board].argmax()
+            max_Q = self.mover[board].max()
+            max_i = self.mover[board].argmax()
         except KeyError:
-            self.opponent[board] = np.ones(len(moves)) * default_Q
-            max_Q = self.opponent[board].max()
-            max_i = self.opponent[board].argmax()
+            self.mover[board] = np.ones(len(moves)) * self.default_Q
+            max_Q = self.mover[board].max()
+            max_i = self.mover[board].argmax()
 
         # Q update
         next_Q = reward + (self.gamma * max_Q)
         loss = next_Q - Q
-        self.opponent[grad_board][grad_i] = Q + (self.learning_rate * loss)
+        self.mover[grad_board][grad_i] = Q + (self.learning_rate * loss)
 
         # Policy update
         if grad_i == max_i:
-            self.opponent_policy[grad_board][grad_i] += self.delta
+            self.mover_policy[grad_board][grad_i] += self.delta
         else:
-            self.opponent_policy[grad_board][
-                grad_i] -= self.delta / (len(moves) - 1.0)
+            self.mover_policy[grad_board][
+                grad_i] -= self.delta / (len(self.all_possible_moves) - 1.0)
 
+        # Set some attrs for later use.
         self.steps += 1
 
-        return board, moves, done
+        self.move = move
+        self.move_i = move_i
+        self.grad_i = grad_i
+        self.grad_board = grad_board
+        self.board = board
+
+        self.Q = Q
+        self.max_Q = max_Q
+        self.next_Q = next_Q
+        self.reward = reward
+        self.loss = loss
+
+        return x, y, board, moves, done
 
     def train(self,
-              num_episodes=10,
+              num_episodes=3,
               render=False,
               tensorboard=None,
               update_every=5,
-              seed_value=None,
-              debug=False):
+              debug=False,
+              seed_value=None):
         """Learn the env."""
-        # --------------------------------------------------------------------
-        # Setup
-        # Log?
+
         self._init_writer(tensorboard)
 
-        # Show?
-        if render:
-            self.env = wrappers.Monitor(
-                self.env, './tmp/{}'.format(self.env_name), force=True)
-
-        # Control randomness
-        self.env.seed(seed_value)
+        # Reseed game?
+        if seed_value is not None:
+            self.seed_value = seed_value
+            self.initialize_game(self.game, seed_value)
 
         # --------------------------------------------------------------------
         # !
-        for trial in range(num_trials):
+        for episode in range(num_episodes):
+            # Restart
             x, y, board, moves = self.reset()
+            board = tuple(flatten_board(board).numpy())
 
+            if debug:
+                print("---------------------------------------")
+                print(">>> NEW GAME ({}).".format(episode))
+                print(">>> Initial position ({}, {})".format(x, y))
+                print(">>> Initial moves {}".format(moves))
+                print("---------------------------------------")
+
+            # Play
             done = False
+            winner = 0
             while not done:
-                board, moves, done = self.player_step(board, moves)
+                # PLAYER
+                x, y, board, moves, done = self.player_step(x, y, board, moves)
+                if done:
+                    winner = 1
+
+                if debug:
+                    print(">>> 1: PLAYER move {}".format(self.move))
+
+                # OPPONENT
                 if not done:
-                    board, moves, done = self.opponent_step(board, moves)
+                    x, y, board, moves, done = self.opponent_step(
+                        x, y, board, moves)
+                if done:
+                    winner = 2
 
-                # TODO tensor/debug
+                if debug:
+                    print(">>> 2: OPPONENT move {}".format(self.move))
+
+            # ----------------------------------------------------------------
+            if debug:
+                print(">>> Reward {}; Loss(Q {}, next_Q {}) -> {}".format(
+                    self.reward, self.Q, self.next_Q, self.loss))
+
+                if done and (self.reward > 0):
+                    print("*** {} WINS ***".format(winner))
+
+            # Log
+            if tensorboard is not None and (int(episode) % update_every) == 0:
+                writer = self.writer
+
+                # Scalars
+                writer.add_scalar(
+                    os.path.join(tensorboard, 'winner'), winner, episode)
+                writer.add_scalar(
+                    os.path.join(tensorboard, 'fraction_good'),
+                    self.good / float(self.steps), episode)
+                writer.add_scalar(
+                    os.path.join(tensorboard, 'winner_Q'), self.Q, episode)
+                writer.add_scalar(
+                    os.path.join(tensorboard, 'winner_loss'), self.loss,
+                    episode)
+
+                # Boards
+                plot_cold_board(
+                    self.m, self.n, path=tensorboard, name='cold_board.png')
+                writer.add_image(
+                    'cold_positions',
+                    skimage.io.imread(
+                        os.path.join(tensorboard, 'cold_board.png')))
+
+                _np_plot_wythoff_max_values(
+                    self.m,
+                    self.n,
+                    self.mover,
+                    path=tensorboard,
+                    name='wythoff_max_values.png')
+                writer.add_image(
+                    'winner_max_value',
+                    skimage.io.imread(
+                        os.path.join(tensorboard, 'wythoff_max_values.png')))
 
 
-class JumpyPuppy(Jumpy):
+class WythoffJumpyPuppy(WythoffJumpy):
     """A Wythoff-specific implementation of WoLF-PHC.
 
     Citation

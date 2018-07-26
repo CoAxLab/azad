@@ -71,3 +71,11 @@ wythoff_exp4:
 		--nice 19 --delay 2 --colsep ',' \
 		'python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp4/exp4_n{1}_stb{2}_str{3}_ep{4} --num_trials=15000 --num_stumbles={1} --num_evals=1 --stumbler_learning_rate={2} --strategist_learning_rate={3} --epsilon={4} --stumbler_game=Wythoff10x10 --strategist_game=Wythoff50x50 --tensorboard=False --save=True --debug=False' ::: \
 		1 100 ::: 0.01 0.1 0.5 ::: 0.1 0.01 ::: 0 0.1
+
+# ----------------------------------------------------------------------------
+# 6-26-2018
+# run_azad3 (WOlF-PHC models)
+wythoff_exp5:
+	-rm -rf $(DATA_PATH)/wythoff/exp5
+	sleep 5  # Wait for tensorboard to notice the deletion
+	python run_azad3.py wythoff_agent --tensorboard=$(DATA_PATH)/wythoff/exp5 --num_episodes=5 --learning_rate=0.1 --epsilon=0.1 --gamma=0.99 --delta=0.01 --game=Wythoff10x10 --debug=True
