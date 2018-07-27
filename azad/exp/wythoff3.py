@@ -121,7 +121,7 @@ class WythoffJumpy(object):
 
         # Build agents, and its optimizer
         self.default_Q = 0.0
-        self.default_policy = 0.0
+        self.default_policy = 1.0 / (self.m * self.n)
         self.player = {}
         self.oppenent = {}
         self.player_policy = {}
@@ -196,6 +196,16 @@ class WythoffJumpy(object):
         x, y, board, moves, done = self._step(x, y, board, moves)
 
         return x, y, board, moves, done
+
+        # def opponent_step(self, x, y, board, moves):
+        #     """Purely random opponent"""
+
+        #     move_i = np.random.randint(0, len(moves))
+        #     move = moves[move_i]
+        #     (x, y, board, moves), reward, done, _ = self.env.step(move)
+        #     board = tuple(flatten_board(board).numpy())
+
+        # return x, y, board, moves, done
 
     def _step(self, x, y, board, moves):
         """A private method for steppin'."""
@@ -306,6 +316,7 @@ class WythoffJumpy(object):
             while not done:
                 # PLAYER
                 x, y, board, moves, done = self.player_step(x, y, board, moves)
+                player_loss = self.loss
                 if done:
                     winner = 1
 
@@ -313,11 +324,15 @@ class WythoffJumpy(object):
                     print(">>> 1: PLAYER move {}".format(self.move))
 
                 # OPPONENT
+                opponent_loss = None
                 if not done:
                     x, y, board, moves, done = self.opponent_step(
                         x, y, board, moves)
-                if done:
-                    winner = 2
+                    opponent_loss = self.loss
+
+                    player_loss = self.loss
+                    if done:
+                        winner = 2
 
                 if debug:
                     print(">>> 2: OPPONENT move {}".format(self.move))
@@ -338,13 +353,11 @@ class WythoffJumpy(object):
                 writer.add_scalar(
                     os.path.join(tensorboard, 'winner'), winner, episode)
                 writer.add_scalar(
-                    os.path.join(tensorboard, 'fraction_good'),
-                    self.good / float(self.steps), episode)
-                writer.add_scalar(
-                    os.path.join(tensorboard, 'winner_Q'), self.Q, episode)
-                writer.add_scalar(
                     os.path.join(tensorboard, 'winner_loss'), self.loss,
                     episode)
+                writer.add_scalar(
+                    os.path.join(tensorboard, 'fraction_good'),
+                    self.good / float(self.steps), episode)
 
                 # Boards
                 plot_cold_board(
@@ -357,13 +370,13 @@ class WythoffJumpy(object):
                 _np_plot_wythoff_max_values(
                     self.m,
                     self.n,
-                    self.mover,
+                    self.player,
                     path=tensorboard,
-                    name='wythoff_max_values.png')
+                    name='player_max_values.png')
                 writer.add_image(
-                    'winner_max_value',
+                    'player',
                     skimage.io.imread(
-                        os.path.join(tensorboard, 'wythoff_max_values.png')))
+                        os.path.join(tensorboard, 'player_max_values.png')))
 
 
 class WythoffJumpyPuppy(WythoffJumpy):
@@ -377,9 +390,162 @@ class WythoffJumpyPuppy(WythoffJumpy):
     """
 
     def __init__(self,
-                 env,
-                 delta_win=0.1,
-                 delta_lose=1,
+                 game="Wythoff10x10",
                  gamma=0.98,
-                 learning_rate=1e-3):
-        pass
+                 epsilon=0.1,
+                 learning_rate=0.1,
+                 learning_rate_l=0.5,
+                 learning_rate_w=0.01,
+                 seed_value=None):
+
+        # --------------------------------------------------------------------
+        # Init params
+        self.initialize_game(game, seed_value)
+
+        self.gamma = gamma
+
+        self.epsilon = epsilon
+        self.learning_rate = learning_rate
+        self.learning_rate_l = learning_rate_l
+        self.learning_rate_w = learning_rate_w
+        self.C = 1.0
+
+        # Build agents, and its optimizer
+        self.default_Q = 0.0
+        self.default_policy = 1.0 / (self.m * self.n)
+
+        # Q
+        self.player = {}
+        self.oppenent = {}
+
+        # Pi
+        self.player_policy = {}
+        self.oppenent_policy = {}
+
+        # Avg Pi
+        self.player_avg = {}
+        self.oppenent_avg = {}
+
+        # Setup up saved attrs
+        self.reset()
+
+    def reset(self):
+        x, y, board, moves = super().reset()
+        self.C = 1.0
+
+        return x, y, board, moves
+
+    def player_step(self, x, y, board, moves):
+        """Player makes a move, and learns from it"""
+
+        self.mover = self.player
+        self.mover_policy = self.player_policy
+        self.mover_avg = self.player_avg
+        x, y, board, moves, done = self._step(x, y, board, moves)
+
+        return x, y, board, moves, done
+
+    def opponent_step(self, x, y, board, moves):
+        """Opponent makes a move, and learns from it"""
+
+        self.mover = self.oppenent
+        self.mover_policy = self.oppenent_policy
+        self.mover_avg = self.oppenent_avg
+        x, y, board, moves, done = self._step(x, y, board, moves)
+
+        return x, y, board, moves, done
+
+    def _step(self, x, y, board, moves):
+        """A private method for steppin'."""
+        # --------------------------------------------------------------------
+        # Get Q(s, ...)
+        try:
+            Qs = self.mover[board]
+        except KeyError:
+            self.mover[board] = np.ones(len(moves)) * self.default_Q
+            Qs = self.mover[board]
+
+        try:
+            pis = self.mover_policy[board]
+        except KeyError:
+            self.mover_policy[board] = np.ones(
+                len(moves)) * self.default_policy
+            pis = self.mover_policy[board]
+
+        try:
+            avgs = self.mover_avg[board]
+        except KeyError:
+            self.mover_avg[board] = np.ones(len(moves)) * self.default_policy
+            avgs = self.mover_avg[board]
+
+        # Decide
+        move_i = epsilon_greedy(pis, self.epsilon)
+        move = moves[move_i]
+
+        if self.good_move(move, x, y):
+            self.good += 1
+
+        # Freeze these
+        grad_i = deepcopy(move_i)
+        grad_board = deepcopy(board)
+
+        Q = Qs[grad_i]
+        pi = pis[grad_i]
+        avg = avgs[grad_i]
+
+        # --------------------------------------------------------------------
+        # Play, leading to s'
+        (x, y, board, moves), reward, done, _ = self.env.step(move)
+        board = tuple(flatten_board(board).numpy())
+
+        # --------------------------------------------------------------------
+        # Get max Q(s', a)
+        try:
+            max_Q = self.mover[board].max()
+            max_i = self.mover[board].argmax()
+        except KeyError:
+            self.mover[board] = np.ones(len(moves)) * self.default_Q
+            max_Q = self.mover[board].max()
+            max_i = self.mover[board].argmax()
+
+        # Q update
+        next_Q = reward + (self.gamma * max_Q)
+        loss = next_Q - Q
+        self.mover[grad_board][grad_i] = Q + (self.learning_rate * loss)
+
+        # Define delta
+        if (Q * pi) > (Q * avg):
+            delta = self.learning_rate_w
+        else:
+            delta = self.learning_rate_l
+
+        # Policy update
+        if grad_i == max_i:
+            self.mover_policy[grad_board][grad_i] += delta
+        else:
+            self.mover_policy[grad_board][
+                grad_i] -= delta / (len(self.all_possible_moves) - 1.0)
+
+        # Avg policy update
+        self.mover_avg[grad_board][grad_i] += (1.0 / self.C) * (pi - avg)
+
+        # --------------------------------------------------------------------
+        # Set some attrs for later use.
+        self.steps += 1
+        self.C += 1
+
+        self.move = move
+        self.move_i = move_i
+        self.grad_i = grad_i
+        self.grad_board = grad_board
+        self.board = board
+
+        self.Q = Q
+        self.max_Q = max_Q
+        self.next_Q = next_Q
+        self.pi = pi
+        self.avg_pi = avg
+        self.reward = reward
+        self.loss = loss
+
+        return x, y, board, moves, done

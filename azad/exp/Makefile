@@ -73,9 +73,16 @@ wythoff_exp4:
 		1 100 ::: 0.01 0.1 0.5 ::: 0.1 0.01 ::: 0 0.1
 
 # ----------------------------------------------------------------------------
-# 6-26-2018
-# run_azad3 (WOlF-PHC models)
+# 7-26-2018
+# run_azad3 (PHC models)
 wythoff_exp5:
 	-rm -rf $(DATA_PATH)/wythoff/exp5
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad3.py wythoff_agent --tensorboard=$(DATA_PATH)/wythoff/exp5 --num_episodes=5 --learning_rate=0.1 --epsilon=0.1 --gamma=0.99 --delta=0.01 --game=Wythoff10x10 --debug=True
+	python run_azad3.py wythoff_agent1 --tensorboard=$(DATA_PATH)/wythoff/exp5 --num_episodes=5000 --learning_rate=0.1 --epsilon=0.1 --gamma=0.99 --delta=0.01 --game=Wythoff10x10 --debug=False
+
+# 7-27-2018
+# run_azad3 (WOLF-PHC models)
+wythoff_exp6:
+	-rm -rf $(DATA_PATH)/wythoff/exp6
+	sleep 5  # Wait for tensorboard to notice the deletion
+	python run_azad3.py wythoff_agent2 --tensorboard=$(DATA_PATH)/wythoff/exp6 --num_episodes=2000 --learning_rate=0.01 --learning_rate_w=0.01 --learning_rate_l=0.5 --epsilon=0.1 --gamma=0.99 --game=Wythoff10x10 --debug=False
