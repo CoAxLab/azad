@@ -85,4 +85,4 @@ wythoff_exp5:
 wythoff_exp6:
 	-rm -rf $(DATA_PATH)/wythoff/exp6
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad3.py wythoff_agent2 --tensorboard=$(DATA_PATH)/wythoff/exp6 --num_episodes=2000 --learning_rate=0.01 --learning_rate_w=0.01 --learning_rate_l=0.5 --epsilon=0.1 --gamma=0.99 --game=Wythoff10x10 --debug=False
+	python run_azad3.py wythoff_agent2 --tensorboard=$(DATA_PATH)/wythoff/exp6 --num_episodes=50000 --update_every=50 --learning_rate=0.01 --learning_rate_w=0.01 --learning_rate_l=1.0 --epsilon=0.1 --gamma=0.99 --game=Wythoff10x10 --debug=False
