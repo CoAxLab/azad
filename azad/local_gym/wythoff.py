@@ -26,7 +26,7 @@ def create_cold_board(m, n):
     return cold_board
 
 
-def locate_cold_moves(m, n):
+def locate_all_cold_moves(m, n):
     """Locate all the cold moves"""
     moves = []
     for k in range(m - 1):
@@ -39,9 +39,18 @@ def locate_cold_moves(m, n):
     return moves
 
 
-def locate_best_move(x, y, moves):
+def cold_move_available(x, y, moves):
+    colds = locate_all_cold_moves(x, y)
+    for cold in colds:
+        if cold in moves:
+            return True
+
+    return False
+
+
+def locate_cold_move(x, y, moves):
     """Locate possible cold moves"""
-    cold_moves = locate_cold_moves(x, y)
+    cold_moves = locate_all_cold_moves(x, y)
     for cold in cold_moves:
         if cold in moves:
             return cold

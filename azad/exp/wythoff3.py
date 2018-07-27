@@ -32,9 +32,8 @@ from azad.local_gym.wythoff import create_all_possible_moves
 from azad.local_gym.wythoff import locate_moves
 from azad.local_gym.wythoff import create_cold_board
 from azad.local_gym.wythoff import create_board
-from azad.local_gym.wythoff import locate_cold_moves
-from azad.local_gym.wythoff import locate_best_move
-from azad.local_gym.wythoff import locate_closest
+from azad.local_gym.wythoff import cold_move_available
+from azad.local_gym.wythoff import locate_cold_move
 
 from azad.models import Table
 from azad.models import DeepTable3
@@ -152,6 +151,7 @@ class WythoffJumpy(object):
     def reset(self):
         """Reset the model and the env."""
         self.good = 0
+        self.num_cold = 0
         self.steps = 0
 
         self.move = None
@@ -173,7 +173,7 @@ class WythoffJumpy(object):
     def good_move(self, move, x, y):
         """Was the move good?"""
 
-        best_moves = locate_cold_moves(x, y)
+        best_moves = locate_all_cold_moves(x, y)
         if move in best_moves:
             return True
         else:
@@ -228,8 +228,12 @@ class WythoffJumpy(object):
         move_i = epsilon_greedy(pis, self.epsilon)
         move = moves[move_i]
 
-        if self.good_move(move, x, y):
-            self.good += 1
+        if cold_move_available(x, y, moves):
+            self.num_cold += 1
+
+            best = locate_cold_move(x, y, moves)
+            if move == best:
+                self.good += 1
 
         # Freeze these
         grad_i = deepcopy(move_i)
@@ -355,9 +359,12 @@ class WythoffJumpy(object):
                 writer.add_scalar(
                     os.path.join(tensorboard, 'winner_loss'), self.loss,
                     episode)
+
+                frac = 0.0
+                if self.num_cold > 0:
+                    frac = self.good / float(self.num_cold)
                 writer.add_scalar(
-                    os.path.join(tensorboard, 'fraction_good'),
-                    self.good / float(self.steps), episode)
+                    os.path.join(tensorboard, 'fraction_good'), frac, episode)
 
                 # Boards
                 plot_cold_board(
@@ -482,8 +489,12 @@ class WythoffJumpyPuppy(WythoffJumpy):
         move_i = epsilon_greedy(pis, self.epsilon)
         move = moves[move_i]
 
-        if self.good_move(move, x, y):
-            self.good += 1
+        if cold_move_available(x, y, moves):
+            self.num_cold += 1
+
+            best = locate_cold_move(x, y, moves)
+            if move == best:
+                self.good += 1
 
         # Freeze these
         grad_i = deepcopy(move_i)

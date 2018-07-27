@@ -31,8 +31,8 @@ from azad.local_gym.wythoff import create_all_possible_moves
 from azad.local_gym.wythoff import locate_moves
 from azad.local_gym.wythoff import create_cold_board
 from azad.local_gym.wythoff import create_board
-from azad.local_gym.wythoff import locate_cold_moves
-from azad.local_gym.wythoff import locate_best_move
+from azad.local_gym.wythoff import locate_all_cold_moves
+from azad.local_gym.wythoff import locate_cold_move
 from azad.local_gym.wythoff import locate_closest
 
 from azad.models import Table
@@ -517,12 +517,12 @@ def wythoff_stumbler(path,
 
             # Move!
             with torch.no_grad():
-                # move_i = epsilon_greedy(Qs, epsilon, index=moves_index)
-                move_i = softmax(Qs, index=moves_index)
+                move_i = epsilon_greedy(Qs, epsilon, index=moves_index)
+                # move_i = softmax(Qs, index=moves_index)
                 grad_i = deepcopy(move_i)
                 move = all_possible_moves[grad_i]
 
-            best = locate_best_move(x, y, moves)
+            best = locate_cold_move(x, y, moves)
             if best is not None:
                 steps += 1
             if move == best:
