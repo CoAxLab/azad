@@ -31,9 +31,9 @@ from azad.local_gym.wythoff import create_all_possible_moves
 from azad.local_gym.wythoff import locate_moves
 from azad.local_gym.wythoff import create_cold_board
 from azad.local_gym.wythoff import create_board
-from azad.local_gym.wythoff import locate_all_cold_moves
-from azad.local_gym.wythoff import locate_cold_move
-from azad.local_gym.wythoff import locate_closest
+from azad.local_gym.wythoff import cold_move_available
+from azad.local_gym.wythoff import locate_closest_cold_move
+from azad.local_gym.wythoff import locate_cold_moves
 
 from azad.models import Table
 from azad.models import DeepTable3
@@ -248,6 +248,7 @@ def wythoff_stumbler(path,
                      tensorboard=False,
                      debug=False,
                      update_every=100,
+                     anneal=True,
                      independent_opp=False,
                      save=False,
                      seed=None):
@@ -292,7 +293,9 @@ def wythoff_stumbler(path,
         # --------------------------------------------------------------------
         # Re-init
         steps = 0
-        good_plays = 0
+        num_cold = 0
+        good = 0
+        best = 0
 
         # Start the game, and process the result
         x, y, board, moves = env.reset()
@@ -320,20 +323,25 @@ def wythoff_stumbler(path,
                 Qs.add_(flatten_board(bias_board[0:m, 0:n]))
 
             # Move!
+            k = 0.3
             with torch.no_grad():
-                move_i = epsilon_greedy(Qs, epsilon, index=moves_index)
-                # move_i = softmax(Qs, index=moves_index)
+                if anneal:
+                    epsilon_t = epsilon * (1.0 / np.log((trial + np.e)))
+                else:
+                    epsilon_t = epsilon
+                move_i = epsilon_greedy(Qs, epsilon_t, index=moves_index)
+
                 grad_i = deepcopy(move_i)
                 move = all_possible_moves[grad_i]
 
-            best = locate_cold_move(x, y, moves)
-            if best is not None:
-                steps += 1
-            if move == best:
-                good_plays += 1
+            # Was it a wise move?
+            if cold_move_available(x, y, moves):
+                num_cold += 1
+                if move == locate_closest_cold_move(x, y, moves):
+                    best += 1
 
-            if best is None:
-                best = locate_closest(moves)
+                if move in locate_cold_moves(x, y, moves):
+                    good += 1
 
             # Get Q(s, a)
             Q = Qs.gather(0, torch.tensor(grad_i))
@@ -348,7 +356,7 @@ def wythoff_stumbler(path,
             moves_index = locate_moves(moves, all_possible_moves)
 
             # Count moves
-            # steps += 1
+            steps += 1
 
             # ----------------------------------------------------------------
             # Greedy opponent plays?
@@ -429,13 +437,19 @@ def wythoff_stumbler(path,
                 writer.add_scalar(os.path.join(path, 'reward'), reward, trial)
                 writer.add_scalar(os.path.join(path, 'Q'), Q, trial)
                 writer.add_scalar(os.path.join(path, 'error'), loss, trial)
+                writer.add_scalar(
+                    os.path.join(path, 'epsilon_t'), epsilon_t, trial)
                 writer.add_scalar(os.path.join(path, 'steps'), steps, trial)
 
                 frac = 0.0
-                if steps > 0:
-                    frac = good_plays / float(steps)
-                writer.add_scalar(
-                    os.path.join(path, 'good_plays'), frac, trial)
+                if num_cold > 0:
+                    frac = good / num_cold
+                writer.add_scalar(os.path.join(path, 'good'), frac, trial)
+
+                frac = 0.0
+                if num_cold > 0:
+                    frac = best / num_cold
+                writer.add_scalar(os.path.join(path, 'optimal'), frac, trial)
 
                 # Optimal ref:
                 plot_cold_board(m, n, path=path, name='cold_board.png')
