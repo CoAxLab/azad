@@ -33,7 +33,7 @@ from azad.local_gym.wythoff import locate_moves
 from azad.local_gym.wythoff import create_cold_board
 from azad.local_gym.wythoff import create_board
 from azad.local_gym.wythoff import cold_move_available
-from azad.local_gym.wythoff import locate_cold_move
+from azad.local_gym.wythoff import locate_closest_cold_move
 
 from azad.models import Table
 from azad.models import DeepTable3
@@ -231,7 +231,7 @@ class WythoffJumpy(object):
         if cold_move_available(x, y, moves):
             self.num_cold += 1
 
-            best = locate_cold_move(x, y, moves)
+            best = locate_closest_cold_move(x, y, moves)
             if move == best:
                 self.good += 1
 
@@ -492,7 +492,7 @@ class WythoffJumpyPuppy(WythoffJumpy):
         if cold_move_available(x, y, moves):
             self.num_cold += 1
 
-            best = locate_cold_move(x, y, moves)
+            best = locate_closest_cold_move(x, y, moves)
             if move == best:
                 self.good += 1
 

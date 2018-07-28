@@ -248,7 +248,7 @@ def wythoff_stumbler(path,
                      tensorboard=False,
                      debug=False,
                      update_every=100,
-                     anneal=True,
+                     anneal=False,
                      independent_opp=False,
                      save=False,
                      seed=None):
@@ -272,6 +272,7 @@ def wythoff_stumbler(path,
 
     env.seed(seed)
     np.random.seed(seed)
+    avg_optim = 0.0
 
     # ------------------------------------------------------------------------
     # Build a Q agent, and its optimizer
@@ -419,6 +420,10 @@ def wythoff_stumbler(path,
             loss.backward()
             optimizer.step()
 
+            # Update avg performance metric
+            if num_cold > 0:
+                avg_optim += (best - avg_optim) / (trial + 1)
+
             # ----------------------------------------------------------------
             if debug:
                 print(">>> Reward {}; max_Q {}; Loss(Q {}, next_Q {}) -> {}".
@@ -440,16 +445,8 @@ def wythoff_stumbler(path,
                 writer.add_scalar(
                     os.path.join(path, 'epsilon_t'), epsilon_t, trial)
                 writer.add_scalar(os.path.join(path, 'steps'), steps, trial)
-
-                frac = 0.0
-                if num_cold > 0:
-                    frac = good / num_cold
-                writer.add_scalar(os.path.join(path, 'good'), frac, trial)
-
-                frac = 0.0
-                if num_cold > 0:
-                    frac = best / num_cold
-                writer.add_scalar(os.path.join(path, 'optimal'), frac, trial)
+                writer.add_scalar(
+                    os.path.join(path, 'avg_optimal'), avg_optim, trial)
 
                 # Optimal ref:
                 plot_cold_board(m, n, path=path, name='cold_board.png')

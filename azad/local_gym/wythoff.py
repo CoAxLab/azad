@@ -48,7 +48,18 @@ def cold_move_available(x, y, moves):
     return False
 
 
-def locate_cold_move(x, y, moves):
+def locate_cold_moves(x, y, moves):
+    all_colds = locate_all_cold_moves(x, y)
+
+    colds = []
+    for cold in all_colds:
+        if cold in moves:
+            colds.append(cold)
+
+    return colds
+
+
+def locate_closest_cold_move(x, y, moves):
     """Locate possible cold moves"""
     cold_moves = locate_all_cold_moves(x, y)
     for cold in cold_moves:

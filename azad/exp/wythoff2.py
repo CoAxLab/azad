@@ -32,7 +32,7 @@ from azad.local_gym.wythoff import locate_moves
 from azad.local_gym.wythoff import create_cold_board
 from azad.local_gym.wythoff import create_board
 from azad.local_gym.wythoff import locate_all_cold_moves
-from azad.local_gym.wythoff import locate_cold_move
+from azad.local_gym.wythoff import locate_closest_cold_move
 from azad.local_gym.wythoff import locate_closest
 
 from azad.models import Table
@@ -148,7 +148,7 @@ def observe_actions(path,
             move = moves[move_i]
 
             # Find best move, as a reference
-            best = locate_cold_move(x, y, moves)
+            best = locate_closest_cold_move(x, y, moves)
             if best is not None:
                 steps += 1
 
@@ -336,7 +336,7 @@ def independent(path,
             move = moves[move_i]
 
             # Find best move
-            best = locate_cold_move(x, y, moves)
+            best = locate_closest_cold_move(x, y, moves)
             if best is not None:
                 steps += 1
             if move == best:
@@ -388,7 +388,7 @@ def independent(path,
             move = moves[move_i]
 
             # Find best move
-            best = locate_cold_move(x, y, moves)
+            best = locate_closest_cold_move(x, y, moves)
             if best is not None:
                 steps += 1
             if move == best:
