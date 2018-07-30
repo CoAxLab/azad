@@ -105,7 +105,7 @@ def softmax(x, beta=0.98, index=None):
     return action
 
 
-class WythoffJointActionStumbler(object):
+class WythoffStumbler(object):
     def __init__(self,
                  game="Wythoff10x10",
                  gamma=0.98,
@@ -117,6 +117,7 @@ class WythoffJointActionStumbler(object):
         # --------------------------------------------------------------------
         # Init params
         self.episode = 0
+        self.avg_optim = 0.0
         self.gamma = gamma
         self.epsilon = epsilon
         self.anneal = anneal
@@ -144,110 +145,111 @@ class WythoffJointActionStumbler(object):
 
         self.m, self.n, _, _ = peek(self.env)
         self.all_possible_moves = create_all_possible_moves(self.m, self.n)
-        self.num_actions = 2 * self.m * self.n
+        self.num_actions = self.m * self.n
 
     def initialize_agents(self):
-        self.num_actions = 2 * self.n * self.m
+        # Player
         self.player = Table(self.m * self.n, self.num_actions)
+        self.player_optimizer = optim.SGD(
+            self.player.parameters(), lr=self.learning_rate)
+
+        # Opponent
         self.opponent = Table(self.m * self.n, self.num_actions)
+        self.opponent_optimizer = optim.SGD(
+            self.opponent.parameters(), lr=self.learning_rate)
 
     def reset(self):
         """Reset the model and the env."""
 
-        self.good = 0
+        self.best = 0
         self.num_cold = 0
-        self.avg_optim = 0.0
+
+        x, y, board, available = self.env.reset()
         self.steps = 0
 
-        self.move = None
-        self.move_i = None
-        self.grad_i = None
-        self.grad_board = None
-        self.board = None
-
-        self.Q = None
-        self.max_Q = None
-        self.next_Q = None
-        self.reward = None
-        self.loss = None
-
-        x, y, board, moves = self.env.reset()
-
-        return x, y, board, moves
+        return x, y, board, available
 
     def player_step(self, x, y, board, available):
         """Step the player's model"""
 
+        # Set model
         self.model = self.player
-        return self._model_step(x, y, board, available)
+        self.model_optimizer = self.player_optimizer
+
+        # Step it
+        x, y, board, move, i, available, reward, done = self._model_step(
+            x, y, board, available)
+
+        # Anlyze player's move
+        if cold_move_available(x, y, available):
+            self.num_cold += 1
+            if move == locate_closest_cold_move(x, y, available):
+                self.best += 1
+        if self.num_cold > 0:
+            self.avg_optim += (self.best - self.avg_optim) / (self.episode + 1)
+
+        return x, y, board, move, i, available, reward, done
 
     def opponent_step(self, x, y, board, available):
         """Step the opponent's model"""
 
+        # Set model
         self.model = self.opponent
+        self.model_optimizer = self.opponent_optimizer
+
+        # Step it
         return self._model_step(x, y, board, available)
 
-    def _model_step(self, x, y, board, available):
-        """Step a model."""
+    def epsilon_t(self):
+        """Anneal epsilon with time (i.e., episode)"""
 
         # Tune exploration
         if self.anneal:
             epsilon_t = self.epsilon * (1.0 / np.log((self.episode + np.e)))
         else:
-            epsilon_t = epsilon
+            epsilon_t = self.epsilon
 
-        # Use value to choose a move
+        return epsilon_t
+
+    def _model_step(self, x, y, board, available):
+        """Step a model."""
+
+        # Get all value
+        Qs = self.model(board).detach()
+
+        # Filter for available values
         moves_index = locate_moves(available, self.all_possible_moves)
 
-        # Get value
-        Qs = self.model(board).detach().view(self.m * self.n, self.m * self.n)
-        import ipdb
-        ipdb.set_trace()
-        Qs = Qs.max(dim=1)
-
+        # Choose a move, wiht e-greedy
         with torch.no_grad():
-            i = epsilon_greedy(Qs, epsilon_t, index=moves_index)
+            i = epsilon_greedy(Qs, self.epsilon_t(), index=moves_index)
             move = self.all_possible_moves[i]
 
         # Make the move
-        (x, y, board, available), reward, done, _ = env.step(move)
+        (x, y, board, available), reward, done, _ = self.env.step(move)
         board = flatten_board(board)
 
         # -
         return x, y, board, move, i, available, reward, done
 
     def learn(self):
-        gamma = self.gamma
-        state = self.state
-        next_state = self.next_state
-        u = self.u
-        reward = self.reward
-        available = self.learner_available
-        moves_index = locate_moves(available, self.all_possible_moves)
-
+        """Learn"""
         # Q(s, a)
-        Qs = self.learner(state).detach().view(self.m * self.n,
-                                               self.m * self.n)
-
-        Qs = Qs.max(dim=1)  # Expectation over all mover's move
-        Q = Qs.gather(0, torch.tensor(u))
+        Qs = self.model(self.state)
+        self.Q = Qs.gather(0, torch.tensor(self.learner_move_i))
 
         # max Q(s', .)
-        next_Qs = self.model(next_state).detach().view(self.m * self.n,
-                                                       self.m * self.n)
-        next_Qs = next_Qs.max(dim=1)
-        next_Qs.gather(0, th.tensor(moves_index))
-        max_Q = next_Qs.max()
+        next_Qs = self.model(self.next_state).detach()
+        self.max_Q = next_Qs.max()
 
-        # Estimate value difference
-        est_Q = (reward + (gamma * max_Q))
+        # Estimate value of next Q
+        self.est_Q = (self.reward + (self.gamma * self.max_Q))
 
         # Learn
-        loss = F.l1_loss(Q, est_Q)
-
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
+        self.loss = F.l1_loss(self.Q, self.est_Q)
+        self.model_optimizer.zero_grad()
+        self.loss.backward()
+        self.model_optimizer.step()
 
     def train(self,
               num_episodes=3,
@@ -278,6 +280,11 @@ class WythoffJointActionStumbler(object):
             board = flatten_board(board)
             self.state = board
 
+            if debug:
+                print("---------------------------------------")
+                print(">>> STUMBLER ({}).".format(self.episode))
+                print(">>> Initial position ({}, {})".format(x, y))
+
             # ----------------------------------------------------------------
             # Inital move by learner
             self.learner = self.player_step
@@ -287,16 +294,19 @@ class WythoffJointActionStumbler(object):
                 x, y, board, available)
 
             # Note returns
+            self.reward = reward
+            self.x, self.y = x, y
             self.next_state = board
+
             self.learner_board = board
             self.learner_move = move
             self.learner_move_i = i
+            self.available = available
 
-            # If first move is a winner, generate a dummy 'u'
-            # and learn from that
-            if done:
-                pass
+            if debug:
+                print(">>> Move {}".format(move))
 
+            # ----------------------------------------------------------------
             # Set the first 'mover'
             self.mover = self.opponent_step
 
@@ -306,27 +316,99 @@ class WythoffJointActionStumbler(object):
                 x, y, board, move, i, available, reward, done = self.mover(
                     x, y, board, available)
 
+                if debug:
+                    print(">>> Move {}".format(move))
+
                 # Note state vars
                 self.reward = reward
+                self.x, self.y = x, y
                 self.next_state = board
+
                 self.mover_board = board
                 self.mover_move = move
                 self.mover_move_i = i
+                self.available = available
 
                 # Mover wins are learner losses.
                 if done:
                     self.reward *= -1
 
-                # Genetate u, the joint action index
-                self.u = self.learner_move_i + self.mover_move_i
+            # Learn
+            self.learn()
 
-                # Learn
-                self.learn()
+            # Leap the frog: swap learner/mover
+            self.learner, self.mover = self.mover, self.learner
+            self.state = self.next_state
+            self.learner_board = self.mover_board
+            self.learner_move = self.mover_move
+            self.learner_move_i = self.mover_move_i
 
-                # Leap the frog: swap learner/mover
-                self.learner, self.mover = self.mover, self.learner
+            if debug:
+                print(">>> Reward {}; max_Q {}; Loss(Q {}, est_Q {}) -> {}".
+                      format(self.reward, self.max_Q,
+                             float(self.Q.detach().numpy()), self.est_Q,
+                             self.loss))
 
-                self.state = self.next_state
-                self.learner_board = self.mover_board
-                self.learner_move = self.mover_move
-                self.learner_move_i = self.mover_move_i
+                grad_i = th.nonzero(self.model.fc1.weight.grad)
+                print(">>> Player W grad: {}".format(
+                    self.model.fc1.weight.grad[grad_i]))
+
+                if done and (reward > 0):
+                    print("*** WIN ***")
+                if done and (reward < 0):
+                    print("*** OPPONENT WIN ***")
+
+            if tensorboard and (int(self.episode) % update_every) == 0:
+                writer.add_graph(model, (board, ))
+
+                writer.add_scalar(
+                    os.path.join(tensorboard, 'reward'), self, reward,
+                    self.episode)
+                writer.add_scalar(
+                    os.path.join(tensorboard, 'Q'), self.Q, self.episode)
+                writer.add_scalar(
+                    os.path.join(tensorboard, 'error'), self.loss,
+                    self.episode)
+                writer.add_scalar(
+                    os.path.join(tensorboard, 'epsilon_t'), seld.epsilon_t(),
+                    self.episode)
+                writer.add_scalar(
+                    os.path.join(tensorboard, 'steps'), self.steps,
+                    self.episode)
+                writer.add_scalar(
+                    os.path.join(tensorboard, 'avg_optimal'), self.avg_optim,
+                    self.episode)
+
+                # Optimal ref:
+                plot_cold_board(
+                    self.m, self.n, path=tensorboard, name='cold_board.png')
+                writer.add_image(
+                    'True cold positions',
+                    skimage.io.imread(
+                        os.path.join(tensorboard, 'cold_board.png')))
+
+                # EV:
+                plot_wythoff_expected_values(
+                    self.m,
+                    self.n,
+                    self.player,
+                    path=tensorboard,
+                    name='player_expected_values.png')
+                writer.add_image(
+                    'Max value',
+                    skimage.io.imread(
+                        os.path.join(tensorboard,
+                                     'wythoff_expected_values.png')))
+
+                est_hc_board = estimate_hot_cold(
+                    self.m,
+                    self.n,
+                    self.player,
+                    hot_threshold=0.5,
+                    cold_threshold=0.0)
+                plot_wythoff_board(
+                    est_hc_board, path=tensorboard, name='est_hc_board.png')
+                writer.add_image(
+                    'Estimated hot and cold positions',
+                    skimage.io.imread(
+                        os.path.join(tensorboard, 'est_hc_board.png')))

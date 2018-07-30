@@ -1,7 +1,7 @@
 """Run azad experiments"""
 import fire
 
-from azad.exp.wythoff4 import WythoffJointActionStumbler
+from azad.exp.wythoff4 import WythoffStumbler
 
 
 def wythoff_stumbler1(num_episodes=3,
@@ -15,7 +15,7 @@ def wythoff_stumbler1(num_episodes=3,
                       update_every=5,
                       debug=False,
                       seed_value=None):
-    model = WythoffJointActionStumbler(
+    model = WythoffStumbler(
         game=game,
         gamma=gamma,
         epsilon=epsilon,
@@ -29,6 +29,8 @@ def wythoff_stumbler1(num_episodes=3,
         update_every=update_every,
         debug=debug,
         seed_value=seed_value)
+
+    return model
 
 
 if __name__ == "__main__":
