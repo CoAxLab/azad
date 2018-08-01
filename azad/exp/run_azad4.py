@@ -34,6 +34,4 @@ def wythoff_stumbler1(num_episodes=3,
 
 
 if __name__ == "__main__":
-    fire.Fire({
-        "wythoff_stumbler1": wythoff_stumbler1,
-    })
+    fire.Fire({"wythoff_stumbler1": wythoff_stumbler1})

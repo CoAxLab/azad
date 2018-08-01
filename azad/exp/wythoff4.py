@@ -34,7 +34,7 @@ from azad.local_gym.wythoff import locate_moves
 from azad.local_gym.wythoff import create_cold_board
 from azad.local_gym.wythoff import create_board
 from azad.local_gym.wythoff import cold_move_available
-from azad.local_gym.wythoff import locate_closest_cold_move
+from azad.local_gym.wythoff import locate_cold_moves
 
 from azad.models import Table
 
@@ -163,42 +163,10 @@ class WythoffStumbler(object):
 
         self.best = 0
         self.num_cold = 0
-
-        x, y, board, available = self.env.reset()
         self.steps = 0
+        x, y, board, available = self.env.reset()
 
         return x, y, board, available
-
-    def player_step(self, x, y, board, available):
-        """Step the player's model"""
-
-        # Set model
-        self.model = self.player
-        self.model_optimizer = self.player_optimizer
-
-        # Step it
-        x, y, board, move, i, available, reward, done = self._model_step(
-            x, y, board, available)
-
-        # Anlyze player's move
-        if cold_move_available(x, y, available):
-            self.num_cold += 1
-            if move == locate_closest_cold_move(x, y, available):
-                self.best += 1
-        if self.num_cold > 0:
-            self.avg_optim += (self.best - self.avg_optim) / (self.episode + 1)
-
-        return x, y, board, move, i, available, reward, done
-
-    def opponent_step(self, x, y, board, available):
-        """Step the opponent's model"""
-
-        # Set model
-        self.model = self.opponent
-        self.model_optimizer = self.opponent_optimizer
-
-        # Step it
-        return self._model_step(x, y, board, available)
 
     def epsilon_t(self):
         """Anneal epsilon with time (i.e., episode)"""
@@ -211,11 +179,8 @@ class WythoffStumbler(object):
 
         return epsilon_t
 
-    def _model_step(self, x, y, board, available):
-        """Step a model."""
-
-        # Get all value
-        Qs = self.model(board).detach()
+    def _choose(self, Qs, available):
+        """Step the env based on Q values"""
 
         # Filter for available values
         moves_index = locate_moves(available, self.all_possible_moves)
@@ -225,31 +190,61 @@ class WythoffStumbler(object):
             i = epsilon_greedy(Qs, self.epsilon_t(), index=moves_index)
             move = self.all_possible_moves[i]
 
+        return i, move
+
+    def player_step(self, x, y, board, available):
+        """Step the player's model"""
+
+        # Choose a move
+        Qs = self.player(board).detach()
+        i, move = self._choose(Qs, available)
+
+        # Anlyze the move
+        if cold_move_available(x, y, available):
+            best = 0
+            if move in locate_cold_moves(x, y, available):
+                best = 1
+            self.avg_optim += (best - self.avg_optim) / (self.episode + 1)
+
         # Make the move
         (x, y, board, available), reward, done, _ = self.env.step(move)
         board = flatten_board(board)
 
-        # -
         return x, y, board, move, i, available, reward, done
 
-    def learn(self):
+    def opponent_step(self, x, y, board, available):
+        """Step the opponent's model"""
+        # Choose a move
+        Qs = self.opponent(board).detach()
+        i, move = self._choose(Qs, available)
+
+        # Make the move
+        (x, y, board, available), reward, done, _ = self.env.step(move)
+        board = flatten_board(board)
+
+        return x, y, board, move, i, available, reward, done
+
+    def learn(self, state, a, next_state, reward, model, optimizer):
         """Learn"""
         # Q(s, a)
-        Qs = self.model(self.state)
-        self.Q = Qs.gather(0, torch.tensor(self.learner_move_i))
+
+        Qs = model(state)
+        Q = Qs.gather(0, torch.tensor(a))
 
         # max Q(s', .)
-        next_Qs = self.model(self.next_state).detach()
-        self.max_Q = next_Qs.max()
+        next_Qs = model(next_state).detach()
+        max_Q = next_Qs.max()
 
         # Estimate value of next Q
-        self.est_Q = (self.reward + (self.gamma * self.max_Q))
+        est_Q = (reward + (self.gamma * max_Q))
 
         # Learn
-        self.loss = F.l1_loss(self.Q, self.est_Q)
-        self.model_optimizer.zero_grad()
-        self.loss.backward()
-        self.model_optimizer.step()
+        loss = F.l1_loss(Q, est_Q)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
+
+        return Q, est_Q, loss, model, optimizer
 
     def train(self,
               num_episodes=3,
@@ -260,8 +255,7 @@ class WythoffStumbler(object):
               seed_value=None):
         """Learn the env."""
 
-        pass
-
+        self.reset()
         self._init_writer(tensorboard)
 
         # Reseed game?
@@ -272,105 +266,134 @@ class WythoffStumbler(object):
         # --------------------------------------------------------------------
         # !
         for episode in range(num_episodes):
+            self.steps = 0
             self.episode += 1
 
-            # Restart
-            done = False
-            x, y, board, available = self.reset()
+            # We begin with a Restarting at the start.
+            x, y, board, available = self.env.reset()
             board = flatten_board(board)
-            self.state = board
 
             if debug:
                 print("---------------------------------------")
                 print(">>> STUMBLER ({}).".format(self.episode))
                 print(">>> Initial position ({}, {})".format(x, y))
 
-            # ----------------------------------------------------------------
-            # Inital move by learner
-            self.learner = self.player_step
-            self.learner_available = available
-
-            x, y, board, move, i, available, reward, done = self.learner(
-                x, y, board, available)
-
-            # Note returns
-            self.reward = reward
-            self.x, self.y = x, y
-            self.next_state = board
-
-            self.learner_board = board
-            self.learner_move = move
-            self.learner_move_i = i
-            self.available = available
-
-            if debug:
-                print(">>> Move {}".format(move))
-
-            # ----------------------------------------------------------------
-            # Set the first 'mover'
-            self.mover = self.opponent_step
-
-            # ...then begin the mover/learner leap-frog loop
+            # At the begining we can not be done, and we must make at least
+            # one move.
+            null_action = False
+            done = False
             while not done:
-                # Mover moves
-                x, y, board, move, i, available, reward, done = self.mover(
-                    x, y, board, available)
+                # ------------------------------------------------------------
+                # We begin at s
+                state = board
 
-                if debug:
-                    print(">>> Move {}".format(move))
+                # ------------------------------------------------------------
+                # The player always moves first in a sequence
 
-                # Note state vars
-                self.reward = reward
-                self.x, self.y = x, y
-                self.next_state = board
+                # If there was a win last round, then the null_action let's
+                # us learn from that
+                if null_action:
+                    reward *= -1
 
-                self.mover_board = board
-                self.mover_move = move
-                self.mover_move_i = i
-                self.available = available
+                    # If we hit a null at the start, then done needs to be
+                    # reset.
+                    done = True
+                    null_action = False
 
-                # Mover wins are learner losses.
-                if done:
-                    self.reward *= -1
+                    if debug:
+                        print(">>> Move NULL")
+                else:
+                    (x, y, board, move, i, available, reward,
+                     done) = self.player_step(x, y, board, available)
+                    next_state = board
 
-            # Learn
-            self.learn()
+                    if debug:
+                        print(">>> Move {}".format(move))
 
-            # Leap the frog: swap learner/mover
-            self.learner, self.mover = self.mover, self.learner
-            self.state = self.next_state
-            self.learner_board = self.mover_board
-            self.learner_move = self.mover_move
-            self.learner_move_i = self.mover_move_i
+                    # If player wins, set it up so that both opponent and player
+                    # can learn from that.
+                    if done:
+                        reward *= -1
+                        null_action = True
 
-            if debug:
-                print(">>> Reward {}; max_Q {}; Loss(Q {}, est_Q {}) -> {}".
-                      format(self.reward, self.max_Q,
-                             float(self.Q.detach().numpy()), self.est_Q,
-                             self.loss))
+                        if debug:
+                            print("*** Player won! ****")
 
-                grad_i = th.nonzero(self.model.fc1.weight.grad)
-                print(">>> Player W grad: {}".format(
-                    self.model.fc1.weight.grad[grad_i]))
+                # ------------------------------------------------------------
+                # Opponent learns now. From the past a_o (prior iteration)
+                # and the present player move (right above).
+                (Q, est_Q, loss,
+                 self.opponent, self.opponent_optimizer) = self.learn(
+                     state, i, next_state, reward, self.opponent,
+                     self.opponent_optimizer)
 
-                if done and (reward > 0):
-                    print("*** WIN ***")
-                if done and (reward < 0):
-                    print("*** OPPONENT WIN ***")
+                if done and debug:
+                    print(
+                        ">>> Opponent: reward {}, Loss(Q {}, est_Q {}) -> {}".
+                        format(reward, float(Q.detach().numpy()), est_Q, loss))
 
+                # If were done, and coming from a null state need to die...
+                # to prevent an infinite learning loop.
+                if done and not null_action:
+                    break
+
+                # ------------------------------------------------------------
+                # Opponent plays now (unless were in the null_action state)
+                if null_action:
+                    reward *= -1
+
+                    if debug:
+                        print(">>> Move NULL")
+                else:
+                    (x, y, board, move, _, available, reward,
+                     done) = self.opponent_step(x, y, board, available)
+                    next_state = board
+                    if debug:
+                        print(">>> Move {}".format(move))
+
+                    # Opponent won, this is a player loss
+                    if done:
+                        reward *= -1
+                        null_action = True
+
+                        # We may need to loop round one more time...
+                        # so temp set done to false
+                        done = False
+
+                        if debug:
+                            print("*** Opponent won! ****")
+
+                # ------------------------------------------------------------
+                # Player learns now
+                (Q, est_Q, loss,
+                 self.player, self.player_optimizer) = self.learn(
+                     state, i, next_state, reward, self.player,
+                     self.player_optimizer)
+
+                if (done or null_action) and debug:
+                    print(">>> Player reward {}; Loss(Q {}, est_Q {}) -> {}".
+                          format(reward, float(Q.detach().numpy()), est_Q,
+                                 loss))
+
+                # Cheat for now... debug
+                # self.opponent = self.player
+
+                # Move count
+                self.steps += 1
+
+            # -------------------------------------------------------------
             if tensorboard and (int(self.episode) % update_every) == 0:
-                writer.add_graph(model, (board, ))
+                writer = self.writer
 
+                writer.add_graph(self.player, (state, ))
                 writer.add_scalar(
-                    os.path.join(tensorboard, 'reward'), self, reward,
-                    self.episode)
+                    os.path.join(tensorboard, 'reward'), reward, self.episode)
                 writer.add_scalar(
-                    os.path.join(tensorboard, 'Q'), self.Q, self.episode)
+                    os.path.join(tensorboard, 'Q'), Q, self.episode)
                 writer.add_scalar(
-                    os.path.join(tensorboard, 'error'), self.loss,
-                    self.episode)
+                    os.path.join(tensorboard, 'error'), loss, self.episode)
                 writer.add_scalar(
-                    os.path.join(tensorboard, 'epsilon_t'), seld.epsilon_t(),
+                    os.path.join(tensorboard, 'epsilon_t'), self.epsilon_t(),
                     self.episode)
                 writer.add_scalar(
                     os.path.join(tensorboard, 'steps'), self.steps,
@@ -395,20 +418,19 @@ class WythoffStumbler(object):
                     path=tensorboard,
                     name='player_expected_values.png')
                 writer.add_image(
-                    'Max value',
+                    'Player',
                     skimage.io.imread(
                         os.path.join(tensorboard,
-                                     'wythoff_expected_values.png')))
+                                     'player_expected_values.png')))
 
-                est_hc_board = estimate_hot_cold(
+                plot_wythoff_expected_values(
                     self.m,
                     self.n,
-                    self.player,
-                    hot_threshold=0.5,
-                    cold_threshold=0.0)
-                plot_wythoff_board(
-                    est_hc_board, path=tensorboard, name='est_hc_board.png')
+                    self.opponent,
+                    path=tensorboard,
+                    name='opponent_expected_values.png')
                 writer.add_image(
-                    'Estimated hot and cold positions',
+                    'Opponent',
                     skimage.io.imread(
-                        os.path.join(tensorboard, 'est_hc_board.png')))
+                        os.path.join(tensorboard,
+                                     'opponent_expected_values.png')))
