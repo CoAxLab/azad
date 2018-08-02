@@ -284,14 +284,10 @@ class WythoffStumbler(object):
             done = False
             while not done:
                 # ------------------------------------------------------------
-                # We begin at s
-                state = board
-
-                # ------------------------------------------------------------
                 # The player always moves first in a sequence
 
                 # If there was a win last round, then the null_action let's
-                # us learn from that
+                # us learn from that.
                 if null_action:
                     reward *= -1
 
@@ -303,12 +299,18 @@ class WythoffStumbler(object):
                     if debug:
                         print(">>> Move NULL")
                 else:
+                    # Shuffle, so we begin at s
+                    state = board
+                    state_xy = (x, y)
+
                     (x, y, board, move, i, available, reward,
                      done) = self.player_step(x, y, board, available)
-                    next_state = board
 
+                    # and end up at s'
+                    next_state = board
+                    next_state_xy = (x, y)
                     if debug:
-                        print(">>> Move {}".format(move))
+                        print(">>> Move player: {}.".format(move))
 
                     # If player wins, set it up so that both opponent and player
                     # can learn from that.
@@ -328,6 +330,8 @@ class WythoffStumbler(object):
                      self.opponent_optimizer)
 
                 if done and debug:
+                    print(">>> Opponent: s {} -> s'{}".format(
+                        state_xy, next_state_xy))
                     print(
                         ">>> Opponent: reward {}, Loss(Q {}, est_Q {}) -> {}".
                         format(reward, float(Q.detach().numpy()), est_Q, loss))
@@ -343,13 +347,17 @@ class WythoffStumbler(object):
                     reward *= -1
 
                     if debug:
-                        print(">>> Move NULL")
+                        print(">>> Move NULL.")
                 else:
                     (x, y, board, move, _, available, reward,
                      done) = self.opponent_step(x, y, board, available)
+
+                    # s'
                     next_state = board
+                    next_state_xy = (x, y)
+
                     if debug:
-                        print(">>> Move {}".format(move))
+                        print(">>> Move opponent: {}.".format(move))
 
                     # Opponent won, this is a player loss
                     if done:
@@ -371,7 +379,9 @@ class WythoffStumbler(object):
                      self.player_optimizer)
 
                 if (done or null_action) and debug:
-                    print(">>> Player reward {}; Loss(Q {}, est_Q {}) -> {}".
+                    print(">>> Player: s {} -> s'{}".format(
+                        state_xy, next_state_xy))
+                    print(">>> Player: reward {}; Loss(Q {}, est_Q {}) -> {}".
                           format(reward, float(Q.detach().numpy()), est_Q,
                                  loss))
 
