@@ -195,6 +195,11 @@ class WythoffStumbler(object):
     def player_step(self, x, y, board, available):
         """Step the player's model"""
 
+        # # Treat (0,0) as a null move, and return what you were given
+        # if available == (0, 0):
+        #     i = locate_moves(available, self.all_possible_moves)
+        #     return x, y, board, (0, 0), i, (0, 0), 1, True
+
         # Choose a move
         Qs = self.player(board).detach()
         i, move = self._choose(Qs, available)
@@ -214,6 +219,12 @@ class WythoffStumbler(object):
 
     def opponent_step(self, x, y, board, available):
         """Step the opponent's model"""
+
+        # # # Treat (0,0) as a null move, and return what you were given
+        # if available == (0, 0):
+        #     i = locate_moves(available, self.all_possible_moves)
+        #     return x, y, board, (0, 0), i, (0, 0), 1, True
+
         # Choose a move
         Qs = self.opponent(board).detach()
         i, move = self._choose(Qs, available)
@@ -266,130 +277,149 @@ class WythoffStumbler(object):
         # --------------------------------------------------------------------
         # !
         for episode in range(num_episodes):
-            self.steps = 0
             self.episode += 1
 
-            # We begin with a Restarting at the start.
+            # Re-init
+            done = False
+            player_win = False
+            opponent_win = False
+            steps = 0
+            reward = 0
+
+            states = []
+            xys = []
+            rewards = []
+            moves_i = []
+            moves = []
+
+            # Find starting position, and log it
             x, y, board, available = self.env.reset()
             board = flatten_board(board)
+
+            states.append(board.unsqueeze(0))
+            xys.append((x, y))
 
             if debug:
                 print("---------------------------------------")
                 print(">>> STUMBLER ({}).".format(self.episode))
                 print(">>> Initial position ({}, {})".format(x, y))
 
-            # At the begining we can not be done, and we must make at least
-            # one move.
-            null_action = False
-            done = False
+            # ----------------------------------------------------------------
             while not done:
                 # ------------------------------------------------------------
-                # The player always moves first in a sequence
+                # PLAYER
+                (x, y, board, move, i, available, reward,
+                 done) = self.player_step(x, y, board, available)
+                if debug:
+                    print(">>> Move player: {}.".format(move))
 
-                # If there was a win last round, then the null_action let's
-                # us learn from that.
-                if null_action:
-                    reward *= -1
+                steps += 1
+                states.append(board.unsqueeze(0))
+                xys.append((x, y))
+                rewards.append(reward)
+                moves.append(move)
+                moves_i.append(i)
 
-                    # If we hit a null at the start, then done needs to be
-                    # reset.
-                    done = True
-                    null_action = False
+                if done:
+                    # Note who wins to set the sign of the rewards during
+                    # learning
+                    player_win = True
 
-                    if debug:
-                        print(">>> Move NULL")
-                else:
-                    # Shuffle, so we begin at s
-                    state = board
-                    state_xy = (x, y)
+                    # Create a null S x A -> S' transition
+                    states.append(board.unsqueeze(0))
+                    xys.append((x, y))
+                    rewards.append(reward)
+                    moves.append(move)
+                    moves_i.append(i)
 
-                    (x, y, board, move, i, available, reward,
-                     done) = self.player_step(x, y, board, available)
-
-                    # and end up at s'
-                    next_state = board
-                    next_state_xy = (x, y)
-                    if debug:
-                        print(">>> Move player: {}.".format(move))
-
-                    # If player wins, set it up so that both opponent and player
-                    # can learn from that.
-                    if done:
-                        reward *= -1
-                        null_action = True
-
-                        if debug:
-                            print("*** Player won! ****")
-
+                    break
                 # ------------------------------------------------------------
-                # Opponent learns now. From the past a_o (prior iteration)
-                # and the present player move (right above).
-                (Q, est_Q, loss,
-                 self.opponent, self.opponent_optimizer) = self.learn(
-                     state, i, next_state, reward, self.opponent,
-                     self.opponent_optimizer)
+                # OPPONENT
+                (x, y, board, move, i, available, reward,
+                 done) = self.opponent_step(x, y, board, available)
+                if debug:
+                    print(">>> Move opponent: {}.".format(move))
 
-                if done and debug:
-                    print(">>> Opponent: s {} -> s'{}".format(
-                        state_xy, next_state_xy))
-                    print(
-                        ">>> Opponent: reward {}, Loss(Q {}, est_Q {}) -> {}".
-                        format(reward, float(Q.detach().numpy()), est_Q, loss))
+                steps += 1
+                states.append(board.unsqueeze(0))
+                xys.append((x, y))
+                rewards.append(reward)
+                moves.append(move)
+                moves_i.append(i)
 
-                # If were done, and coming from a null state need to die...
-                # to prevent an infinite learning loop.
-                if done and not null_action:
+                if done:
+                    # Note who wins to set the sign of the rewards during
+                    # learning
+                    opponent_win = True
+
+                    # Create a null S x A -> S' transition
+                    states.append(board.unsqueeze(0))
+                    xys.append((x, y))
+                    rewards.append(reward)
+                    moves.append(move)
+                    moves_i.append(i)
+
                     break
 
-                # ------------------------------------------------------------
-                # Opponent plays now (unless were in the null_action state)
-                if null_action:
-                    reward *= -1
+            # ----------------------------------------------------------------
+            # Unroll the state transitions, actions and rewards, so both agents
+            # can learn from episode.
+            states = th.cat(states)
+            rewards = th.tensor(rewards).unsqueeze(1)
+            moves_i = th.tensor(moves_i).unsqueeze(1)
 
-                    if debug:
-                        print(">>> Move NULL.")
-                else:
-                    (x, y, board, move, _, available, reward,
-                     done) = self.opponent_step(x, y, board, available)
+            import ipdb
+            ipdb.set_trace()
 
-                    # s'
-                    next_state = board
-                    next_state_xy = (x, y)
+            # ---
+            # PLAYER
+            s_idx = th.range(0, steps - 1, 2).type(torch.LongTensor)
+            S = states[s_idx]
+            next_S = states[s_idx + 2]
 
-                    if debug:
-                        print(">>> Move opponent: {}.".format(move))
+            r_idx = th.range(0, steps - 1, 2).type(torch.LongTensor)
+            R = rewards.gather(0, r_idx.unsqueeze(1))
+            Mi = moves_i[r_idx]
 
-                    # Opponent won, this is a player loss
-                    if done:
-                        reward *= -1
-                        null_action = True
+            Qs = self.player(S).gather(1, Mi)
+            max_Qs = self.player(next_S).max(1)[0].unsqueeze(1)
 
-                        # We may need to loop round one more time...
-                        # so temp set done to false
-                        done = False
+            # Reward sign depends on who wins...
+            if opponent_win:
+                R *= -1
 
-                        if debug:
-                            print("*** Opponent won! ****")
+            # Make prediction
+            next_Qs = R.float() + (self.gamma * max_Qs)
 
-                # ------------------------------------------------------------
-                # Player learns now
-                (Q, est_Q, loss,
-                 self.player, self.player_optimizer) = self.learn(
-                     state, i, next_state, reward, self.player,
-                     self.player_optimizer)
+            self.player_loss = F.l1_loss(Qs, next_Qs)
+            self.player_optimizer.zero_grad()
+            self.player_loss.backward()
+            self.player_optimizer.step()
 
-                if (done or null_action) and debug:
-                    print(">>> Player: s {} -> s'{}".format(
-                        state_xy, next_state_xy))
-                    print(">>> Player: reward {}; Loss(Q {}, est_Q {}) -> {}".
-                          format(reward, float(Q.detach().numpy()), est_Q,
-                                 loss))
+            # ---
+            # OPPONENT
+            s_idx = th.range(1, steps - 1, 2).type(torch.LongTensor)
+            S = states[s_idx]
+            next_S = states[s_idx + 2]
 
-                # Cheat for now... debug
-                # self.opponent = self.player
+            r_idx = th.range(1, steps - 1, 2).type(torch.LongTensor)
+            R = rewards.gather(0, r_idx.unsqueeze(1))
+            Mi = moves_i[r_idx]
 
-                # Move count
-                self.steps += 1
+            Qs = self.opponent(S).gather(1, Mi)
+            max_Qs = self.opponent(next_S).max(1)[0].unsqueeze(1)
+
+            # Reward sign depends on who wins...
+            if opponent_win:
+                R *= -1
+
+            # Make prediction
+            next_Qs = R.float() + (self.gamma * max_Qs)
+
+            self.opponent_loss = F.l1_loss(Qs, next_Qs)
+            self.opponent_optimizer.zero_grad()
+            self.opponent_loss.backward()
+            self.opponent_optimizer.step()
 
             # -------------------------------------------------------------
             if tensorboard and (int(self.episode) % update_every) == 0:
@@ -406,8 +436,7 @@ class WythoffStumbler(object):
                     os.path.join(tensorboard, 'epsilon_t'), self.epsilon_t(),
                     self.episode)
                 writer.add_scalar(
-                    os.path.join(tensorboard, 'steps'), self.steps,
-                    self.episode)
+                    os.path.join(tensorboard, 'steps'), steps, self.episode)
                 writer.add_scalar(
                     os.path.join(tensorboard, 'avg_optimal'), self.avg_optim,
                     self.episode)
