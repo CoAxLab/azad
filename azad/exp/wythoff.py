@@ -351,7 +351,8 @@ def wythoff_agent_unroll(path,
 
                 # Generate moves
                 try:
-                    move_i = _np_greedy(opponent[board])
+                    # move_i = _np_greedy(opponent[board])
+                    move_i = _np_epsilon_greedy(opponent[board], epsilon=epsilon)
                 except KeyError:
                     opponent[board] = np.ones(len(moves)) * default_Q
                     move_i = np.random.randint(0, len(moves))
@@ -464,8 +465,7 @@ def wythoff_agent_unroll(path,
                 m, n, model, path=path, name='player_max_values.png')
             writer.add_image(
                 'player',
-                skimage.io.imread(
-                    os.path.join(path, 'player_max_values.png')))
+                skimage.io.imread(os.path.join(path, 'player_max_values.png')))
 
             _np_plot_wythoff_max_values(
                 m, n, opponent, path=path, name='opponent_max_values.png')
