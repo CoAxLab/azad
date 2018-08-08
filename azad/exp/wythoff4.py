@@ -235,28 +235,6 @@ class WythoffStumbler(object):
 
         return x, y, board, move, i, available, reward, done
 
-    def learn(self, state, a, next_state, reward, model, optimizer):
-        """Learn"""
-        # Q(s, a)
-
-        Qs = model(state)
-        Q = Qs.gather(0, torch.tensor(a))
-
-        # max Q(s', .)
-        next_Qs = model(next_state).detach()
-        max_Q = next_Qs.max()
-
-        # Estimate value of next Q
-        est_Q = (reward + (self.gamma * max_Q))
-
-        # Learn
-        loss = F.l1_loss(Q, est_Q)
-        optimizer.zero_grad()
-        loss.backward()
-        optimizer.step()
-
-        return Q, est_Q, loss, model, optimizer
-
     def train(self,
               num_episodes=3,
               render=False,
@@ -283,8 +261,7 @@ class WythoffStumbler(object):
             done = False
             player_win = False
             opponent_win = False
-            steps = 0
-            reward = 0
+            steps = 1
 
             states = []
             xys = []
@@ -361,6 +338,14 @@ class WythoffStumbler(object):
 
                     break
 
+            # Final pad at the end, for opp indexing
+            # works without edge-cases
+            states.append(board.unsqueeze(0))
+            xys.append((x, y))
+            rewards.append(reward)
+            moves.append(move)
+            moves_i.append(i)
+
             # ----------------------------------------------------------------
             # Unroll the state transitions, actions and rewards, so both agents
             # can learn from episode.
@@ -368,18 +353,19 @@ class WythoffStumbler(object):
             rewards = th.tensor(rewards).unsqueeze(1)
             moves_i = th.tensor(moves_i).unsqueeze(1)
 
-            import ipdb
-            ipdb.set_trace()
-
-            # ---
+            # ----------------------------------------------------------------
             # PLAYER
-            s_idx = th.range(0, steps - 1, 2).type(torch.LongTensor)
+            s_idx = th.range(0, steps - 2, 2).type(torch.LongTensor)
             S = states[s_idx]
             next_S = states[s_idx + 2]
 
-            r_idx = th.range(0, steps - 1, 2).type(torch.LongTensor)
+            Mi = moves_i[s_idx]
+
+            if player_win:
+                r_idx = th.range(0, steps - 2, 2).type(torch.LongTensor)
+            else:
+                r_idx = th.range(1, steps - 1, 2).type(torch.LongTensor)
             R = rewards.gather(0, r_idx.unsqueeze(1))
-            Mi = moves_i[r_idx]
 
             Qs = self.player(S).gather(1, Mi)
             max_Qs = self.player(next_S).max(1)[0].unsqueeze(1)
@@ -391,47 +377,80 @@ class WythoffStumbler(object):
             # Make prediction
             next_Qs = R.float() + (self.gamma * max_Qs)
 
-            self.player_loss = F.l1_loss(Qs, next_Qs)
-            self.player_optimizer.zero_grad()
-            self.player_loss.backward()
-            self.player_optimizer.step()
+            # self.player_loss = F.l1_loss(Qs, next_Qs, reduce=False)
+            for Q, next_Q in zip(Qs, next_Qs):
+                self.player_loss = F.l1_loss(Q, next_Q)
+                self.player_optimizer.zero_grad()
+                self.player_loss.backward(retain_graph=True)
+                self.player_optimizer.step()
 
-            # ---
+            if debug:
+                if player_win:
+                    print(">>> PLAYER WIN!")
+                else:
+                    print(">>> OPPONENT WIN!")
+
+                print(">>> PLAYER LEARNING:")
+
+                Sxy = [xys[int(i)] for i in s_idx]
+                print(">>> S {}".format(Sxy))
+                next_Sxy = [xys[int(i) + 2] for i in s_idx]
+                print(">>> S' {}".format(next_Sxy))
+
+                Mv = [moves[int(i)] for i in s_idx]
+                print(">>> M {}".format(Mv))
+                print(">>> M_i {}".format(Mi.squeeze()))
+
+                print(">>> R {}".format(R.squeeze()))
+
+                print(">>> Qs {}".format(Qs.squeeze()))
+                print(">>> est_Qs {}".format(next_Qs.squeeze()))
+                print(">>> Player loss {}".format(self.player_loss))
+
+            # ----------------------------------------------------------------
             # OPPONENT
-            s_idx = th.range(1, steps - 1, 2).type(torch.LongTensor)
-            S = states[s_idx]
-            next_S = states[s_idx + 2]
+            self.opponent = self.player
+            self.opponent_loss = self.player_loss
+            # s_idx = th.range(1, steps, 2).type(torch.LongTensor)
+            # S = states[s_idx]
+            # next_S = states[s_idx + 2]
 
-            r_idx = th.range(1, steps - 1, 2).type(torch.LongTensor)
-            R = rewards.gather(0, r_idx.unsqueeze(1))
-            Mi = moves_i[r_idx]
+            # r_idx = th.range(1, steps, 2).type(torch.LongTensor)
+            # R = rewards.gather(0, r_idx.unsqueeze(1))
+            # Mi = moves_i[r_idx]
 
-            Qs = self.opponent(S).gather(1, Mi)
-            max_Qs = self.opponent(next_S).max(1)[0].unsqueeze(1)
+            # Qs = self.opponent(S).gather(1, Mi)
+            # max_Qs = self.opponent(next_S).max(1)[0].unsqueeze(1)
 
-            # Reward sign depends on who wins...
-            if opponent_win:
-                R *= -1
+            # # Reward sign depends on who wins...
+            # if player_win:
+            #     R *= -1
 
-            # Make prediction
-            next_Qs = R.float() + (self.gamma * max_Qs)
+            # # Make prediction
+            # next_Qs = R.float() + (self.gamma * max_Qs)
 
-            self.opponent_loss = F.l1_loss(Qs, next_Qs)
-            self.opponent_optimizer.zero_grad()
-            self.opponent_loss.backward()
-            self.opponent_optimizer.step()
+            # self.opponent_loss = F.l1_loss(Qs, next_Qs)
+            # self.opponent_optimizer.zero_grad()
+            # self.opponent_loss.backward()
+            # self.opponent_optimizer.step()
 
-            # -------------------------------------------------------------
+            # if debug:
+            #     print(">>> OPPONENT LEARNING:")
+            #     print(">>> Moves {}".format(Mi.squeeze()))
+            #     print(">>> Rewards {}".format(R.squeeze()))
+            #     print(">>> Qs {}".format(Qs.squeeze()))
+            #     print(">>> est_Qs {}".format(next_Qs.squeeze()))
+
+            # ----------------------------------------------------------------
             if tensorboard and (int(self.episode) % update_every) == 0:
                 writer = self.writer
 
-                writer.add_graph(self.player, (state, ))
                 writer.add_scalar(
-                    os.path.join(tensorboard, 'reward'), reward, self.episode)
+                    os.path.join(tensorboard, 'player_error'),
+                    self.player_loss.sum(), self.episode)
                 writer.add_scalar(
-                    os.path.join(tensorboard, 'Q'), Q, self.episode)
-                writer.add_scalar(
-                    os.path.join(tensorboard, 'error'), loss, self.episode)
+                    os.path.join(tensorboard, 'opponent_error'),
+                    self.opponent_loss.sum(), self.episode)
                 writer.add_scalar(
                     os.path.join(tensorboard, 'epsilon_t'), self.epsilon_t(),
                     self.episode)
