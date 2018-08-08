@@ -58,7 +58,7 @@ wythoff_exp2:
 wythoff_exp3:
 	-rm -rf $(DATA_PATH)/wythoff/exp3
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_agent $(DATA_PATH)/wythoff/exp3 --num_trials=50000 --learning_rate=0.25 --epsilon=0.1 --gamma=0.99 --game=Wythoff10x10 --tensorboard=True --debug=True
+	python run_azad.py wythoff_agent $(DATA_PATH)/wythoff/exp3 --num_trials=50000 --learning_rate=0.25 --epsilon=0.1 --gamma=0.99 --game=Wythoff10x10 --tensorboard=True --debug=False
 
 # ----------------------------------------------------------------------------
 # 7-8-2018
@@ -92,9 +92,14 @@ wythoff_exp6:
 wythoff_exp7:
 	-rm -rf $(DATA_PATH)/wythoff/exp7
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad4.py wythoff_stumbler1 --tensorboard=$(DATA_PATH)/wythoff/exp7 --num_episodes=50000 --update_every=50 --learning_rate=0.01 --epsilon=0.2 --anneal=True --gamma=0.98 --game=Wythoff10x10 --debug=False
+	python run_azad4.py wythoff_stumbler1 --tensorboard=$(DATA_PATH)/wythoff/exp7 --num_episodes=50000 --update_every=50 --learning_rate=0.25 --epsilon=0.1 --anneal=False --gamma=0.98 --game=Wythoff10x10 --debug=False
 
 wythoff_exp7_debug:
 	# -rm -rf $(DATA_PATH)/wythoff/exp7
 	# sleep 5  # Wait for tensorboard to notice the deletion
 	python run_azad4.py wythoff_stumbler1 --num_episodes=1000 --learning_rate=0.1 --epsilon=0.5 --anneal=True --gamma=0.98 --game=Wythoff10x10 --debug=True
+
+wythoff_exp8:
+	-rm -rf $(DATA_PATH)/wythoff/exp8
+	sleep 5  # Wait for tensorboard to notice the deletion
+	python run_azad.py wythoff_agent_unroll $(DATA_PATH)/wythoff/exp8 --num_trials=50000 --learning_rate=0.25 --epsilon=0.1 --gamma=0.99 --game=Wythoff10x10 --tensorboard=True --debug=False

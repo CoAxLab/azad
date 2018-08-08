@@ -236,6 +236,218 @@ def wythoff_agent(path,
     return model, env
 
 
+def wythoff_agent_unroll(path,
+                         num_trials=10,
+                         epsilon=0.1,
+                         gamma=0.8,
+                         learning_rate=0.1,
+                         game='Wythoff10x10',
+                         model=None,
+                         bias_board=None,
+                         tensorboard=False,
+                         debug=False,
+                         seed=None):
+    """Train a Q-agent to play Wythoff's game, using a lookup table."""
+    # ------------------------------------------------------------------------
+    # Setup
+
+    # Create path
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+
+    # Do tensorboard?
+    if tensorboard:
+        writer = SummaryWriter(log_dir=path)
+
+    # Crate env
+    env = create_env(game)
+
+    # Control randomness
+    env.seed(seed)
+    np.random.seed(seed)
+
+    # ------------------------------------------------------------------------
+    # Build a Q agent, and its optimizer
+    default_Q = 0.0
+    m, n, board, moves = peek(env)
+
+    # Init the lookup table
+    model = {}
+
+    # Run some trials
+    for trial in range(num_trials):
+        # ----------------------------------------------------------------
+        # Re-init
+        steps = 1
+
+        x, y, board, moves = env.reset()
+        board = tuple(flatten_board(board).numpy())
+        if debug:
+            print("---------------------------------------")
+            print(">>> NEW GAME ({}).".format(trial))
+            print(">>> Initial position ({}, {})".format(x, y))
+            print(">>> Initial moves {}".format(moves))
+            print("---------------------------------------")
+
+        # State vars
+        t_states = [
+            board,
+        ]
+        t_all_moves = [moves]
+        t_move = []
+        t_move_i = []
+        t_rewards = []
+
+        done = False
+        player_win = False
+        while not done:
+            # ----------------------------------------------------------------
+            # PLAYER
+
+            # Get all values
+            try:
+                Qs = model[board]
+            except KeyError:
+                model[board] = np.ones(len(moves)) * default_Q
+                Qs = model[board]
+
+            # Move!
+            move_i = _np_epsilon_greedy(Qs, epsilon=epsilon)
+            move = moves[move_i]
+
+            # Get Q(s, ....)
+            Q = Qs[move_i]
+
+            # Play
+            (x, y, board, moves), reward, done, _ = env.step(move)
+            board = tuple(flatten_board(board).numpy())
+
+            steps += 1
+
+            if debug:
+                print(">>> PLAYER move {}".format(move))
+
+            t_states.append(board)
+            t_move.append(move)
+            t_all_moves.append(moves)
+            t_move_i.append(move_i)
+            t_rewards.append(reward)
+
+            if done:
+                player_win = True
+                t_states.append(board)
+                t_move.append(move)
+                t_all_moves.append(moves)
+                t_move_i.append(move_i)
+                t_rewards.append(reward)
+
+            # ----------------------------------------------------------------
+            # Greedy opponent plays?
+            if not done:
+
+                # Generate moves
+                try:
+                    move_i = _np_greedy(model[board])
+                except KeyError:
+                    move_i = np.random.randint(0, len(moves))
+
+                move = moves[move_i]
+
+                # Play
+                (x, y, board, moves), reward, done, _ = env.step(move)
+                board = tuple(flatten_board(board).numpy())
+
+                # Count opponent moves
+                steps += 1
+
+                # Flip reward
+                reward *= -1
+
+                if debug:
+                    print(">>> OPPONENT move {}".format(move))
+
+                t_states.append(board)
+                t_move.append(move)
+                t_all_moves.append(moves)
+                t_move_i.append(move_i)
+                t_rewards.append(reward)
+
+                if done:
+                    t_states.append(board)
+                    t_move.append(move)
+                    t_all_moves.append(moves)
+                    t_move_i.append(move_i)
+                    t_rewards.append(reward)
+
+        # ----------------------------------------------------------------
+        # Learn by unrolling the game
+        s_idx = np.arange(0, steps - 1, 2)
+        for i in s_idx:
+            # States and actions
+            s = t_states[i]
+            next_s = t_states[i + 2]
+            m_i = t_move_i[i]
+
+            # Value and reward
+            Q = model[s][m_i]
+
+            try:
+                max_Q = model[next_s].max()
+            except KeyError:
+                model[next_s] = np.ones(len(t_all_moves[i])) * default_Q
+                max_Q = model[next_s].max()
+
+            if player_win:
+                r = t_rewards[i]
+            else:
+                r = t_rewards[i + 1]
+
+            # Loss and learn
+            next_Q = r + (gamma * max_Q)
+            loss = next_Q - Q
+            model[s][m_i] = Q + (learning_rate * loss)
+
+        # ----------------------------------------------------------------
+        # Update the log
+        if debug:
+            print(">>> Reward {}; Loss(Q {}, next_Q {}) -> {}".format(
+                r, Q, next_Q, loss))
+
+            if done and (r > 0):
+                print("*** WIN ***")
+            if done and (r < 0):
+                print("*** OPPONENT WIN ***")
+
+        if tensorboard and (int(trial) % 50) == 0:
+            writer.add_scalar(os.path.join(path, 'reward'), r, trial)
+            writer.add_scalar(os.path.join(path, 'Q'), Q, trial)
+            writer.add_scalar(os.path.join(path, 'error'), loss, trial)
+            writer.add_scalar(os.path.join(path, 'steps'), steps, trial)
+
+            # Optimal ref:
+            plot_cold_board(m, n, path=path, name='cold_board.png')
+            writer.add_image(
+                'cold_positions',
+                skimage.io.imread(os.path.join(path, 'cold_board.png')))
+
+            _np_plot_wythoff_max_values(
+                m, n, model, path=path, name='wythoff_max_values.png')
+            writer.add_image(
+                'max_value',
+                skimage.io.imread(
+                    os.path.join(path, 'wythoff_max_values.png')))
+
+    # ------------------------------------------------------------------------
+    # The end
+    if tensorboard:
+        writer.close()
+
+    return model, env
+
+
 def wythoff_stumbler(path,
                      num_trials=10,
                      epsilon=0.1,
@@ -287,6 +499,262 @@ def wythoff_stumbler(path,
     if independent_opp:
         opp_model = Table(m * n, len(all_possible_moves))
         opp_optimizer = optim.SGD(opp_model.parameters(), lr=learning_rate)
+
+    # ------------------------------------------------------------------------
+    # Run some trials
+    for trial in range(num_trials):
+        # --------------------------------------------------------------------
+        # Re-init
+        steps = 0
+        num_cold = 0
+        good = 0
+        best = 0
+
+        # Start the game, and process the result
+        x, y, board, moves = env.reset()
+        board = flatten_board(board)
+        moves_index = locate_moves(moves, all_possible_moves)
+
+        if debug:
+            print("---------------------------------------")
+            print(">>> STUMBLER ({}).".format(trial))
+            print(">>> Initial position ({}, {})".format(x, y))
+            print(">>> Initial moves {}".format(moves))
+
+        # --------------------------------------------------------------------
+        done = False
+        while not done:
+            # ----------------------------------------------------------------
+            # PLAYER
+
+            # Create values
+            grad_board = board.clone()
+            Qs = model(board)
+
+            # Bias Q?
+            if bias_board is not None:
+                Qs.add_(flatten_board(bias_board[0:m, 0:n]))
+
+            # Move!
+            k = 0.3
+            with torch.no_grad():
+                if anneal:
+                    epsilon_t = epsilon * (1.0 / np.log((trial + np.e)))
+                else:
+                    epsilon_t = epsilon
+                move_i = epsilon_greedy(Qs, epsilon_t, index=moves_index)
+
+                grad_i = deepcopy(move_i)
+                move = all_possible_moves[grad_i]
+
+            # Was it a wise move?
+            if cold_move_available(x, y, moves):
+                num_cold += 1
+                if move == locate_closest_cold_move(x, y, moves):
+                    best += 1
+
+                if move in locate_cold_moves(x, y, moves):
+                    good += 1
+
+            # Get Q(s, a)
+            Q = Qs.gather(0, torch.tensor(grad_i))
+
+            if debug:
+                print(">>> Possible moves {}".format(moves))
+                print(">>> PLAYER move {}".format(move))
+
+            # Play
+            (x, y, board, moves), reward, done, _ = env.step(move)
+            board = flatten_board(board)
+            moves_index = locate_moves(moves, all_possible_moves)
+
+            # Count moves
+            steps += 1
+
+            # ----------------------------------------------------------------
+            # Greedy opponent plays?
+            if done:
+                if independent_opp:
+                    opp_reward = -1 * reward
+            if not done:
+                if independent_opp:
+                    with torch.no_grad():
+                        move_i = epsilon_greedy(
+                            opp_model(board), epsilon=0.0, index=moves_index)
+                        move = all_possible_moves[move_i]
+                else:
+                    with torch.no_grad():
+                        # move_i = np.random.choice(moves_index)
+                        move_i = epsilon_greedy(
+                            model(board), epsilon=0.0, index=moves_index)
+                        move = all_possible_moves[move_i]
+
+                if debug:
+                    print(">>> Possible moves {}".format(moves))
+                    print(">>> OPPONENT move {}".format(move))
+
+                # Play
+                (x, y, board, moves), reward, done, _ = env.step(move)
+                board = flatten_board(board)
+                moves_index = locate_moves(moves, all_possible_moves)
+
+                if independent_opp:
+                    opp_reward = deepcopy(reward)
+
+                # Flip reward for player update
+                reward *= -1
+
+                # Count moves
+                # steps += 1
+
+            if independent_opp:
+                opp_next_Qs = opp_model(board).detach()
+                opp_next_Qs.gather(0, torch.tensor(moves_index))
+                opp_max_Q = opp_next_Qs.max()
+
+                opp_next_Q = (opp_reward + (gamma * opp_max_Q))
+                opp_loss = F.l1_loss(Q, opp_next_Q)
+
+                opp_optimizer.zero_grad()
+                opp_loss.backward(retain_graph=True)
+                opp_optimizer.step()
+
+            # ----------------------------------------------------------------
+            # Learn!
+            next_Qs = model(board).detach()
+            next_Qs.gather(0, torch.tensor())
+            max_Q = next_Qs.max()
+
+            next_Q = (reward + (gamma * max_Q))
+            loss = F.l1_loss(Q, next_Q)
+
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            # Update avg performance metric
+            if num_cold > 0:
+                avg_optim += (best - avg_optim) / (trial + 1)
+
+            # ----------------------------------------------------------------
+            if debug:
+                print(">>> Reward {}; max_Q {}; Loss(Q {}, next_Q {}) -> {}".
+                      format(reward, max_Q, float(Q.detach().numpy()), next_Q,
+                             loss.data[0]))
+                print(">>> Board grad: {}".format(grad_board))
+                print(">>> W grad: {}".format(model.fc1.weight.grad))
+                if done and (reward > 0):
+                    print("*** WIN ***")
+                if done and (reward < 0):
+                    print("*** OPPONENT WIN ***")
+
+            if tensorboard and (int(trial) % update_every) == 0:
+                writer.add_graph(model, (board, ))
+
+                writer.add_scalar(os.path.join(path, 'reward'), reward, trial)
+                writer.add_scalar(os.path.join(path, 'Q'), Q, trial)
+                writer.add_scalar(os.path.join(path, 'error'), loss, trial)
+                writer.add_scalar(
+                    os.path.join(path, 'epsilon_t'), epsilon_t, trial)
+                writer.add_scalar(os.path.join(path, 'steps'), steps, trial)
+                writer.add_scalar(
+                    os.path.join(path, 'avg_optimal'), avg_optim, trial)
+
+                # Optimal ref:
+                plot_cold_board(m, n, path=path, name='cold_board.png')
+                writer.add_image(
+                    'True cold positions',
+                    skimage.io.imread(os.path.join(path, 'cold_board.png')))
+
+                # EV:
+                plot_wythoff_expected_values(
+                    m, n, model, path=path, name='wythoff_expected_values.png')
+                writer.add_image(
+                    'Max value',
+                    skimage.io.imread(
+                        os.path.join(path, 'wythoff_expected_values.png')))
+
+                est_hc_board = estimate_hot_cold(
+                    m, n, model, hot_threshold=0.5, cold_threshold=0.0)
+                plot_wythoff_board(
+                    est_hc_board, path=path, name='est_hc_board.png')
+                writer.add_image(
+                    'Estimated hot and cold positions',
+                    skimage.io.imread(os.path.join(path, 'est_hc_board.png')))
+
+    # ------------------------------------------------------------------------
+    # The end
+    if tensorboard:
+        writer.close()
+
+    if save:
+        state = {
+            'trial': trial,
+            'game': game,
+            'epsilon': epsilon,
+            'gamma': gamma,
+            'learning_rate': learning_rate,
+            'state_dict': model.state_dict(),
+            'optimizer': optimizer.state_dict(),
+        }
+        torch.save(state, os.path.join(path + ".pytorch"))
+
+    if debug:
+        print(">>> Final W: {}".format(model.fc1.weight))
+
+    return model, env
+
+
+def wythoff_stumbler_joint(path,
+                           num_trials=10,
+                           epsilon=0.1,
+                           gamma=0.8,
+                           learning_rate=0.1,
+                           game='Wythoff3x3',
+                           env=None,
+                           bias_board=None,
+                           tensorboard=False,
+                           debug=False,
+                           update_every=100,
+                           anneal=False,
+                           save=False,
+                           seed=None):
+    """Train a NN-based Q-agent to play Wythoff's game, using SGD."""
+    # -------------------------------------------
+    # Setup
+
+    # Create path
+    try:
+        os.makedirs(path)
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+
+    if tensorboard:
+        writer = SummaryWriter(log_dir=path)
+
+    # Crate env
+    if env is None:
+        env = create_env(game)
+
+    env.seed(seed)
+    np.random.seed(seed)
+    avg_optim = 0.0
+
+    # ------------------------------------------------------------------------
+    # Build a Q agent, and its optimizer
+    m, n, board, _ = peek(env)
+    all_possible_moves = create_all_possible_moves(m, n)
+
+    # Joint action space
+    num_actions = 2 * m * n
+
+    # Init the model and top
+    model = Table(m * n, num_actions)
+    opp_model = Table(m * n, num_actions)
+
+    optimizer = optim.SGD(model.parameters(), lr=learning_rate)
+    opp_optimizer = optim.SGD(opp_model.parameters(), lr=learning_rate)
 
     # ------------------------------------------------------------------------
     # Run some trials
