@@ -276,6 +276,7 @@ def wythoff_agent_unroll(path,
 
     # Init the lookup table
     model = {}
+    opponent = {}
 
     # Run some trials
     for trial in range(num_trials):
@@ -350,8 +351,9 @@ def wythoff_agent_unroll(path,
 
                 # Generate moves
                 try:
-                    move_i = _np_greedy(model[board])
+                    move_i = _np_greedy(opponent[board])
                 except KeyError:
+                    opponent[board] = np.ones(len(moves)) * default_Q
                     move_i = np.random.randint(0, len(moves))
 
                 move = moves[move_i]
@@ -362,9 +364,6 @@ def wythoff_agent_unroll(path,
 
                 # Count opponent moves
                 steps += 1
-
-                # Flip reward
-                reward *= -1
 
                 if debug:
                     print(">>> OPPONENT move {}".format(move))
@@ -384,6 +383,7 @@ def wythoff_agent_unroll(path,
 
         # ----------------------------------------------------------------
         # Learn by unrolling the game
+        # Player (model)
         s_idx = np.arange(0, steps - 1, 2)
         for i in s_idx:
             # States and actions
@@ -403,12 +403,39 @@ def wythoff_agent_unroll(path,
             if player_win:
                 r = t_rewards[i]
             else:
-                r = t_rewards[i + 1]
+                r = -1 * t_rewards[i + 1]
 
             # Loss and learn
             next_Q = r + (gamma * max_Q)
             loss = next_Q - Q
             model[s][m_i] = Q + (learning_rate * loss)
+
+        # Opponent
+        s_idx = np.arange(1, steps - 1, 2)
+        for i in s_idx:
+            # States and actions
+            s = t_states[i]
+            next_s = t_states[i + 2]
+            m_i = t_move_i[i]
+
+            # Value and reward
+            Q = opponent[s][m_i]
+
+            try:
+                max_Q = opponent[next_s].max()
+            except KeyError:
+                opponent[next_s] = np.ones(len(t_all_moves[i])) * default_Q
+                max_Q = opponent[next_s].max()
+
+            if not player_win:
+                r = t_rewards[i]
+            else:
+                r = -1 * t_rewards[i + 1]
+
+            # Loss and learn
+            next_Q = r + (gamma * max_Q)
+            loss = next_Q - Q
+            opponent[s][m_i] = Q + (learning_rate * loss)
 
         # ----------------------------------------------------------------
         # Update the log
@@ -434,11 +461,18 @@ def wythoff_agent_unroll(path,
                 skimage.io.imread(os.path.join(path, 'cold_board.png')))
 
             _np_plot_wythoff_max_values(
-                m, n, model, path=path, name='wythoff_max_values.png')
+                m, n, model, path=path, name='player_max_values.png')
             writer.add_image(
-                'max_value',
+                'player',
                 skimage.io.imread(
-                    os.path.join(path, 'wythoff_max_values.png')))
+                    os.path.join(path, 'player_max_values.png')))
+
+            _np_plot_wythoff_max_values(
+                m, n, opponent, path=path, name='opponent_max_values.png')
+            writer.add_image(
+                'opponent',
+                skimage.io.imread(
+                    os.path.join(path, 'opponent_max_values.png')))
 
     # ------------------------------------------------------------------------
     # The end
