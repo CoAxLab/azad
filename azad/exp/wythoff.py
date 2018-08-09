@@ -330,21 +330,18 @@ def wythoff_stumbler(num_episodes=10,
     return model, opponent, env
 
 
-def wythoff_strategist(path,
+def wythoff_strategist(stumbler_model,
+                       stumbler_game,
                        num_episodes=1000,
-                       num_stumbles=1,
-                       num_evals=1,
-                       epsilon=0.2,
-                       gamma=0.98,
                        cold_threshold=0.0,
-                       stumbler_learning_rate=0.1,
-                       strategist_learning_rate=0.01,
-                       stumbler_game='Wythoff15x15',
-                       strategist_game='Wythoff50x50',
+                       learning_rate=0.01,
+                       memory_size=2000,
+                       game='Wythoff50x50',
                        anneal=True,
-                       tensorboard=False,
+                       tensorboard=None,
                        update_every=50,
                        debug=False,
+                       save=None,
                        seed=None):
     """A stumbler-strategist netowrk"""
 
@@ -360,57 +357,27 @@ def wythoff_strategist(path,
         writer = SummaryWriter(log_dir=tensorboard)
 
     # Create env and find all moves in it
-    env = create_env(strategist_game)
-    m, n, board, _ = peek(env)
-    all_possible_moves = create_all_possible_moves(m, n)
-
-    # Peek at stumbler env
-    o, p, _, _ = peek(create_env(stumbler_game))
-
-    # Control randomness
+    env = create_env(game)
     env.seed(seed)
     np.random.seed(seed)
+    m, n, board, _ = peek(env)
+    all_possible_moves = create_all_possible_moves(m, n)
 
     # Working mem size
     batch_size = 64
 
-    if tensorboard:
-        writer = SummaryWriter(log_dir=path)
+    # Peek at stumbler env
+    o, p, _, _ = peek(create_env(stumbler_game))
 
-    # ------------------------------------------------------------------------
-    # Init:
-
-    # Strategist
+    # Init the strategist net
     num_hidden1 = 100
     num_hidden2 = 25
     model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
-
-    optimizer = optim.Adam(model.parameters(), lr=strategist_learning_rate)
-    memory = ReplayMemory(500)
-
-    # Stumbler
-    stumbler_model = None
-    stumbler_opponent = None
-    influence = 0.0
-    bias_board = torch.zeros((m, n), dtype=torch.float)
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    memory = ReplayMemory(memory_size)
 
     # -----------------------------------------------------------------------
     for episode in range(num_episodes):
-
-        stumbler_model, stumbler_opponent, _ = wythoff_stumbler(
-            num_episodes=num_stumbles,
-            epsilon=epsilon,
-            gamma=gamma,
-            game=stumbler_game,
-            model=stumbler_model,
-            opponent=stumbler_opponent,
-            bias_board=bias_board * influence,  # None
-            learning_rate=stumbler_learning_rate,
-            tensorboard=tensorboard,
-            anneal=anneal,
-            debug=debug,
-            seed=seed)
-
         if debug:
             print("---------------------------------------")
             print(">>> STRATEGIST ({}).".format(episode))
@@ -433,7 +400,6 @@ def wythoff_strategist(path,
 
         loss = 0.0
         if len(memory) > batch_size:
-            # Sample data....
             coords = []
             values = []
             samples = memory.sample(batch_size)
@@ -452,8 +418,6 @@ def wythoff_strategist(path,
 
             # and find their loss.
             loss = F.mse_loss(predicted_values, values)
-
-            # Walk down the hill of righteousness!
             optimizer.zero_grad()
             loss.backward()
             optimizer.step()
@@ -482,9 +446,9 @@ def wythoff_strategist(path,
 
         # Update the influence and then the bias_board
         if win > 0.5:
-            influence += strategist_learning_rate
+            influence += learning_rate
         else:
-            influence -= strategist_learning_rate
+            influence -= learning_rate
         influence = np.clip(influence, 0, 1)
 
         # --------------------------------------------------------------------
@@ -524,39 +488,33 @@ def wythoff_strategist(path,
     if tensorboard:
         writer.close()
 
-    if save:
+    if save is not None:
         state = {
             'episode': episode,
             'epsilon': epsilon,
             'gamma': gamma,
             'num_episodes': num_episodes,
-            'num_stumbles': num_stumbles,
-            'num_evals': num_evals,
             'influence': influence,
-            'stumbler_game': stumbler_game,
-            'strategist_game': strategist_game,
+            'game': game,
             'cold_threshold': cold_threshold,
-            'stumbler_learning_rate': stumbler_learning_rate,
-            'stumbler_model_dict': stumbler_model.items(),
-            'stumbler_opponent_dict': stumbler_opponent.items(),
-            'strategist_learning_rate': strategist_learning_rate,
-            'strategist_state_dict': model.state_dict(),
-            'strategist_optimizer': optimizer.state_dict(),
+            'learning_rate': learning_rate,
+            'model_state_dict': model.state_dict(),
+            'optimizer_state_dict': optimizer.state_dict(),
+            'stumbler_game': stumbler_game,
+            'stumbler_model_dict': stumbler_model.items()
         }
-        torch.save(state, os.path.join(path, "model_state.pytorch"))
+        torch.save(state, os.path.join(save, "strategist.pytorch"))
 
         # Save final images
         plot_wythoff_expected_values(
-            o, p, stumbler_model, vmin=-2, vmax=2, path=path)
-
+            o, p, stumbler_model, vmin=-2, vmax=2, path=save)
         est_hc_board = estimate_hot_cold(
             o, p, stumbler_model, hot_threshold=0.5, cold_threshold=0.0)
-        plot_wythoff_board(est_hc_board, path=path, name='est_hc_board.png')
-
+        plot_wythoff_board(est_hc_board, path=save, name='est_hc_board.png')
         plot_wythoff_board(
-            bias_board, vmin=-1, vmax=0, path=path, name='bias_board.png')
+            bias_board, vmin=-1, vmax=0, path=save, name='bias_board.png')
 
-    return (model, env, influence)
+    return (model, env, bias_board, influence)
 
 
 def wythoff_optimal(path,
