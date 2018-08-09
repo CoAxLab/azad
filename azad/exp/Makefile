@@ -32,13 +32,13 @@ bandit_exp1:
 	python run_azad.py bandit_stumbler $(DATA_PATH)/bandit/exp1 --bandit_name=BanditTwoArmedHighLowFixed --num_trials=200 --epsilon=0.2 --learning_rate=0.1
 
 # ----------------------------------------------------------------------------
-# 5-16-2018
+# 5-16-2018 - 8/9/2018 
 # Testing wythoff stumbler 
 # To learn the COLD spots seems to need shared value, greedy opp. WHY?
 wythoff_exp0:
 	-rm -rf $(DATA_PATH)/wythoff/exp0
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_stumbler $(DATA_PATH)/wythoff/exp0 --num_trials=50000 --update_every=100 --learning_rate=0.1 --epsilon=0.5 --gamma=0.98 --game=Wythoff10x10 --tensorboard=True --debug=False --independent_opp=False --anneal=True
+	python run_azad.py wythoff_stumbler --tensorboard=$(DATA_PATH)/wythoff/exp0 --num_episodes=50000 --update_every=100 --learning_rate=0.1 --epsilon=0.5 --gamma=0.98 --game=Wythoff10x10 --debug=False --anneal=True
 
 # Testing wythoff strategist 
 wythoff_exp1:
@@ -53,14 +53,6 @@ wythoff_exp2:
 	python run_azad.py wythoff_optimal $(DATA_PATH)/wythoff/exp2 --num_trials=10000 --learning_rate=0.01 --stumbler_game=Wythoff10x10 --strategist_game=Wythoff50x50 --debug=False --tensorboard=True
 
 # ----------------------------------------------------------------------------
-# 6-26-2018
-# A true Q agent
-wythoff_exp3:
-	-rm -rf $(DATA_PATH)/wythoff/exp3
-	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_agent $(DATA_PATH)/wythoff/exp3 --num_trials=50000 --learning_rate=0.25 --epsilon=0.1 --gamma=0.99 --game=Wythoff10x10 --tensorboard=True --debug=False
-
-# ----------------------------------------------------------------------------
 # 7-8-2018
 # Grid-hyper param search for the wythoff_strategist
 wythoff_exp4:
@@ -71,35 +63,3 @@ wythoff_exp4:
 		--nice 19 --delay 2 --colsep ',' \
 		'python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp4/exp4_n{1}_stb{2}_str{3}_ep{4} --num_trials=15000 --num_stumbles={1} --num_evals=1 --stumbler_learning_rate={2} --strategist_learning_rate={3} --epsilon={4} --stumbler_game=Wythoff10x10 --strategist_game=Wythoff50x50 --tensorboard=False --save=True --debug=False' ::: \
 		1 100 ::: 0.01 0.1 0.5 ::: 0.1 0.01 ::: 0 0.1
-
-# ----------------------------------------------------------------------------
-# 7-26-2018
-# run_azad3 (PHC models)
-wythoff_exp5:
-	-rm -rf $(DATA_PATH)/wythoff/exp5
-	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad3.py wythoff_agent1 --tensorboard=$(DATA_PATH)/wythoff/exp5 --num_episodes=5000 --learning_rate=0.1 --epsilon=0.1 --gamma=0.99 --delta=0.01 --game=Wythoff10x10 --debug=False
-
-# 7-27-2018
-# run_azad3 (WOLF-PHC models)
-wythoff_exp6:
-	-rm -rf $(DATA_PATH)/wythoff/exp6
-	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad3.py wythoff_agent2 --tensorboard=$(DATA_PATH)/wythoff/exp6 --num_episodes=50000 --update_every=50 --learning_rate=0.01 --learning_rate_w=0.01 --learning_rate_l=1.0 --epsilon=0.1 --gamma=0.99 --game=Wythoff10x10 --debug=False
-
-# 7-31-2018
-# Joint action set testing.
-wythoff_exp7:
-	-rm -rf $(DATA_PATH)/wythoff/exp7
-	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad4.py wythoff_stumbler1 --tensorboard=$(DATA_PATH)/wythoff/exp7 --num_episodes=50000 --update_every=50 --learning_rate=0.25 --epsilon=0.1 --anneal=False --gamma=0.98 --game=Wythoff10x10 --debug=False
-
-wythoff_exp7_debug:
-	# -rm -rf $(DATA_PATH)/wythoff/exp7
-	# sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad4.py wythoff_stumbler1 --num_episodes=1000 --learning_rate=0.1 --epsilon=0.5 --anneal=True --gamma=0.98 --game=Wythoff10x10 --debug=True
-
-wythoff_exp8:
-	-rm -rf $(DATA_PATH)/wythoff/exp8
-	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_agent_unroll $(DATA_PATH)/wythoff/exp8 --num_trials=50000 --learning_rate=0.25 --epsilon=0.1 --gamma=0.99 --game=Wythoff10x10 --tensorboard=True --debug=False
