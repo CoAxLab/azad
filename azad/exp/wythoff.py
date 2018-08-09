@@ -327,7 +327,7 @@ def wythoff_stumbler(num_episodes=10,
     if tensorboard is not None:
         writer.close()
 
-    return model, env
+    return model, opponent, env
 
 
 def wythoff_strategist(path,
@@ -341,24 +341,23 @@ def wythoff_strategist(path,
                        strategist_learning_rate=0.01,
                        stumbler_game='Wythoff15x15',
                        strategist_game='Wythoff50x50',
+                       anneal=True,
                        tensorboard=False,
+                       update_every=50,
                        debug=False,
-                       save=False,
                        seed=None):
     """A stumbler-strategist netowrk"""
 
     # ------------------------------------------------------------------------
     # Setup
+    if tensorboard is not None:
+        try:
+            os.makedirs(tensorboard)
+        except OSError as exception:
+            if exception.errno != errno.EEXIST:
+                raise
 
-    # Create path
-    try:
-        os.makedirs(path)
-    except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
-
-    if tensorboard:
-        writer = SummaryWriter(log_dir=path)
+        writer = SummaryWriter(log_dir=tensorboard)
 
     # Create env and find all moves in it
     env = create_env(strategist_game)
@@ -379,7 +378,9 @@ def wythoff_strategist(path,
         writer = SummaryWriter(log_dir=path)
 
     # ------------------------------------------------------------------------
-    # Build a Strategist, its memory, and its optimizer
+    # Init:
+
+    # Strategist
     num_hidden1 = 100
     num_hidden2 = 25
     model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
@@ -387,30 +388,26 @@ def wythoff_strategist(path,
     optimizer = optim.Adam(model.parameters(), lr=strategist_learning_rate)
     memory = ReplayMemory(500)
 
-    # ------------------------------------------------------------------------
-    # Train over episodes:
-
-    # Init
+    # Stumbler
     stumbler_model = None
-    stumbler_env = None
-
+    stumbler_opponent = None
     influence = 0.0
     bias_board = torch.zeros((m, n), dtype=torch.float)
 
-    # Run
+    # -----------------------------------------------------------------------
     for episode in range(num_episodes):
-        # --------------------------------------------------------------------
-        stumbler_model, stumbler_env = wythoff_stumbler(
-            path,
+
+        stumbler_model, stumbler_opponent, _ = wythoff_stumbler(
             num_episodes=num_stumbles,
             epsilon=epsilon,
             gamma=gamma,
             game=stumbler_game,
             model=stumbler_model,
-            env=stumbler_env,
+            opponent=stumbler_opponent,
             bias_board=bias_board * influence,  # None
             learning_rate=stumbler_learning_rate,
-            tensorboard=False,
+            tensorboard=tensorboard,
+            anneal=anneal,
             debug=debug,
             seed=seed)
 
@@ -491,7 +488,7 @@ def wythoff_strategist(path,
         influence = np.clip(influence, 0, 1)
 
         # --------------------------------------------------------------------
-        if tensorboard and (int(episode) % 50) == 0:
+        if tensorboard and (int(episode) % update_every) == 0:
             # Timecourse
             writer.add_scalar(
                 os.path.join(path, 'stategist_error'), loss, episode)
@@ -540,7 +537,8 @@ def wythoff_strategist(path,
             'strategist_game': strategist_game,
             'cold_threshold': cold_threshold,
             'stumbler_learning_rate': stumbler_learning_rate,
-            'stumbler_state_dict': stumbler_model.state_dict(),
+            'stumbler_model_dict': stumbler_model.items(),
+            'stumbler_opponent_dict': stumbler_opponent.items(),
             'strategist_learning_rate': strategist_learning_rate,
             'strategist_state_dict': model.state_dict(),
             'strategist_optimizer': optimizer.state_dict(),
