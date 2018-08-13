@@ -68,6 +68,118 @@ from azad.util.wythoff import plot_wythoff_board
 from azad.util.wythoff import plot_wythoff_expected_values
 
 
+def wythoff_stumbler_strategist(num_episodes=10,
+                                num_stumbles=1000,
+                                stumbler_game='Wythoff10x10',
+                                learning_rate_stumbler=0.1,
+                                epsilon=0.5,
+                                anneal=True,
+                                gamma=1.0,
+                                num_strategies=1000,
+                                strategist_game='Wythoff50x50',
+                                learning_rate_strategist=0.01,
+                                memory_size=2000,
+                                cold_threshold=0.0,
+                                hot_threshold=0.5,
+                                tensorboard=None,
+                                update_every=5,
+                                seed=None,
+                                save=False,
+                                debug=False):
+    """Learn Wythoff's with a stumbler-strategist network"""
+
+    # -----------------------------------------------------------------------
+    # Init
+
+    # Game sizes
+    m, n, _, _ = peek(create_env(strategist_game))
+    o, p, _, _ = peek(create_env(stumbler_game))
+
+    # Agents, etc
+    stumbler_pair = (None, None)
+    strategist = None
+    bias_board = None
+    influence = 0.0
+
+    # -----------------------------------------------------------------------
+    for episode in range(num_episodes):
+
+        # Stumbler
+        stumbler_pair - wythoff_stumbler(
+            num_episodes=num_stumbles,
+            game=stumbler_game,
+            epsilon=epsilon,
+            gamma=gamma,
+            learning_rate=learning_rate_stumbler,
+            model=stumbler_pair[0],
+            opponent=stumbler_pair[1],
+            bias_board=bias_board,
+            influence=influence,
+            tensorboard=tensorboard,
+            update_every=update_every,
+            debug=debug,
+            seed=seed)
+
+        # Strategist
+        player = stumbler_pair[0]
+        strategist, bias_board, influence = wythoff_strategist(
+            player,
+            stumbler_game,
+            num_episodes=num_strategies,
+            game=strategist_game,
+            cold_threshold=cold_threshold,
+            hot_threshold=hot_threshold,
+            learning_rate=learning_rate_strategist,
+            memory_size=memory_size,
+            tensorboard=tensorboard,
+            update_every=update_every,
+            debug=debug,
+            save=False,
+            seed=seed,
+        )
+
+        # -----------------------------------------------------------------------
+        if save and (int(episode) % update_every) == 0:
+            state = {
+                'episode': episode,
+                'epsilon': epsilon,
+                'anneal': anneal,
+                'gamma': gamma,
+                'num_episodes': num_episodes,
+                'num_stumbles': num_stumbles,
+                'num_strategies': num_strategies,
+                'influence': influence,
+                'stumbler_game': stumbler_game,
+                'strategist_game': strategist_game,
+                'cold_threshold': cold_threshold,
+                'hot_threshold': hot_threshold,
+                'learning_rate_stumbler': learning_rate_stumbler,
+                'learning_rate_strategist': learning_rate_strategist,
+                'strategist_state_dict': strategist.state_dict(),
+                'stumbler_player_dict': stumbler_pair[0].items(),
+                'stumbler_opponent_dict': stumbler_pair[1].items()
+            }
+            torch.save(
+                state, os.path.join(save,
+                                    "stumber_strategist_network.pytorch"))
+
+            # Save board images
+            plot_wythoff_expected_values(
+                o, p, stumbler_pair[0], vmin=-2, vmax=2, path=save)
+            est_hc_board = estimate_hot_cold(
+                o,
+                p,
+                stumbler_pair[0],
+                hot_threshold=hot_threshold,
+                cold_threshold=cold_threshold)
+            plot_wythoff_board(
+                est_hc_board, path=save, name='est_hc_board.png')
+            plot_wythoff_board(
+                bias_board, vmin=-1, vmax=0, path=save, name='bias_board.png')
+
+    return stumbler_pair, strategist
+
+
 def wythoff_stumbler(num_episodes=10,
                      epsilon=0.1,
                      gamma=0.8,
@@ -77,6 +189,7 @@ def wythoff_stumbler(num_episodes=10,
                      opponent=None,
                      anneal=False,
                      bias_board=None,
+                     influence=0.0,
                      tensorboard=None,
                      update_every=5,
                      debug=False,
@@ -327,21 +440,20 @@ def wythoff_stumbler(num_episodes=10,
     if tensorboard is not None:
         writer.close()
 
-    return model, opponent, env
+    return model, opponent
 
 
 def wythoff_strategist(stumbler_model,
                        stumbler_game,
                        num_episodes=1000,
                        cold_threshold=0.0,
+                       hot_threshold=0.5,
                        learning_rate=0.01,
                        memory_size=2000,
                        game='Wythoff50x50',
-                       anneal=True,
                        tensorboard=None,
                        update_every=50,
                        debug=False,
-                       save=None,
                        seed=None):
     """A stumbler-strategist netowrk"""
 
@@ -488,33 +600,7 @@ def wythoff_strategist(stumbler_model,
     if tensorboard:
         writer.close()
 
-    if save is not None:
-        state = {
-            'episode': episode,
-            'epsilon': epsilon,
-            'gamma': gamma,
-            'num_episodes': num_episodes,
-            'influence': influence,
-            'game': game,
-            'cold_threshold': cold_threshold,
-            'learning_rate': learning_rate,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'stumbler_game': stumbler_game,
-            'stumbler_model_dict': stumbler_model.items()
-        }
-        torch.save(state, os.path.join(save, "strategist.pytorch"))
-
-        # Save final images
-        plot_wythoff_expected_values(
-            o, p, stumbler_model, vmin=-2, vmax=2, path=save)
-        est_hc_board = estimate_hot_cold(
-            o, p, stumbler_model, hot_threshold=0.5, cold_threshold=0.0)
-        plot_wythoff_board(est_hc_board, path=save, name='est_hc_board.png')
-        plot_wythoff_board(
-            bias_board, vmin=-1, vmax=0, path=save, name='bias_board.png')
-
-    return (model, env, bias_board, influence)
+    return (model, bias_board, influence)
 
 
 def wythoff_optimal(path,
