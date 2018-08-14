@@ -121,7 +121,6 @@ def locate_moves(moves, all_possible_moves):
             index.append(i)
         except ValueError:
             pass
-
     return index
 
 

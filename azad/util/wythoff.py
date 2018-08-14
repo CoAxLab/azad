@@ -408,185 +408,36 @@ def create_env(wythoff_name):
     return env
 
 
-def _np_greedy(x, index=None):
-    """Pick the biggest"""
-    # Filter x using index, but first ensure we can
-    # map the action back to x' orignal 'space'
-    if index is not None:
-        x = x[index]
-
-    action = np.argmax(x)
-
-    # Map back to x's original space
-    if index is not None:
-        action = index[action]
-
-    return action
-
-
-def _np_epsilon_greedy(x, epsilon, index=None):
-    """Pick the biggest, with probability epsilon"""
-
-    # Filter x using index, but first ensure we can
-    # map the action back to x' orignal 'space'
-    if index is not None:
-        x = x[index]
-
-    if np.random.rand() < epsilon:
-        action = np.random.randint(0, x.shape[0])
-    else:
-        action = np.argmax(x)
-
-    # Map back to x's original space
-    if index is not None:
-        action = index[action]
-
-    return action
-
-
-def _np_softmax(x, beta=0.98, index=None):
-    """
-    Pick an action with softmax
-    """
-
-    # Filter x using index, but first ensure we can
-    # map the action back to x' orignal 'space'
-    if index is not None:
-        x = x[index]
-
-    # multiply x against the beta parameter,
-    x = x * float(beta)
-
-    # subtract the max for numerical stability
-    x = x - np.max(x)
-
-    # exponentiate x
-    x = np.exp(x)
-
-    # take the sum along the specified axis
-    ax_sum = np.sum(x)
-
-    # finally: divide elementwise
-    p = x / ax_sum
-
-    # sample action using p
-    actions = np.arange(len(x), dtype=np.int)
-    action = np.random.choice(actions, p=p)
-
-    # Map back to x's original space
-    if index is not None:
-        action = index[action]
-
-    return action
-
-
-def _np_expected_value(m, n, model):
-    """Estimate the expected value of each board position"""
-    # Build the matrix a values for each (i, j) board
-    values = np.zeros((m, n))
-    for i in range(m):
-        for j in range(n):
-            board = tuple(flatten_board(create_board(i, j, m, n)).numpy())
-            try:
-                values[i, j] = model[board].mean()
-            except KeyError:
-                values[i, j] = 0.0
-
-    return values
-
-
-def _np_min_value(m, n, model):
-    """Estimate the min value of each board position"""
-    # Build the matrix a values for each (i, j) board
-    values = np.zeros((m, n))
-    for i in range(m):
-        for j in range(n):
-            board = tuple(flatten_board(create_board(i, j, m, n)).numpy())
-            try:
-                values[i, j] = model[board].min()
-            except KeyError:
-                values[i, j] = 0.0
-
-    return values
-
-
 def _np_max_value(m, n, model):
     """Estimate the max value of each board position"""
     # Build the matrix a values for each (i, j) board
     values = np.zeros((m, n))
+    all_possible_moves = create_all_possible_moves(m, n)
+
     for i in range(m):
         for j in range(n):
             board = tuple(flatten_board(create_board(i, j, m, n)).numpy())
+            available = create_moves(i, j)
+            moves_index = locate_moves(available, all_possible_moves)
             try:
-                values[i, j] = model[board].max()
+                # v = model[board][moves_index].max()
+                v = model[board].max()
+                values[i, j] = v
             except KeyError:
+
                 values[i, j] = 0.0
 
     return values
 
 
-def _np_plot_wythoff_expected_values(m,
-                                     n,
-                                     model,
-                                     plot=False,
-                                     path=None,
-                                     vmin=-2,
-                                     vmax=2,
-                                     name='wythoff_expected_values.png'):
-    """Plot EVs"""
-    values = _np_expected_value(m, n, model)
-
-    # !
-    fig, ax = plt.subplots()  # Sample figsize in inches
-    # ax = sns.heatmap(values, linewidths=3, vmin=vmin, vmax=vmax, ax=ax)
-    ax = sns.heatmap(values, linewidths=3, ax=ax)
-
-    # Save an image?
-    if path is not None:
-        plt.savefig(os.path.join(path, name))
-
-    if plot:
-        # plt.show()
-        plt.pause(0.01)
-
-    plt.close()
-
-
-def _np_plot_wythoff_min_values(m,
-                                n,
-                                model,
-                                plot=False,
-                                path=None,
-                                vmin=-2,
-                                vmax=2,
-                                name='wythoff_min_values.png'):
-    """Plot min Vs"""
-    values = _np_min_value(m, n, model)
-
-    # !
-    fig, ax = plt.subplots()  # Sample figsize in inches
-    # ax = sns.heatmap(values, linewidths=3, vmin=vmin, vmax=vmax, ax=ax)
-    ax = sns.heatmap(values, linewidths=3, ax=ax)
-
-    # Save an image?
-    if path is not None:
-        plt.savefig(os.path.join(path, name))
-
-    if plot:
-        # plt.show()
-        plt.pause(0.01)
-
-    plt.close()
-
-
-def _np_plot_wythoff_max_values(m,
-                                n,
-                                model,
-                                plot=False,
-                                path=None,
-                                vmin=-2,
-                                vmax=2,
-                                name='wythoff_max_values.png'):
+def np_plot_wythoff_max_values(m,
+                               n,
+                               model,
+                               plot=False,
+                               path=None,
+                               vmin=-2,
+                               vmax=2,
+                               name='wythoff_max_values.png'):
     """Plot  max Vs"""
     values = _np_max_value(m, n, model)
 
