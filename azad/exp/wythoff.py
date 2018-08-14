@@ -43,26 +43,26 @@ from azad.models import ReplayMemory
 from azad.policy import epsilon_greedy
 from azad.policy import softmax
 
-from azad.util.wythoff import peek
-from azad.util.wythoff import pad_board
-from azad.util.wythoff import flatten_board
-from azad.util.wythoff import convert_ijv
-from azad.util.wythoff import balance_ijv
-from azad.util.wythoff import evaluate_models
-from azad.util.wythoff import estimate_cold
-from azad.util.wythoff import estimate_hot
-from azad.util.wythoff import estimate_hot_cold
-from azad.util.wythoff import estimate_alp_hot_cold
-from azad.util.wythoff import estimate_strategic_value
-from azad.util.wythoff import create_env
-from azad.util.wythoff import create_moves
-from azad.util.wythoff import create_bias_board
-from azad.util.wythoff import create_all_possible_moves
-from azad.util.wythoff import create_cold_board
-from azad.util.wythoff import np_plot_wythoff_max_values
-from azad.util.wythoff import plot_cold_board
-from azad.util.wythoff import plot_wythoff_board
-from azad.util.wythoff import plot_wythoff_expected_values
+# from azad.util.wythoff import peek
+# from azad.util.wythoff import pad_board
+# from azad.util.wythoff import flatten_board
+# from azad.util.wythoff import convert_ijv
+# from azad.util.wythoff import balance_ijv
+# from azad.util.wythoff import evaluate_models
+# from azad.util.wythoff import estimate_cold
+# from azad.util.wythoff import estimate_hot
+# from azad.util.wythoff import estimate_hot_cold
+# from azad.util.wythoff import estimate_alp_hot_cold
+# from azad.util.wythoff import estimate_strategic_value
+# from azad.util.wythoff import create_env
+# from azad.util.wythoff import create_moves
+# from azad.util.wythoff import create_bias_board
+# from azad.util.wythoff import create_all_possible_moves
+# from azad.util.wythoff import create_cold_board
+# from azad.util.wythoff import np_plot_wythoff_max_values
+# from azad.util.wythoff import plot_cold_board
+# from azad.util.wythoff import plot_wythoff_board
+# from azad.util.wythoff import plot_wythoff_expected_values
 
 
 def wythoff_stumbler_strategist(num_episodes=10,
@@ -230,7 +230,7 @@ def wythoff_stumbler(num_episodes=10,
         steps = 1
 
         x, y, board, available = env.reset()
-        board = tuple(flatten_board(board).numpy())
+        board = tuple(flatten_board(board))
         if debug:
             print("---------------------------------------")
             print(">>> NEW GAME ({}).".format(episode))
@@ -276,7 +276,7 @@ def wythoff_stumbler(num_episodes=10,
 
             # PLAY THE MOVE
             (x, y, board, available), reward, done, _ = env.step(move)
-            board = tuple(flatten_board(board).numpy())
+            board = tuple(flatten_board(board))
             steps += 1
 
             # Log....
@@ -310,7 +310,7 @@ def wythoff_stumbler(num_episodes=10,
 
                 # PLAY THE MOVE
                 (x, y, board, available), reward, done, _ = env.step(move)
-                board = tuple(flatten_board(board).numpy())
+                board = tuple(flatten_board(board))
                 steps += 1
 
                 # Log....
@@ -411,25 +411,25 @@ def wythoff_stumbler(num_episodes=10,
                 os.path.join(tensorboard, 'epsilon'), epsilon_e, episode)
 
             # Cold ref:
-            plot_cold_board(m, n, path=tensorboard, name='cold_board.png')
+            cold = create_cold_board(m, n)
+            plot_wythoff_board(
+                cold, vmin=0, vmax=1, path=tensorboard, name='cold_board.png')
             writer.add_image(
                 'cold_positions',
                 skimage.io.imread(os.path.join(tensorboard, 'cold_board.png')))
 
             # Agent max(Q) boards
-            np_plot_wythoff_max_values(
-                m, n, model, path=tensorboard, name='player_max_values.png')
+            values = expected_value(m, n, model)
+            plot_wythoff_board(
+                values, path=tensorboard, name='player_max_values.png')
             writer.add_image(
                 'player',
                 skimage.io.imread(
                     os.path.join(tensorboard, 'player_max_values.png')))
 
-            np_plot_wythoff_max_values(
-                m,
-                n,
-                opponent,
-                path=tensorboard,
-                name='opponent_max_values.png')
+            values = expected_value(m, n, opponent)
+            plot_wythoff_board(
+                values, path=tensorboard, name='opponent_max_values.png')
             writer.add_image(
                 'opponent',
                 skimage.io.imread(
@@ -452,6 +452,7 @@ def wythoff_strategist(stumbler_model,
                        memory_size=2000,
                        game='Wythoff50x50',
                        tensorboard=None,
+                       stumbler_mode='numpy',
                        update_every=50,
                        debug=False,
                        seed=None):
@@ -710,3 +711,311 @@ def wythoff_optimal(path,
         writer.close()
 
     return model, env,
+
+
+def estimate_strategic_value(m, n, hotcold):
+    """Create a board to bias a stumblers moves."""
+
+    strategic_value = np.zeros((m, n))
+    with torch.no_grad():
+        for i in range(m):
+            for j in range(n):
+                coord = torch.tensor([i, j], dtype=torch.float)
+                strategic_value[i, j] = hotcold(coord)
+
+    return strategic_value
+
+
+def convert_ijv(data):
+    """Convert a (m,n) matrix into a list of (i, j, value)"""
+
+    m, n = data.shape
+    converted = []
+    for i in range(m):
+        for j in range(n):
+            converted.append([(i, j), data[i, j]])
+
+    return converted
+
+
+def balance_ijv(ijv_data, null_value):
+    """Balance counts of null versus other values"""
+
+    # Separate data based on null_value
+    other = []
+    null = []
+    for c, v in ijv_data:
+        if np.isclose(v, null_value):
+            null.append([c, v])
+        else:
+            other.append([c, v])
+
+    # Sizes
+    N_null = len(null)
+    N_other = len(other)
+
+    # Sanity?
+    if N_null == 0:
+        return None
+    if N_other == 0:
+        return None
+
+    np.random.shuffle(null)
+    np.random.shuffle(other)
+
+    # Finally, balance one or the other. Who is bigger?
+    if N_null > N_other:
+        null = null[:N_other]
+    elif N_other > N_null:
+        other = other[:N_null]
+    else:
+        # They already balanced. Return I
+        return ijv_data
+
+    return null + other
+
+
+def expected_value(m, n, model, default_value=0.0):
+    """Estimate the max value of each board position"""
+
+    values = np.zeros((m, n))
+    all_possible_moves = create_all_possible_moves(m, n)
+    for i in range(m):
+        for j in range(n):
+            board = tuple(flatten_board(create_board(i, j, m, n)))
+            try:
+                v = model[board].max()
+                values[i, j] = v
+            except KeyError:
+                values[i, j] = default_value
+
+    return values
+
+
+def estimate_cold(m, n, model, threshold=0.0, value=-1):
+    """Estimate cold positions, enforcing symmetry on the diagonal"""
+    values = expected_value(m, n, model)
+    cold = np.zeros_like(values)
+
+    # Cold
+    mask = values < threshold
+    cold[mask] = value
+    cold[mask.transpose()] = value
+
+    return cold
+
+
+def estimate_hot(m, n, model, threshold=0.5, value=1):
+    """Estimate hot positions"""
+    values = expected_value(m, n, model)
+    hot = np.zeros_like(values)
+
+    mask = values > threshold
+    hot[mask] = value
+
+    return hot
+
+
+def estimate_hot_cold(m,
+                      n,
+                      model,
+                      hot_threshold=0.5,
+                      cold_threshold=0.25,
+                      cold_value=-1,
+                      hot_value=1):
+    """Estimate hot and cold positions"""
+    hot = estimate_hot(m, n, model, hot_threshold, value=hot_value)
+    cold = estimate_cold(m, n, model, cold_threshold, value=cold_value)
+
+    return hot + cold
+
+
+def pad_board(m, n, board, value):
+    """Given a board-shaped array, pad it to (m,n) with value."""
+
+    padded = np.ones((m, n)) * value
+    o, p = board.shape
+    padded[0:o, 0:p] = board
+
+    return padded
+
+
+def estimate_alp_hot_cold(m, n, model, conf=0.05, default=0.5):
+    """Estimate hot and cold positions"""
+
+    values = expected_value(m, n, model)
+    values = (values + 1.0) / 2.0
+
+    hotcold = np.ones_like(values) * default
+
+    # Cold
+    mask = values < (conf * 1.3)
+    hotcold[mask] = values[mask]
+    hotcold[mask.transpose()] = values[mask]
+
+    # Hot?
+    # TODO? Skipped the random part....
+    mask = values > (1 - conf)
+    hotcold[mask] = values[mask]
+
+    return hotcold
+
+
+def create_bias_board(m, n, strategist_model, default=0.0):
+    """"Sample all positions' value in a strategist model"""
+    bias_board = torch.ones((m, n), dtype=torch.float) * default
+
+    with torch.no_grad():
+        for i in range(m):
+            for j in range(n):
+                coords = torch.tensor([i, j], dtype=torch.float)
+                bias_board[i, j] = strategist_model(coords)
+
+    return bias_board
+
+
+def peek(env):
+    """Peak at the env's board"""
+    x, y, board, moves = env.reset()
+    env.close()
+    m, n = board.shape
+
+    return m, n, board, moves
+
+
+def flatten_board(board):
+    m, n = board.shape
+    return board.reshape(m * n)
+
+
+def create_env(wythoff_name):
+    env = gym.make('{}-v0'.format(wythoff_name))
+    env = wrappers.Monitor(
+        env, './tmp/{}-v0-1'.format(wythoff_name), force=True)
+
+    return env
+
+
+def plot_wythoff_board(board,
+                       vmin=-1.5,
+                       vmax=1.5,
+                       plot=False,
+                       path=None,
+                       name='wythoff_board.png'):
+    """Plot the board"""
+
+    fig, ax = plt.subplots()  # Sample figsize in inches
+    ax = sns.heatmap(board, linewidths=3, vmin=vmin, vmax=vmax, ax=ax)
+
+    # Save an image?
+    if path is not None:
+        plt.savefig(os.path.join(path, name))
+
+    if plot:
+        # plt.show()
+        plt.pause(0.01)
+
+    plt.close('all')
+
+
+def evaluate_models(stumbler,
+                    strategist,
+                    stumbler_env,
+                    strategist_env,
+                    num_eval=100,
+                    mode='random',
+                    debug=False):
+    """Compare stumblers to strategists.
+    
+    Returns 
+    -------
+    wins : float
+        the fraction of games won by the strategist.
+    """
+    # ------------------------------------------------------------------------
+    # Init boards, etc
+    # Stratgist
+    m, n, board, _ = peek(strategist_env)
+    all_strategist_moves = create_all_possible_moves(m, n)
+    all_strategist_moves_index = np.arange(0, len(all_strategist_moves))
+    hot_cold_table = create_bias_board(m, n, strategist)
+
+    # Stumbler
+    o, p, _, _ = peek(stumbler_env)
+    all_stumbler_moves = create_all_possible_moves(o, p)
+    all_stumbler_moves_index = np.arange(0, len(all_stumbler_moves))
+    q_table = create_q_table(o, p, len(all_stumbler_moves), stumbler)
+
+    # ------------------------------------------------------------------------
+    # A stumbler and a strategist take turns playing a (m,n) game of wythoffs
+    wins = 0.0
+    for trial in range(num_eval):
+        # --------------------------------------------------------------------
+        # Re-init
+        steps = 0
+
+        # Start the game, and process the result
+        x, y, board, moves = strategist_env.reset()
+        board = flatten_board(board)
+
+        if debug:
+            print("---------------------------------------")
+            print(">>> NEW MODEL EVALUATION ({}).".format(trial))
+            print(">>> Initial position ({}, {})".format(x, y))
+            print(">>> Initial moves {}".format(moves))
+
+        done = False
+        while not done:
+            # ------------------------------------------------------------
+            # STUMBLER
+
+            # Choose a move
+            # Random
+            if mode == 'random':
+                move_i = np.random.randint(0, len(moves))
+                move = moves[move_i]
+            elif mode == 'greedy':
+                if (x < o) and (y < p):
+                    moves_index = locate_moves(moves, all_stumbler_moves)
+                    move_i = greedy(q_table[x, y, :], index=moves_index)
+                    move = all_stumbler_moves[move_i]
+                else:
+                    moves_index = locate_moves(moves, all_strategist_moves)
+                    move_i = np.random.choice(moves_index)
+                    move = all_strategist_moves[move_i]
+            else:
+                raise ValueError("mode was not understood")
+
+            if debug:
+                print(">>> STUMBLER move {}".format(move))
+
+            # Make a move
+            (x, y, board, moves), reward, done, _ = strategist_env.step(move)
+            board = flatten_board(board)
+            moves_index = locate_moves(moves, all_strategist_moves)
+
+            # Die early if the stumbler wins
+            if done:
+                if debug: print("*** STUMBLER WIN ***")
+                break
+
+            # ------------------------------------------------------------
+            # STRATEGIST
+
+            # Choose a move
+            move_i = greedy(flatten_board(hot_cold_table), index=moves_index)
+            move = all_strategist_moves[move_i]
+
+            if debug:
+                print(">>> STRATEGIST move {}".format(move))
+
+            # Make a move
+            (x, y, board, moves), reward, done, _ = strategist_env.step(move)
+            board = flatten_board(board)
+            moves_index = locate_moves(moves, all_strategist_moves)
+
+            if done:
+                wins += 1.0
+                if debug: print("*** STRATEGIST WIN ***")
+
+    return wins / num_eval

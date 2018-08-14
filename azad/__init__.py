@@ -1,4 +1,3 @@
-from azad import util
 from azad import people
 from azad import models
 from azad import policy
