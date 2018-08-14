@@ -34,11 +34,10 @@ bandit_exp1:
 # ----------------------------------------------------------------------------
 # 5-16-2018 - 8/9/2018 
 # Testing wythoff stumbler 
-# To learn the COLD spots seems to need shared value, greedy opp. WHY?
 wythoff_exp0:
 	-rm -rf $(DATA_PATH)/wythoff/exp0
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_stumbler --tensorboard=$(DATA_PATH)/wythoff/exp0 --num_episodes=50000 --update_every=100 --learning_rate=0.1 --epsilon=0.5 --gamma=0.98 --game=Wythoff10x10 --debug=False --anneal=True
+	python run_azad.py wythoff_stumbler --tensorboard=$(DATA_PATH)/wythoff/exp0 --num_episodes=50000 --update_every=100 --learning_rate=0.1 --epsilon=1.0 --gamma=0.98 --game=Wythoff10x10 --debug=False --anneal=True
 
 # Testing wythoff strategist 
 wythoff_exp1:
@@ -63,3 +62,17 @@ wythoff_exp4:
 		--nice 19 --delay 2 --colsep ',' \
 		'python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp4/exp4_n{1}_stb{2}_str{3}_ep{4} --num_trials=15000 --num_stumbles={1} --num_evals=1 --stumbler_learning_rate={2} --strategist_learning_rate={3} --epsilon={4} --stumbler_game=Wythoff10x10 --strategist_game=Wythoff50x50 --tensorboard=False --save=True --debug=False' ::: \
 		1 100 ::: 0.01 0.1 0.5 ::: 0.1 0.01 ::: 0 0.1
+
+wythoff_exp5:
+	-rm -rf $(DATA_PATH)/wythoff/exp5
+	sleep 5  # Wait for tensorboard to notice the deletion
+	python run_azad.py wythoff_stumbler_strategist \
+		--num_episodes=100 \
+		--num_stumbles=1 --learning_rate_stumbler=0.01 --stumbler_game=Wythoff10x10 \
+		--epsilon=0.5 --anneal=True --gamma=0.98 \
+		--num_strategies=1 --learning_rate_strategist=0.01 --strategist_game=Wythoff50x50 \
+		--memory_size=2000 \
+		--cold_threshold=0.0 --hot_threshold=0.5 \
+		--debug=False \
+		--tensorboard=$(DATA_PATH)/wythoff/exp5 --update_every=50 \
+		--save==$(DATA_PATH)/wythoff/exp_5 --debug=False 
