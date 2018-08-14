@@ -225,11 +225,14 @@ def wythoff_stumbler(num_episodes=10,
         while not done:
             # PLAYER CHOOSES A MOVE
             try:
+                Qs_episode = add_bias_board(model[board], available,
+                                            bias_board, influence)
                 move_i = epsilon_greedy(
-                    model[board], epsilon=epsilon_e, mode='numpy')
+                    Qs_episode, epsilon=epsilon_e, mode='numpy')
             except KeyError:
                 model[board] = np.ones(len(available)) * default_Q
                 move_i = np.random.randint(0, len(available))
+
             move = available[move_i]
 
             # Analyze it...
@@ -266,11 +269,14 @@ def wythoff_stumbler(num_episodes=10,
             if not done:
                 # OPPONENT CHOOSES A MOVE
                 try:
+                    Qs_episode = add_bias_board(opponent[board], available,
+                                                bias_board, influence)
                     move_i = epsilon_greedy(
-                        opponent[board], epsilon=epsilon_e, mode='numpy')
+                        Qs_episode, epsilon=epsilon_e, mode='numpy')
                 except KeyError:
                     opponent[board] = np.ones(len(available)) * default_Q
                     move_i = np.random.randint(0, len(available))
+
                 move = available[move_i]
 
                 # PLAY THE MOVE
@@ -693,7 +699,19 @@ def wythoff_optimal(path,
 # HELPER FNs
 
 
-def apply_bias_board(Qs, bias_board, influence):
+def add_bias_board(Qs, available, bias_board, influence):
+    """Add bias to Qs."""
+    
+    assert len(Qs) == len(available), "Qs/available mismatch."
+
+    if bias_board is None:
+        return Qs
+    if np.isclose(influence, 0.0):
+        return Qs
+
+    for i, (x, y) in enumerate(available):
+        Qs[i] = Qs[i] + (influence * bias_board[x, y])
+
     return Qs
 
 
