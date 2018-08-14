@@ -175,10 +175,6 @@ def wythoff_stumbler_strategist(num_episodes=10,
     return stumbler_pair, strategist
 
 
-def apply_bias_board(Qs, bias_board, influence):
-    return Qs
-
-
 def wythoff_stumbler(num_episodes=10,
                      epsilon=0.1,
                      gamma=0.8,
@@ -711,6 +707,16 @@ def wythoff_optimal(path,
         writer.close()
 
     return model, env,
+
+
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# ---------------------------------------------------------------------------
+# HELPER FNs
+
+
+def apply_bias_board(Qs, bias_board, influence):
+    return Qs
 
 
 def estimate_strategic_value(m, n, hotcold):
