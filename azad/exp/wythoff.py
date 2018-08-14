@@ -43,27 +43,6 @@ from azad.models import ReplayMemory
 from azad.policy import epsilon_greedy
 from azad.policy import softmax
 
-# from azad.util.wythoff import peek
-# from azad.util.wythoff import pad_board
-# from azad.util.wythoff import flatten_board
-# from azad.util.wythoff import convert_ijv
-# from azad.util.wythoff import balance_ijv
-# from azad.util.wythoff import evaluate_models
-# from azad.util.wythoff import estimate_cold
-# from azad.util.wythoff import estimate_hot
-# from azad.util.wythoff import estimate_hot_cold
-# from azad.util.wythoff import estimate_alp_hot_cold
-# from azad.util.wythoff import estimate_strategic_value
-# from azad.util.wythoff import create_env
-# from azad.util.wythoff import create_moves
-# from azad.util.wythoff import create_bias_board
-# from azad.util.wythoff import create_all_possible_moves
-# from azad.util.wythoff import create_cold_board
-# from azad.util.wythoff import np_plot_wythoff_max_values
-# from azad.util.wythoff import plot_cold_board
-# from azad.util.wythoff import plot_wythoff_board
-# from azad.util.wythoff import plot_wythoff_expected_values
-
 
 def wythoff_stumbler_strategist(num_episodes=10,
                                 num_stumbles=1000,
@@ -76,6 +55,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
                                 strategist_game='Wythoff50x50',
                                 learning_rate_strategist=0.01,
                                 memory_size=2000,
+                                batch_size=2000,
                                 cold_threshold=0.0,
                                 hot_threshold=0.5,
                                 tensorboard=None,
@@ -93,23 +73,23 @@ def wythoff_stumbler_strategist(num_episodes=10,
     o, p, _, _ = peek(create_env(stumbler_game))
 
     # Agents, etc
-    stumbler_pair = (None, None)
+    player = None
+    opponent = None
     strategist = None
     bias_board = None
     influence = 0.0
-
     # ------------------------------------------------------------------------
     for episode in range(num_episodes):
-
         # Stumbler
-        stumbler_pair = wythoff_stumbler(
+        player, opponent = wythoff_stumbler(
             num_episodes=num_stumbles,
             game=stumbler_game,
             epsilon=epsilon,
+            anneal=anneal,
             gamma=gamma,
             learning_rate=learning_rate_stumbler,
-            model=stumbler_pair[0],
-            opponent=stumbler_pair[1],
+            model=player,
+            opponent=opponent,
             bias_board=bias_board,
             influence=influence,
             tensorboard=tensorboard,
@@ -118,16 +98,17 @@ def wythoff_stumbler_strategist(num_episodes=10,
             seed=seed)
 
         # Strategist
-        player = stumbler_pair[0]
         strategist, bias_board, influence = wythoff_strategist(
             player,
             stumbler_game,
             num_episodes=num_strategies,
+            num_eval=1,
             game=strategist_game,
             cold_threshold=cold_threshold,
             hot_threshold=hot_threshold,
             learning_rate=learning_rate_strategist,
             memory_size=memory_size,
+            batch_size=batch_size,
             tensorboard=tensorboard,
             update_every=update_every,
             debug=debug,
@@ -151,28 +132,12 @@ def wythoff_stumbler_strategist(num_episodes=10,
                 'learning_rate_stumbler': learning_rate_stumbler,
                 'learning_rate_strategist': learning_rate_strategist,
                 'strategist_state_dict': strategist.state_dict(),
-                'stumbler_player_dict': stumbler_pair[0].items(),
-                'stumbler_opponent_dict': stumbler_pair[1].items()
+                'stumbler_player_dict': player,
+                'stumbler_opponent_dict': opponent
             }
-            torch.save(
-                state, os.path.join(save,
-                                    "stumber_strategist_network.pytorch"))
+            torch.save(state, save)
 
-            # Save board images
-            plot_wythoff_expected_values(
-                o, p, stumbler_pair[0], vmin=-2, vmax=2, path=save)
-            est_hc_board = estimate_hot_cold(
-                o,
-                p,
-                stumbler_pair[0],
-                hot_threshold=hot_threshold,
-                cold_threshold=cold_threshold)
-            plot_wythoff_board(
-                est_hc_board, path=save, name='est_hc_board.png')
-            plot_wythoff_board(
-                bias_board, vmin=-1, vmax=0, path=save, name='bias_board.png')
-
-    return stumbler_pair, strategist
+    return player, opponent, strategist
 
 
 def wythoff_stumbler(num_episodes=10,
@@ -189,7 +154,11 @@ def wythoff_stumbler(num_episodes=10,
                      update_every=5,
                      debug=False,
                      seed=None):
-    """Train a Q-agent to play Wythoff's game, using a lookup table."""
+    """Learn to play Wythoff's w/ e-greedy random exploration.
+    
+    Note: Learning is based on a player-opponent joint action formalism 
+    and tabular Q-learning.
+    """
     # ------------------------------------------------------------------------
     # Setup
     if tensorboard is not None:
@@ -446,13 +415,15 @@ def wythoff_strategist(stumbler_model,
                        hot_threshold=0.5,
                        learning_rate=0.01,
                        memory_size=2000,
+                       batch_size=64,
                        game='Wythoff50x50',
+                       num_eval=1,
                        tensorboard=None,
                        stumbler_mode='numpy',
                        update_every=50,
                        debug=False,
                        seed=None):
-    """Learn a heuristic for Wythoffs by sampling Q values."""
+    """Learn a generalizable strategy for Wythoffs game"""
 
     # ------------------------------------------------------------------------
     # Setup
@@ -473,9 +444,6 @@ def wythoff_strategist(stumbler_model,
     m, n, board, _ = peek(env)
     all_possible_moves = create_all_possible_moves(m, n)
 
-    # Working mem size
-    batch_size = 64
-
     # Peek at stumbler env
     o, p, _, _ = peek(create_env(stumbler_game))
 
@@ -487,19 +455,24 @@ def wythoff_strategist(stumbler_model,
     memory = ReplayMemory(memory_size)
 
     # -----------------------------------------------------------------------
+    influence = 0.0
+    bias_board = np.zeros((o, p)).flatten()
     for episode in range(num_episodes):
         if debug:
             print("---------------------------------------")
             print(">>> STRATEGIST ({}).".format(episode))
 
-        # Extract strategic data from the stumber,
-        # project it and remember that
+        # Extract strategic data from the stumbler
         strategic_default_value = 0.0
-        strategic_value = estimate_cold(
-            o, p, stumbler_model, threshold=cold_threshold)
-
-        # strategic_value = estimate_hot_cold(
-        #     o, p, stumbler_model, hot_threshold=0.5, cold_threshold=0.0)
+        strategic_value = estimate_hot_cold(
+            o,
+            p,
+            stumbler_model,
+            hot_threshold=hot_threshold,
+            cold_threshold=cold_threshold,
+            hot_value=1,
+            cold_value=-1,
+            default_value=strategic_default_value)
 
         # ...Into tuples
         s_data = convert_ijv(strategic_value)
@@ -549,9 +522,9 @@ def wythoff_strategist(stumbler_model,
         win = evaluate_models(
             stumbler_model,
             model,
-            stumbler_env,
-            env,
-            num_eval=num_evals,
+            stumbler_game,
+            game,
+            num_episodes=num_eval,
             debug=debug)
 
         # Update the influence and then the bias_board
@@ -565,24 +538,29 @@ def wythoff_strategist(stumbler_model,
         if tensorboard and (int(episode) % update_every) == 0:
             # Timecourse
             writer.add_scalar(
-                os.path.join(path, 'stategist_error'), loss, episode)
+                os.path.join(tensorboard, 'stategist_error'), loss, episode)
             writer.add_scalar(
-                os.path.join(path, 'Stategist_wins'), win, episode)
+                os.path.join(tensorboard, 'stategist_wins'), win, episode)
             writer.add_scalar(
-                os.path.join(path, 'Stategist_influence'), influence, episode)
+                os.path.join(tensorboard, 'stategist_influence'), influence,
+                episode)
 
             plot_wythoff_board(
-                bias_board, vmin=-1, vmax=0, path=path, name='bias_board.png')
+                bias_board,
+                vmin=-1,
+                vmax=1,
+                path=tensorboard,
+                name='bias_board.png')
             writer.add_image(
-                'strategist_learned_board',
-                skimage.io.imread(os.path.join(path, 'bias_board.png')))
+                'strategist_bias_board',
+                skimage.io.imread(os.path.join(tensorboard, 'bias_board.png')))
 
     # ------------------------------------------------------------------------
     # The end
     if tensorboard:
         writer.close()
 
-    return (model, bias_board, influence)
+    return model, bias_board, influence
 
 
 def wythoff_optimal(path,
@@ -798,9 +776,9 @@ def expected_value(m, n, model, default_value=0.0):
     return values
 
 
-def estimate_cold(m, n, model, threshold=0.0, value=-1):
+def estimate_cold(m, n, model, threshold=0.0, value=-1, default_value=0.0):
     """Estimate cold positions, enforcing symmetry on the diagonal"""
-    values = expected_value(m, n, model)
+    values = expected_value(m, n, model, default_value=default_value)
     cold = np.zeros_like(values)
 
     # Cold
@@ -811,9 +789,9 @@ def estimate_cold(m, n, model, threshold=0.0, value=-1):
     return cold
 
 
-def estimate_hot(m, n, model, threshold=0.5, value=1):
+def estimate_hot(m, n, model, threshold=0.5, value=1, default_value=0.0):
     """Estimate hot positions"""
-    values = expected_value(m, n, model)
+    values = expected_value(m, n, model, default_value=default_value)
     hot = np.zeros_like(values)
 
     mask = values > threshold
@@ -828,10 +806,23 @@ def estimate_hot_cold(m,
                       hot_threshold=0.5,
                       cold_threshold=0.25,
                       cold_value=-1,
-                      hot_value=1):
+                      hot_value=1,
+                      default_value=0.0):
     """Estimate hot and cold positions"""
-    hot = estimate_hot(m, n, model, hot_threshold, value=hot_value)
-    cold = estimate_cold(m, n, model, cold_threshold, value=cold_value)
+    hot = estimate_hot(
+        m,
+        n,
+        model,
+        hot_threshold,
+        value=hot_value,
+        default_value=default_value)
+    cold = estimate_cold(
+        m,
+        n,
+        model,
+        cold_threshold,
+        value=cold_value,
+        default_value=default_value)
 
     return hot + cold
 
@@ -926,9 +917,9 @@ def plot_wythoff_board(board,
 
 def evaluate_models(stumbler,
                     strategist,
-                    stumbler_env,
-                    strategist_env,
-                    num_eval=100,
+                    stumbler_game,
+                    strategist_game,
+                    num_episodes=100,
                     mode='random',
                     debug=False):
     """Compare stumblers to strategists.
@@ -941,87 +932,74 @@ def evaluate_models(stumbler,
     # ------------------------------------------------------------------------
     # Init boards, etc
     # Stratgist
-    m, n, board, _ = peek(strategist_env)
-    all_strategist_moves = create_all_possible_moves(m, n)
-    all_strategist_moves_index = np.arange(0, len(all_strategist_moves))
+    env = create_env(strategist_game)
+    m, n, board, _ = peek(env)
     hot_cold_table = create_bias_board(m, n, strategist)
 
     # Stumbler
-    o, p, _, _ = peek(stumbler_env)
-    all_stumbler_moves = create_all_possible_moves(o, p)
-    all_stumbler_moves_index = np.arange(0, len(all_stumbler_moves))
-    q_table = create_q_table(o, p, len(all_stumbler_moves), stumbler)
+    o, p, _, _ = peek(create_env(stumbler_game))
 
     # ------------------------------------------------------------------------
     # A stumbler and a strategist take turns playing a (m,n) game of wythoffs
     wins = 0.0
-    for trial in range(num_eval):
-        # --------------------------------------------------------------------
+    for episode in range(num_episodes):
         # Re-init
         steps = 0
 
         # Start the game, and process the result
-        x, y, board, moves = strategist_env.reset()
-        board = flatten_board(board)
+        x, y, board, available = env.reset()
+        board = tuple(flatten_board(board))
 
         if debug:
             print("---------------------------------------")
-            print(">>> NEW MODEL EVALUATION ({}).".format(trial))
+            print(">>> NEW MODEL EVALUATION ({}).".format(episode))
             print(">>> Initial position ({}, {})".format(x, y))
-            print(">>> Initial moves {}".format(moves))
+            print(">>> Initial moves {}".format(available))
 
         done = False
         while not done:
-            # ------------------------------------------------------------
+            # ----------------------------------------------------------------
             # STUMBLER
-
-            # Choose a move
-            # Random
-            if mode == 'random':
-                move_i = np.random.randint(0, len(moves))
-                move = moves[move_i]
-            elif mode == 'greedy':
-                if (x < o) and (y < p):
-                    moves_index = locate_moves(moves, all_stumbler_moves)
-                    move_i = greedy(q_table[x, y, :], index=moves_index)
-                    move = all_stumbler_moves[move_i]
-                else:
-                    moves_index = locate_moves(moves, all_strategist_moves)
-                    move_i = np.random.choice(moves_index)
-                    move = all_strategist_moves[move_i]
+            if (x < o) and (y < p):
+                s_board = tuple(flatten_board(create_board(x, y, o, p)))
+                s_available = create_moves(x, y)
+                try:
+                    values = stumbler[s_board]
+                    move_i = epsilon_greedy(values, epsilon=0.0, mode='numpy')
+                    move = s_available[move_i]
+                except KeyError:
+                    move_i = np.random.randint(0, len(available))
+                    move = available[move_i]
             else:
-                raise ValueError("mode was not understood")
+                move_i = np.random.randint(0, len(available))
+                move = available[move_i]
 
+            (x, y, board, available), reward, done, _ = env.step(move)
+            board = tuple(flatten_board(board))
             if debug:
                 print(">>> STUMBLER move {}".format(move))
 
-            # Make a move
-            (x, y, board, moves), reward, done, _ = strategist_env.step(move)
-            board = flatten_board(board)
-            moves_index = locate_moves(moves, all_strategist_moves)
-
-            # Die early if the stumbler wins
             if done:
-                if debug: print("*** STUMBLER WIN ***")
                 break
 
-            # ------------------------------------------------------------
+            # ----------------------------------------------------------------
             # STRATEGIST
+            hot_cold_move_values = [hot_cold_table[x, y] for x, y in available]
 
-            # Choose a move
-            move_i = greedy(flatten_board(hot_cold_table), index=moves_index)
-            move = all_strategist_moves[move_i]
+            move_i = epsilon_greedy(
+                np.asarray(hot_cold_move_values), epsilon=0.0, mode='numpy')
+            move = available[move_i]
 
             if debug:
                 print(">>> STRATEGIST move {}".format(move))
 
             # Make a move
-            (x, y, board, moves), reward, done, _ = strategist_env.step(move)
-            board = flatten_board(board)
-            moves_index = locate_moves(moves, all_strategist_moves)
-
+            (x, y, board, available), reward, done, _ = env.step(move)
+            board = tuple(flatten_board(board))
             if done:
                 wins += 1.0
-                if debug: print("*** STRATEGIST WIN ***")
 
-    return wins / num_eval
+        if debug:
+            print("Wins {}".format(wins / episode + 1))
+
+    return wins / num_episodes

@@ -37,7 +37,7 @@ bandit_exp1:
 wythoff_exp0:
 	-rm -rf $(DATA_PATH)/wythoff/exp0
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_stumbler --tensorboard=$(DATA_PATH)/wythoff/exp0 --num_episodes=50000 --update_every=100 --learning_rate=0.1 --epsilon=1.0 --gamma=0.98 --game=Wythoff10x10 --debug=False --anneal=True
+	python run_azad.py wythoff_stumbler --tensorboard=$(DATA_PATH)/wythoff/exp0 --num_episodes=50000 --update_every=100 --learning_rate=0.1 --epsilon=5.0 --gamma=0.98 --game=Wythoff10x10 --debug=False --anneal=True
 
 # Testing wythoff strategist 
 wythoff_exp1:
@@ -67,12 +67,13 @@ wythoff_exp5:
 	-rm -rf $(DATA_PATH)/wythoff/exp5
 	sleep 5  # Wait for tensorboard to notice the deletion
 	python run_azad.py wythoff_stumbler_strategist \
-		--num_episodes=100 \
-		--num_stumbles=1 --learning_rate_stumbler=0.01 --stumbler_game=Wythoff10x10 \
+		--num_episodes=1000 \
+		--num_stumbles=1000 --learning_rate_stumbler=0.1 --stumbler_game=Wythoff10x10 \
 		--epsilon=0.5 --anneal=True --gamma=0.98 \
-		--num_strategies=1 --learning_rate_strategist=0.01 --strategist_game=Wythoff50x50 \
+		--num_strategies=1000 --learning_rate_strategist=0.01 --strategist_game=Wythoff50x50 \
 		--memory_size=2000 \
+		--batch_size=128 \
 		--cold_threshold=0.0 --hot_threshold=0.5 \
 		--debug=False \
 		--tensorboard=$(DATA_PATH)/wythoff/exp5 --update_every=50 \
-		--save==$(DATA_PATH)/wythoff/exp_5 --debug=False 
+		--save=$(DATA_PATH)/wythoff/exp5.pytorch --debug=False 
