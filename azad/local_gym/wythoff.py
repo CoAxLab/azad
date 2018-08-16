@@ -125,10 +125,9 @@ def locate_moves(moves, all_possible_moves):
 
 
 class WythoffEnv(gym.Env):
-    """Wythoff's game.
+    """Wythoff's game template. 
     
-    Note: the opponent is simulated by a perfect player
-    """
+    Note: subclass to use."""
 
     def __init__(self, m, n, seed=None):
         # Board/pile size
