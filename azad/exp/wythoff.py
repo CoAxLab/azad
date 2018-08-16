@@ -104,6 +104,8 @@ def wythoff_stumbler_strategist(num_episodes=10,
             num_episodes=num_strategies,
             num_eval=1,
             game=strategist_game,
+            model=strategist,
+            influence=influence,
             cold_threshold=cold_threshold,
             hot_threshold=hot_threshold,
             learning_rate=learning_rate_strategist,
@@ -423,6 +425,8 @@ def wythoff_strategist(stumbler_model,
                        memory_size=2000,
                        batch_size=64,
                        game='Wythoff50x50',
+                       model=None,
+                       influence=0.0,
                        num_eval=1,
                        tensorboard=None,
                        stumbler_mode='numpy',
@@ -454,14 +458,14 @@ def wythoff_strategist(stumbler_model,
     o, p, _, _ = peek(create_env(stumbler_game))
 
     # Init the strategist net
-    num_hidden1 = 100
-    num_hidden2 = 25
-    model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
+    if model is None:
+        num_hidden1 = 100
+        num_hidden2 = 25
+        model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
     memory = ReplayMemory(memory_size)
 
     # -----------------------------------------------------------------------
-    influence = 0.0
     bias_board = np.zeros((o, p)).flatten()
     for episode in range(num_episodes):
         if debug:
@@ -701,7 +705,7 @@ def wythoff_optimal(path,
 
 def add_bias_board(Qs, available, bias_board, influence):
     """Add bias to Qs."""
-    
+
     assert len(Qs) == len(available), "Qs/available mismatch."
 
     if bias_board is None:
