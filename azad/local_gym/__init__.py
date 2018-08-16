@@ -21,6 +21,12 @@ from .nim import Nim10x10
 from .nim import Nim15x15
 from .nim import Nim50x50
 
+from .euclid import Euclid3x3
+from .euclid import Euclid5x5
+from .euclid import Euclid10x10
+from .euclid import Euclid15x15
+from .euclid import Euclid50x50
+
 environments = [['BanditTenArmedRandomFixed', 'v0',
                  1], ['BanditTenArmedRandomRandom', 'v0',
                       1], ['BanditTenArmedGaussian', 'v0', 1],
@@ -34,8 +40,11 @@ environments = [['BanditTenArmedRandomFixed', 'v0',
                     'Wythoff15x15', 'v0', 1000
                 ], ['Wythoff50x50', 'v0', 1000], ['Nim3x3', 'v0', 1000], [
                     'Nim5x5', 'v0', 1000
-                ], ['Nim10x10', 'v0', 1000], ['Nim15x15', 'v0',
-                                              1000], ['Nim50x50', 'v0', 1000]]
+                ], ['Nim10x10', 'v0', 1000], ['Nim15x15', 'v0', 1000], [
+                    'Nim50x50', 'v0', 1000
+                ], ['Euclid3x3', 'v0', 1000], ['Euclid5x5', 'v0', 1000], [
+                    'Euclid10x10', 'v0', 1000
+                ], ['Euclid15x15', 'v0', 1000], ['Euclid50x50', 'v0', 1000]]
 
 for environment in environments:
     register(
