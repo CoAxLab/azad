@@ -155,9 +155,11 @@ def wythoff_stumbler_strategist(num_episodes=10,
 
             plot_wythoff_board(
                 bias_board,
-                vmin=-1,
-                vmax=1,
+                vmin=-1.5,
+                vmax=1.5,
                 path=tensorboard,
+                height=10,
+                width=15,
                 name='bias_board.png')
             writer.add_image(
                 'strategist_bias_board',
@@ -526,7 +528,7 @@ def wythoff_strategist(stumbler_model,
 
     # Convert format
     s_data = convert_ijv(strategic_value)
-    s_data = balance_ijv(s_data, cold_value)
+    # s_data = balance_ijv(s_data, cold_value)
 
     # Sanity?
     if s_data is None:
@@ -930,10 +932,12 @@ def plot_wythoff_board(board,
                        vmax=1.5,
                        plot=False,
                        path=None,
+                       height=2,
+                       width=3,
                        name='wythoff_board.png'):
     """Plot the board"""
 
-    fig, ax = plt.subplots()  # Sample figsize in inches
+    fig, ax = plt.subplots(figsize=(width, height))  # Sample figsize in inches
     ax = sns.heatmap(board, linewidths=3, vmin=vmin, vmax=vmax, ax=ax)
 
     # Save an image?
