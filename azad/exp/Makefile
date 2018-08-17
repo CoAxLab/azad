@@ -96,7 +96,10 @@ wythoff_exp6:
 	-rm -rf $(DATA_PATH)/wythoff/exp6
 	-mkdir $(DATA_PATH)/wythoff/exp6
 	# Generate a grid,
-	python run_azad.py create_grid $(DATA_PATH)/wythoff/exp6/grid.csv --learning_rate='(0.01, 1.0, 10)' --epsilon='(1.0, 0.1, 10)' --gamma='(0.1, 1.0, 10)'
+	python run_azad.py create_grid $(DATA_PATH)/wythoff/exp6/grid.csv \
+		--learning_rate='(0.01, 1.0, 10)' \
+		--epsilon='(1.0, 0.1, 10)' \
+		--gamma='(0.1, 1.0, 10)'
 	# and search it.
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp6/exp6.parallel.log' \
@@ -104,11 +107,43 @@ wythoff_exp6:
 		'python run_azad.py wythoff_stumbler --save=$(DATA_PATH)/wythoff/exp6/run_{row_code}.pkl --num_episodes=50000 --learning_rate={learning_rate} --epsilon={epsilon} --gamma={gamma} --game=Wythoff15x15 --debug=False --anneal=True' :::: \
 		$(DATA_PATH)/wythoff/exp6/grid.csv
 
-# Stumbler-strategist
+# Stumbler-strategist v1
+# Learning
+wythoff_exp7:
+	-rm -rf $(DATA_PATH)/wythoff/exp7
+	-mkdir $(DATA_PATH)/wythoff/exp7
+	# Generate a grid,
+	python run_azad.py create_grid $(DATA_PATH)/wythoff/exp7/grid.csv --fmt='%i,%.6f,%i,%i' \
+		--learning_rate_strategist='(0.001, 0.1, 10)' \
+		--num_strategies='(100, 1000, 10)' \
+		--num_stumbles='(100, 1000, 10)' 
+	# and search it.
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp7/exp7.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		'python run_azad.py wythoff_stumbler_strategist --num_episodes=100 --num_stumbles={num_stumbles} --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies={num_strategies} --learning_rate_strategist={learning_rate_strategist} --strategist_game=Wythoff50x50 --cold_threshold=0.0 --hot_threshold=0.5 --hot_value=-1 --cold_value=1 --debug=False --save=$(DATA_PATH)/wythoff/exp7/run_{row_code}.pkl --debug=False' :::: \
+		$(DATA_PATH)/wythoff/exp7/grid.csv
+
+# Stumbler-strategist v2
+# H/C 
+wythoff_exp8:
+	-rm -rf $(DATA_PATH)/wythoff/exp8
+	-mkdir $(DATA_PATH)/wythoff/exp8
+	# Generate a grid,
+	python run_azad.py create_grid $(DATA_PATH)/wythoff/exp8/grid.csv \
+		--hot_threshold='(0.0, 0.99, 10)' \
+		--cold_threshold='(0.0, -0.99, 10)' 
+	# and search it.
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp8/exp8.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		'python run_azad.py wythoff_stumbler_strategist TODO' :::: \
+		$(DATA_PATH)/wythoff/exp8/grid.csv
 
 
 # ----------------------------------------------------------------------------
-# Exps for paper
+# Exps for paper. Use top N opt params from exp6-7.
+
 # - Stumbler only
 # - SS
 # - SS w/ only cold
