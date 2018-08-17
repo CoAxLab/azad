@@ -72,8 +72,8 @@ def wythoff_stumbler_strategist(num_episodes=10,
     # Init
 
     # Game sizes
-    m, n, _, _ = peek(create_env(strategist_game))
-    o, p, _, _ = peek(create_env(stumbler_game))
+    m, n, _, _ = peek(create_env(strategist_game, monitor=False))
+    o, p, _, _ = peek(create_env(stumbler_game, monitor=False))
 
     # Agents, etc
     player = None
@@ -541,7 +541,7 @@ def wythoff_strategist(stumbler_model,
     all_possible_moves = create_all_possible_moves(m, n)
 
     # Peek at stumbler env
-    o, p, _, _ = peek(create_env(stumbler_game))
+    o, p, _, _ = peek(create_env(stumbler_game, monitor=False))
 
     # Init the strategist net
     if model is None:
@@ -1029,12 +1029,12 @@ def evaluate_models(stumbler,
     # ------------------------------------------------------------------------
     # Init boards, etc
     # Stratgist
-    env = create_env(strategist_game)
+    env = create_env(strategist_game, monitor=False)
     m, n, board, _ = peek(env)
     hot_cold_table = create_bias_board(m, n, strategist)
 
     # Stumbler
-    o, p, _, _ = peek(create_env(stumbler_game))
+    o, p, _, _ = peek(create_env(stumbler_game, monitor=False))
 
     # ------------------------------------------------------------------------
     # A stumbler and a strategist take turns playing a (m,n) game of wythoffs
