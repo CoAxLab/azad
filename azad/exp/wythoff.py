@@ -546,10 +546,20 @@ def wythoff_strategist(stumbler_model,
     strategic_default_value = 0.0
     if hot_threshold is None:
         strategic_value = estimate_cold(
-            m, n, stumbler_model, cold_threshold, value=cold_value)
+            m,
+            n,
+            stumbler_model,
+            threshold=cold_threshold,
+            value=cold_value,
+            default_value=strategic_default_value)
     elif cold_threshold is None:
         strategic_value = estimate_hot(
-            m, n, stumbler_model, hot_threshold, value=hot_value)
+            m,
+            n,
+            stumbler_model,
+            threshold=hot_threshold,
+            value=hot_value,
+            default_value=strategic_default_value)
     else:
         strategic_value = estimate_hot_cold(
             o,
