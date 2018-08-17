@@ -19,7 +19,7 @@ def create_grid(name, **kwargs):
     table = np.vstack(i_table)
 
     head = "row_code," + ",".join(keys)
-    fmt = '%i ' + '%.6f ' * len(keys)
+    fmt = '%i,' + '%.6f,' * (len(keys) - 1) + '%.6f'
     np.savetxt(name, table, delimiter=",", header=head, fmt=fmt, comments="")
 
 
@@ -41,5 +41,5 @@ def create_random(name, seed_value=None, **kwargs):
     table = np.vstack(i_table)
 
     head = "row_code," + ",".join(keys)
-    fmt = '%i ' + '%.6f ' * len(keys)
+    fmt = '%i,' + '%.6f,' * (len(keys) - 1) + '%.6f'
     np.savetxt(name, table, delimiter=",", header=head, fmt=fmt, comments="")
