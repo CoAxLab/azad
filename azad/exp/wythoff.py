@@ -612,10 +612,9 @@ def wythoff_strategist(stumbler_model,
     with th.no_grad():
         pred = create_bias_board(m, n, model, default=0.0).numpy()
         cold = create_cold_board(m, n, default=hot_value)
-        mae = np.mean(np.abs(pred - cold))
-        score += (mae - score) / (episode + 1)
+        mae = np.median(np.abs(pred - cold))
 
-    return (model), (score)
+    return (model), (mae)
 
 
 # def wythoff_optimal(path,
