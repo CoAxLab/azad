@@ -68,9 +68,9 @@ wythoff_exp5:
 	sleep 5  # Wait for tensorboard to notice the deletion
 	python run_azad.py wythoff_stumbler_strategist \
 		--num_episodes=10000 \
-		--num_stumbles=250 --learning_rate_stumbler=0.1 --stumbler_game=Wythoff10x10 \
+		--num_stumbles=250 --learning_rate_stumbler=0.1 --stumbler_game=Wythoff15x15 \
 		--epsilon=0.5 --anneal=True --gamma=0.98 \
-		--num_strategies=1000 --learning_rate_strategist=0.0001 \
+		--num_strategies=1000 --learning_rate_strategist=0.01 \
 		--strategist_game=Wythoff50x50 \
 		--cold_threshold=0.0 --hot_threshold=0.5 \
 		--hot_value=-1 --cold_value=1 \
