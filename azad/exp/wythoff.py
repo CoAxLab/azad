@@ -757,7 +757,7 @@ def convert_ijv(data):
 def balance_ijv(ijv_data, target_value):
     """Balance counts of target versus other values"""
 
-    # Separate data based on null_value
+    # Separate data based on target_value
     other = []
     null = []
     for c, v in ijv_data:
