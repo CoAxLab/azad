@@ -37,7 +37,7 @@ bandit_exp1:
 wythoff_exp0:
 	-rm -rf $(DATA_PATH)/wythoff/exp0
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_stumbler --tensorboard=$(DATA_PATH)/wythoff/exp0 --num_episodes=50000 --update_every=100 --learning_rate=0.1 --epsilon=5.0 --gamma=0.98 --game=Wythoff10x10 --debug=False --anneal=True
+	python run_azad.py wythoff_stumbler --tensorboard=$(DATA_PATH)/wythoff/exp0 --num_episodes=50000 --update_every=100 --learning_rate=0.1 --epsilon=0.5 --gamma=0.98 --game=Wythoff10x10 --debug=False --anneal=True
 
 # Testing wythoff strategist 
 wythoff_exp1:
@@ -68,12 +68,43 @@ wythoff_exp5:
 	sleep 5  # Wait for tensorboard to notice the deletion
 	python run_azad.py wythoff_stumbler_strategist \
 		--num_episodes=10000 \
-		--num_stumbles=250 --learning_rate_stumbler=0.1 --stumbler_game=Wythoff15x15 \
-		--epsilon=0.5 --anneal=True --gamma=0.98 \
-		--num_strategies=1000 --learning_rate_strategist=0.01 \
+		--num_stumbles=500 \
+		--learning_rate_stumbler=0.1 \
+		--stumbler_game=Wythoff15x15 \
+		--epsilon=0.5 \
+		--anneal=True \
+		--gamma=0.98 \
+		--num_strategies=500 \
+		--learning_rate_strategist=0.01 \
 		--strategist_game=Wythoff50x50 \
-		--cold_threshold=0.0 --hot_threshold=0.5 \
-		--hot_value=-1 --cold_value=1 \
+		--cold_threshold=0.0 \
+		--hot_threshold=0.5 \
+		--hot_value=-1 \
+		--cold_value=1 \
 		--debug=False \
-		--tensorboard=$(DATA_PATH)/wythoff/exp5 --update_every=50 \
-		--save=$(DATA_PATH)/wythoff/exp5.pytorch --debug=False 
+		--tensorboard=$(DATA_PATH)/wythoff/exp5 \
+		--update_every=50 \
+		--save=$(DATA_PATH)/wythoff/exp5.pytorch \
+		--debug=False 
+
+# ----------------------------------------------------------------------------
+# Hyperparam search
+# Stumbler
+
+# Stumbler-strategist
+
+
+# ----------------------------------------------------------------------------
+# Exps for paper
+# Stumbler, n = 20
+# TODO params
+ wythoff_exp4:
+	-rm -rf $(DATA_PATH)/wythoff/exp4*
+	sleep 5  # Wait for tensorboard to notice the deletion
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/exp4.parallel.log' \
+		--nice 19 --delay 2 --colsep ',' \
+		'python run_azad.py wythoff_stumbler --tensorboard=$(DATA_PATH)/wythoff/exp0 --num_episodes=50000 --update_every=100 --learning_rate=0.1 --epsilon=0.5 --gamma=0.98 --game=Wythoff15x15 --debug=False --anneal=True --seed={1}' \
+		::: 1..20
+
+# Stumber-strategist, n = 20
