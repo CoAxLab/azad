@@ -37,7 +37,7 @@ bandit_exp1:
 wythoff_exp0:
 	-rm -rf $(DATA_PATH)/wythoff/exp0
 	sleep 5  # Wait for tensorboard to notice the deletion
-	python run_azad.py wythoff_stumbler --tensorboard=$(DATA_PATH)/wythoff/exp0 --num_episodes=50000 --update_every=100 --learning_rate=0.1 --epsilon=0.5 --gamma=0.98 --game=Wythoff10x10 --debug=False --anneal=True
+	python run_azad.py wythoff_stumbler --tensorboard=$(DATA_PATH)/wythoff/exp0 --save=$(DATA_PATH)/wythoff/exp0/exp0.pkl --num_episodes=5 --update_every=100 --learning_rate=0.1 --epsilon=0.5 --gamma=0.98 --game=Wythoff10x10 --debug=False --anneal=True
 
 # Testing wythoff strategist 
 wythoff_exp1:
@@ -84,27 +84,30 @@ wythoff_exp5:
 		--debug=False \
 		--tensorboard=$(DATA_PATH)/wythoff/exp5 \
 		--update_every=50 \
-		--save=$(DATA_PATH)/wythoff/exp5.pytorch \
+		--save=$(DATA_PATH)/wythoff/exp5.pkl \
 		--debug=False 
 
 # ----------------------------------------------------------------------------
-# Hyperparam search
+# Hyperparam searches
+
+# 8-17-2018
 # Stumbler
+wythoff_exp6:
+	-rm -rf $(DATA_PATH)/wythoff/exp6
+	-mkdir $(DATA_PATH)/wythoff/exp6
+	# Generate a grid,
+	python run_azad.py create_grid $(DATA_PATH)/wythoff/exp6/grid.csv --learning_rate='(0.01, 1.0, 10)' --epsilon='(1.0, 0.1, 10)' --gamma='(0.1, 1.0, 10)'
+	# and search it.
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp6/exp6.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		'python run_azad.py wythoff_stumbler --save=$(DATA_PATH)/wythoff/exp6/run_{row_code}.pkl --num_episodes=50000 --learning_rate={learning_rate} --epsilon={epsilon} --gamma={gamma} --game=Wythoff15x15 --debug=False --anneal=True' :::: \
+		$(DATA_PATH)/wythoff/exp6/grid.csv
 
 # Stumbler-strategist
 
 
 # ----------------------------------------------------------------------------
 # Exps for paper
-# Stumbler, n = 20
-# TODO params
- wythoff_exp4:
-	-rm -rf $(DATA_PATH)/wythoff/exp4*
-	sleep 5  # Wait for tensorboard to notice the deletion
-	parallel -j 8 -v \
-		--joblog '$(DATA_PATH)/exp4.parallel.log' \
-		--nice 19 --delay 2 --colsep ',' \
-		'python run_azad.py wythoff_stumbler --tensorboard=$(DATA_PATH)/wythoff/exp0 --num_episodes=50000 --update_every=100 --learning_rate=0.1 --epsilon=0.5 --gamma=0.98 --game=Wythoff15x15 --debug=False --anneal=True --seed={1}' \
-		::: 1..20
 
-# Stumber-strategist, n = 20
+ 
