@@ -466,28 +466,29 @@ def wythoff_stumbler(num_episodes=10,
                 skimage.io.imread(
                     os.path.join(tensorboard, 'opponent_max_values.png')))
 
-        # --------------------------------------------------------------------
-        if save and (int(episode) % update_every) == 0:
-            state = {
-                'episode': episode,
-                'epsilon': epsilon,
-                'anneal': anneal,
-                'gamma': gamma,
-                'num_episodes': num_episodes,
-                'stumbler_score': score,
-                'stumbler_game': game,
-                'learning_rate_stumbler': learning_rate,
-                'stumbler_player_dict': player,
-                'stumbler_opponent_dict': opponent
-            }
-            torch.save(state, save)
-
     # ------------------------------------------------------------------------
     # The end
     if tensorboard is not None:
         writer.close()
 
-    return (model, opponent), (score, score)
+    # --------------------------------------------------------------------
+    if save:
+        state = {
+            'episode': episode,
+            'epsilon': epsilon,
+            'anneal': anneal,
+            'gamma': gamma,
+            'num_episodes': num_episodes,
+            'stumbler_score': score,
+            'stumbler_game': game,
+            'learning_rate_stumbler': learning_rate,
+            'stumbler_player_dict': model,
+            'stumbler_opponent_dict': opponent
+        }
+        torch.save(state, save)
+        return None
+    else:
+        return (model, opponent), (score, score)
 
 
 def wythoff_strategist(stumbler_model,
