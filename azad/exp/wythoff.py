@@ -54,8 +54,6 @@ def wythoff_stumbler_strategist(num_episodes=10,
                                 num_strategies=1000,
                                 strategist_game='Wythoff50x50',
                                 learning_rate_strategist=0.01,
-                                memory_size=2000,
-                                batch_size=2000,
                                 cold_threshold=0.0,
                                 hot_threshold=0.5,
                                 tensorboard=None,
@@ -78,10 +76,12 @@ def wythoff_stumbler_strategist(num_episodes=10,
     strategist = None
     bias_board = None
     influence = 0.0
+    optim = 0.0
+
     # ------------------------------------------------------------------------
     for episode in range(num_episodes):
         # Stumbler
-        player, opponent = wythoff_stumbler(
+        player, opponent, optim = wythoff_stumbler(
             num_episodes=num_stumbles,
             game=stumbler_game,
             epsilon=epsilon,
@@ -92,8 +92,10 @@ def wythoff_stumbler_strategist(num_episodes=10,
             opponent=opponent,
             bias_board=bias_board,
             influence=influence,
+            optim=optim,
             tensorboard=tensorboard,
             update_every=update_every,
+            initial=episode * num_stumbles,
             debug=debug,
             seed=seed)
 
@@ -109,10 +111,9 @@ def wythoff_stumbler_strategist(num_episodes=10,
             cold_threshold=cold_threshold,
             hot_threshold=hot_threshold,
             learning_rate=learning_rate_strategist,
-            memory_size=memory_size,
-            batch_size=batch_size,
             tensorboard=tensorboard,
             update_every=update_every,
+            initial=episode * num_strategies,
             debug=debug,
             seed=seed)
 
@@ -152,8 +153,10 @@ def wythoff_stumbler(num_episodes=10,
                      anneal=False,
                      bias_board=None,
                      influence=0.0,
+                     optim=0.0,
                      tensorboard=None,
                      update_every=5,
+                     initial=0,
                      debug=False,
                      seed=None):
     """Learn to play Wythoff's w/ e-greedy random exploration.
@@ -188,11 +191,8 @@ def wythoff_stumbler(num_episodes=10,
     if opponent is None:
         opponent = {}
 
-    # Log fraction of optimal PLAYER moves
-    optim = 0.0
-
     # ------------------------------------------------------------------------
-    for episode in range(num_episodes):
+    for episode in range(initial, initial + num_episodes):
         # Re-init
         steps = 1
 
@@ -413,7 +413,7 @@ def wythoff_stumbler(num_episodes=10,
     if tensorboard is not None:
         writer.close()
 
-    return model, opponent
+    return model, opponent, optim
 
 
 def wythoff_strategist(stumbler_model,
@@ -421,16 +421,17 @@ def wythoff_strategist(stumbler_model,
                        num_episodes=1000,
                        cold_threshold=0.0,
                        hot_threshold=0.5,
+                       hot_value=1,
+                       cold_value=-1,
                        learning_rate=0.01,
-                       memory_size=2000,
-                       batch_size=64,
                        game='Wythoff50x50',
                        model=None,
                        influence=0.0,
-                       num_eval=1,
+                       initial=0,
                        tensorboard=None,
                        stumbler_mode='numpy',
                        update_every=50,
+                       num_eval=1,
                        debug=False,
                        seed=None):
     """Learn a generalizable strategy for Wythoffs game"""
@@ -463,111 +464,114 @@ def wythoff_strategist(stumbler_model,
         num_hidden2 = 25
         model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    memory = ReplayMemory(memory_size)
 
     # -----------------------------------------------------------------------
-    bias_board = np.zeros((o, p)).flatten()
-    for episode in range(num_episodes):
+    # Extract strategic data from the stumbler
+    strategic_default_value = 0.0
+    strategic_value = estimate_hot_cold(
+        o,
+        p,
+        stumbler_model,
+        hot_threshold=hot_threshold,
+        cold_threshold=cold_threshold,
+        hot_value=hot_value,
+        cold_value=cold_value,
+        default_value=strategic_default_value)
+
+    # Convert format
+    s_data = convert_ijv(strategic_value)
+    s_data = balance_ijv(s_data, hot_value)
+
+    # Sanity?
+    if s_data is None:
+        return model, None, influence
+
+    # Define a memory to sample
+    memory = ReplayMemory(len(s_data))
+    batch_size = len(s_data)
+    for d in s_data:
+        memory.push(*d)
+
+    # -----------------------------------------------------------------------
+    # Sample the memory to teach the strategist
+    bias_board = None
+    for episode in range(initial, initial + num_episodes):
+        loss = 0.0
+
         if debug:
             print("---------------------------------------")
             print(">>> STRATEGIST ({}).".format(episode))
 
-        # Extract strategic data from the stumbler
-        strategic_default_value = 0.0
-        strategic_value = estimate_hot_cold(
-            o,
-            p,
-            stumbler_model,
-            hot_threshold=hot_threshold,
-            cold_threshold=cold_threshold,
-            hot_value=1,
-            cold_value=-1,
-            default_value=strategic_default_value)
+        coords = []
+        values = []
+        for c, v in memory.sample(batch_size):
+            coords.append(c)
+            values.append(v)
+        coords = torch.tensor(
+            np.vstack(coords), requires_grad=True, dtype=torch.float)
+        values = torch.tensor(values, requires_grad=False, dtype=torch.float)
 
-        # ...Into tuples
-        s_data = convert_ijv(strategic_value)
-        s_data = balance_ijv(s_data, strategic_default_value)
-        if s_data is not None:
-            for d in s_data:
-                memory.push(*d)
+        # Making some preditions, ...
+        predicted_values = model(coords).squeeze()
 
-        loss = 0.0
-        if len(memory) > batch_size:
-            coords = []
-            values = []
-            samples = memory.sample(batch_size)
-
-            for c, v in samples:
-                coords.append(c)
-                values.append(v)
-
-            coords = torch.tensor(
-                np.vstack(coords), requires_grad=True, dtype=torch.float)
-            values = torch.tensor(
-                values, requires_grad=False, dtype=torch.float)
-
-            # Making some preditions,
-            predicted_values = model(coords).squeeze()
-
-            # and find their loss.
-            loss = F.mse_loss(predicted_values, values)
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            if debug:
-                print(">>> Coords: {}".format(coords))
-                print(">>> Values: {}".format(values))
-                print(">>> Predicted values: {}".format(values))
-                print(">>> Loss {}".format(loss))
-
-                print(">>> Last win {}".format(win))
-                print(">>> Influence {}".format(influence))
+        # and learn from them
+        loss = F.mse_loss(predicted_values, values)
+        optimizer.zero_grad()
+        loss.backward()
+        optimizer.step()
 
         # --------------------------------------------------------------------
-        # Use the trained strategist to generate a bias_board,
-        bias_board = create_bias_board(m, n, model)
+        if debug:
+            print(">>> Coords: {}".format(coords))
+            print(">>> Values: {}".format(values))
+            print(">>> Predicted values: {}".format(values))
+            print(">>> Loss {}".format(loss))
 
-        # Est performance. Count strategist wins.
-        win = evaluate_models(
-            stumbler_model,
-            model,
-            stumbler_game,
-            game,
-            num_episodes=num_eval,
-            debug=debug)
+            print(">>> Last win {}".format(win))
+            print(">>> Influence {}".format(influence))
 
-        # Update the influence and then the bias_board
-        if win > 0.5:
-            influence += learning_rate
-        else:
-            influence -= learning_rate
-        influence = np.clip(influence, 0, 1)
-
-        # --------------------------------------------------------------------
         if tensorboard and (int(episode) % update_every) == 0:
             # Timecourse
             writer.add_scalar(
                 os.path.join(tensorboard, 'stategist_error'), loss, episode)
-            writer.add_scalar(
-                os.path.join(tensorboard, 'stategist_wins'), win, episode)
-            writer.add_scalar(
-                os.path.join(tensorboard, 'stategist_influence'), influence,
-                episode)
 
-            plot_wythoff_board(
-                bias_board,
-                vmin=-1,
-                vmax=1,
-                path=tensorboard,
-                name='bias_board.png')
-            writer.add_image(
-                'strategist_bias_board',
-                skimage.io.imread(os.path.join(tensorboard, 'bias_board.png')))
+    # --------------------------------------------------------------------
+    # Use the trained strategist to generate a bias_board,
+    bias_board = create_bias_board(m, n, model)
+
+    # Est performance. Count strategist wins.
+    win = evaluate_models(
+        stumbler_model,
+        model,
+        stumbler_game,
+        game,
+        num_episodes=num_eval,
+        debug=debug)
+
+    # Update the influence and then the bias_board
+    if win > 0.5:
+        influence += learning_rate
+    else:
+        influence -= learning_rate
+        influence = np.clip(influence, 0, 1)
 
     # ------------------------------------------------------------------------
     # The end
     if tensorboard:
+        writer.add_scalar(
+            os.path.join(tensorboard, 'stategist_influence'), influence,
+            episode)
+
+        plot_wythoff_board(
+            bias_board,
+            vmin=-1,
+            vmax=1,
+            path=tensorboard,
+            name='bias_board.png')
+        writer.add_image(
+            'strategist_bias_board',
+            skimage.io.imread(os.path.join(tensorboard, 'bias_board.png')))
+
         writer.close()
 
     return model, bias_board, influence

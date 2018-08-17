@@ -67,13 +67,11 @@ wythoff_exp5:
 	-rm -rf $(DATA_PATH)/wythoff/exp5
 	sleep 5  # Wait for tensorboard to notice the deletion
 	python run_azad.py wythoff_stumbler_strategist \
-		--num_episodes=1000 \
-		--num_stumbles=1000 --learning_rate_stumbler=0.1 --stumbler_game=Wythoff10x10 \
+		--num_episodes=10000 \
+		--num_stumbles=250 --learning_rate_stumbler=0.1 --stumbler_game=Wythoff10x10 \
 		--epsilon=0.5 --anneal=True --gamma=0.98 \
-		--num_strategies=1000 --learning_rate_strategist=0.01 --strategist_game=Wythoff50x50 \
-		--memory_size=10000 \
-		--batch_size=128 \
-		--cold_threshold=0.0 --hot_threshold=10.0 \
+		--num_strategies=1000 --learning_rate_strategist=0.1 --strategist_game=Wythoff50x50 \
+		--cold_threshold=0.0 --hot_threshold=0.5 \
 		--debug=False \
 		--tensorboard=$(DATA_PATH)/wythoff/exp5 --update_every=50 \
 		--save=$(DATA_PATH)/wythoff/exp5.pytorch --debug=False 
