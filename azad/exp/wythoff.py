@@ -197,8 +197,9 @@ def wythoff_stumbler_strategist(num_episodes=10,
             'stumbler_opponent_dict': opponent
         }
         torch.save(state, save)
-
-    return (player, opponent, strategist), (score_a, score_a, score_b)
+        return None
+    else:
+        return (player, opponent, strategist), (score_a, score_a, score_b)
 
 
 def wythoff_stumbler(num_episodes=10,
