@@ -56,6 +56,9 @@ def wythoff_stumbler_strategist(num_episodes=10,
                                 learning_rate_strategist=0.01,
                                 cold_threshold=0.0,
                                 hot_threshold=0.5,
+                                hot_value=1,
+                                cold_value=-1,
+                                num_eval=1,
                                 tensorboard=None,
                                 update_every=5,
                                 seed=None,
@@ -100,22 +103,66 @@ def wythoff_stumbler_strategist(num_episodes=10,
             seed=seed)
 
         # Strategist
-        strategist, bias_board, influence = wythoff_strategist(
+        strategist = wythoff_strategist(
             player,
             stumbler_game,
             num_episodes=num_strategies,
-            num_eval=1,
             game=strategist_game,
             model=strategist,
-            influence=influence,
             cold_threshold=cold_threshold,
             hot_threshold=hot_threshold,
             learning_rate=learning_rate_strategist,
             tensorboard=tensorboard,
             update_every=update_every,
+            hot_value=hot_value,
+            cold_value=cold_value,
             initial=episode * num_strategies,
             debug=debug,
             seed=seed)
+
+        # --------------------------------------------------------------------
+        # Use the trained strategist to generate a bias_board,
+        bias_board = create_bias_board(m, n, strategist)
+
+        # Est performance. Count strategist wins.
+        win = evaluate_models(
+            player,
+            strategist,
+            stumbler_game,
+            strategist_game,
+            num_episodes=num_eval,
+            debug=debug)
+
+        # Update the influence and then the bias_board
+        if win > 0.5:
+            influence += learning_rate_stumbler
+        else:
+            influence -= learning_rate_stumbler
+        influence = np.clip(influence, 0, 1)
+
+        # ------------------------------------------------------------------------
+        if tensorboard is not None:
+            try:
+                os.makedirs(tensorboard)
+            except OSError as exception:
+                if exception.errno != errno.EEXIST:
+                    raise
+
+            writer = SummaryWriter(log_dir=tensorboard)
+            writer.add_scalar(
+                os.path.join(tensorboard, 'stategist_influence'), influence,
+                episode)
+
+            plot_wythoff_board(
+                bias_board,
+                vmin=-1,
+                vmax=1,
+                path=tensorboard,
+                name='bias_board.png')
+            writer.add_image(
+                'strategist_bias_board',
+                skimage.io.imread(os.path.join(tensorboard, 'bias_board.png')))
+            writer.close()
 
         # --------------------------------------------------------------------
         if save and (int(episode) % update_every) == 0:
@@ -426,7 +473,6 @@ def wythoff_strategist(stumbler_model,
                        learning_rate=0.01,
                        game='Wythoff50x50',
                        model=None,
-                       influence=0.0,
                        initial=0,
                        tensorboard=None,
                        stumbler_mode='numpy',
@@ -484,7 +530,7 @@ def wythoff_strategist(stumbler_model,
 
     # Sanity?
     if s_data is None:
-        return model, None, influence
+        return model, None
 
     # Define a memory to sample
     memory = ReplayMemory(len(s_data))
@@ -528,53 +574,13 @@ def wythoff_strategist(stumbler_model,
             print(">>> Loss {}".format(loss))
 
             print(">>> Last win {}".format(win))
-            print(">>> Influence {}".format(influence))
 
         if tensorboard and (int(episode) % update_every) == 0:
             # Timecourse
             writer.add_scalar(
                 os.path.join(tensorboard, 'stategist_error'), loss, episode)
 
-    # --------------------------------------------------------------------
-    # Use the trained strategist to generate a bias_board,
-    bias_board = create_bias_board(m, n, model)
-
-    # Est performance. Count strategist wins.
-    win = evaluate_models(
-        stumbler_model,
-        model,
-        stumbler_game,
-        game,
-        num_episodes=num_eval,
-        debug=debug)
-
-    # Update the influence and then the bias_board
-    if win > 0.5:
-        influence += learning_rate
-    else:
-        influence -= learning_rate
-        influence = np.clip(influence, 0, 1)
-
-    # ------------------------------------------------------------------------
-    # The end
-    if tensorboard:
-        writer.add_scalar(
-            os.path.join(tensorboard, 'stategist_influence'), influence,
-            episode)
-
-        plot_wythoff_board(
-            bias_board,
-            vmin=-1,
-            vmax=1,
-            path=tensorboard,
-            name='bias_board.png')
-        writer.add_image(
-            'strategist_bias_board',
-            skimage.io.imread(os.path.join(tensorboard, 'bias_board.png')))
-
-        writer.close()
-
-    return model, bias_board, influence
+    return model
 
 
 def wythoff_optimal(path,
