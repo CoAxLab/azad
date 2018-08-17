@@ -103,6 +103,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
             update_every=update_every,
             initial=episode * num_stumbles,
             debug=debug,
+            save=False,
             seed=seed)
 
         # Strategist
@@ -144,7 +145,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
             influence -= learning_rate_strategist
         influence = np.clip(influence, 0, 1)
 
-        # ------------------------------------------------------------------------
+        # --------------------------------------------------------------------
         if tensorboard is not None:
             try:
                 os.makedirs(tensorboard)
@@ -172,30 +173,30 @@ def wythoff_stumbler_strategist(num_episodes=10,
                 skimage.io.imread(os.path.join(tensorboard, 'bias_board.png')))
             writer.close()
 
-        # --------------------------------------------------------------------
-        if save and (int(episode) % update_every) == 0:
-            state = {
-                'episode': episode,
-                'epsilon': epsilon,
-                'anneal': anneal,
-                'gamma': gamma,
-                'num_episodes': num_episodes,
-                'num_stumbles': num_stumbles,
-                'num_strategies': num_strategies,
-                'influence': influence,
-                'stumbler_score': score_a,
-                'strategist_score': score_b,
-                'stumbler_game': stumbler_game,
-                'strategist_game': strategist_game,
-                'cold_threshold': cold_threshold,
-                'hot_threshold': hot_threshold,
-                'learning_rate_stumbler': learning_rate_stumbler,
-                'learning_rate_strategist': learning_rate_strategist,
-                'strategist_state_dict': strategist.state_dict(),
-                'stumbler_player_dict': player,
-                'stumbler_opponent_dict': opponent
-            }
-            torch.save(state, save)
+    # --------------------------------------------------------------------
+    if save:
+        state = {
+            'episode': episode,
+            'epsilon': epsilon,
+            'anneal': anneal,
+            'gamma': gamma,
+            'num_episodes': num_episodes,
+            'num_stumbles': num_stumbles,
+            'num_strategies': num_strategies,
+            'influence': influence,
+            'stumbler_score': score_a,
+            'strategist_score': score_b,
+            'stumbler_game': stumbler_game,
+            'strategist_game': strategist_game,
+            'cold_threshold': cold_threshold,
+            'hot_threshold': hot_threshold,
+            'learning_rate_stumbler': learning_rate_stumbler,
+            'learning_rate_strategist': learning_rate_strategist,
+            'strategist_state_dict': strategist.state_dict(),
+            'stumbler_player_dict': player,
+            'stumbler_opponent_dict': opponent
+        }
+        torch.save(state, save)
 
     return (player, opponent, strategist), (score_a, score_a, score_b)
 
