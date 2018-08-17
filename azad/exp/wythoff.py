@@ -234,7 +234,11 @@ def wythoff_stumbler(num_episodes=10,
         writer = SummaryWriter(log_dir=tensorboard)
 
     # Create env
-    env = create_env(game)
+    if tensorboard is not None:
+        env = create_env(game, monitor=True)
+    else:
+        env = create_env(game, monitor=False)
+
     env.seed(seed)
     np.random.seed(seed)
 
@@ -524,7 +528,12 @@ def wythoff_strategist(stumbler_model,
         writer = SummaryWriter(log_dir=tensorboard)
 
     # Create env and find all moves in it
-    env = create_env(game)
+    # Create env
+    if tensorboard is not None:
+        env = create_env(game, monitor=True)
+    else:
+        env = create_env(game, monitor=False)
+
     env.seed(seed)
     np.random.seed(seed)
 
@@ -970,10 +979,11 @@ def flatten_board(board):
     return board.reshape(m * n)
 
 
-def create_env(wythoff_name):
+def create_env(wythoff_name, monitor=True):
     env = gym.make('{}-v0'.format(wythoff_name))
-    env = wrappers.Monitor(
-        env, './tmp/{}-v0-1'.format(wythoff_name), force=True)
+    if monitor:
+        env = wrappers.Monitor(
+            env, './tmp/{}-v0-1'.format(wythoff_name), force=True)
 
     return env
 
