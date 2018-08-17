@@ -214,6 +214,7 @@ def wythoff_stumbler(num_episodes=10,
                      tensorboard=None,
                      update_every=5,
                      initial=0,
+                     save=False,
                      debug=False,
                      seed=None):
     """Learn to play Wythoff's w/ e-greedy random exploration.
@@ -464,6 +465,22 @@ def wythoff_stumbler(num_episodes=10,
                 'opponent',
                 skimage.io.imread(
                     os.path.join(tensorboard, 'opponent_max_values.png')))
+
+        # --------------------------------------------------------------------
+        if save and (int(episode) % update_every) == 0:
+            state = {
+                'episode': episode,
+                'epsilon': epsilon,
+                'anneal': anneal,
+                'gamma': gamma,
+                'num_episodes': num_episodes,
+                'stumbler_score': score,
+                'stumbler_game': game,
+                'learning_rate_stumbler': learning_rate,
+                'stumbler_player_dict': player,
+                'stumbler_opponent_dict': opponent
+            }
+            torch.save(state, save)
 
     # ------------------------------------------------------------------------
     # The end
