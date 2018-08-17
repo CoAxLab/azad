@@ -505,6 +505,7 @@ def wythoff_strategist(stumbler_model,
                        score=0.0,
                        tensorboard=None,
                        stumbler_mode='numpy',
+                       balance_cold=False,
                        update_every=50,
                        num_eval=1,
                        debug=False,
@@ -543,19 +544,27 @@ def wythoff_strategist(stumbler_model,
     # -----------------------------------------------------------------------
     # Extract strategic data from the stumbler
     strategic_default_value = 0.0
-    strategic_value = estimate_hot_cold(
-        o,
-        p,
-        stumbler_model,
-        hot_threshold=hot_threshold,
-        cold_threshold=cold_threshold,
-        hot_value=hot_value,
-        cold_value=cold_value,
-        default_value=strategic_default_value)
+    if hot_threshold is None:
+        strategic_value = estimate_cold(
+            m, n, stumbler_model, cold_threshold, value=cold_value)
+    elif cold_threshold is None:
+        strategic_value = estimate_hot(
+            m, n, stumbler_model, hot_threshold, value=hot_value)
+    else:
+        strategic_value = estimate_hot_cold(
+            o,
+            p,
+            stumbler_model,
+            hot_threshold=hot_threshold,
+            cold_threshold=cold_threshold,
+            hot_value=hot_value,
+            cold_value=cold_value,
+            default_value=strategic_default_value)
 
     # Convert format
     s_data = convert_ijv(strategic_value)
-    # s_data = balance_ijv(s_data, cold_value)
+    if balance_cold:
+        s_data = balance_ijv(s_data, cold_value)
 
     # Sanity?
     if s_data is None:
