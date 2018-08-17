@@ -109,5 +109,12 @@ wythoff_exp6:
 
 # ----------------------------------------------------------------------------
 # Exps for paper
-
- 
+# - Stumbler only
+# - SS
+# - SS w/ only cold
+# - SS w/ only cold (no sym sampling)
+# - SS w/ only hot
+# - SS w/ perfect strategy (+ control)
+# - S: Train Wythoff: relearn Nim, Euclid
+# - SS: Train Wythoff: relearn Nim, Euclid
+# - SS in shallow mode 
