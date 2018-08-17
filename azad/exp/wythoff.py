@@ -135,9 +135,9 @@ def wythoff_stumbler_strategist(num_episodes=10,
 
         # Update the influence and then the bias_board
         if win > 0.5:
-            influence += learning_rate_stumbler
+            influence += learning_rate_strategist
         else:
-            influence -= learning_rate_stumbler
+            influence -= learning_rate_strategist
         influence = np.clip(influence, 0, 1)
 
         # ------------------------------------------------------------------------
@@ -526,7 +526,7 @@ def wythoff_strategist(stumbler_model,
 
     # Convert format
     s_data = convert_ijv(strategic_value)
-    s_data = balance_ijv(s_data, hot_value)
+    s_data = balance_ijv(s_data, cold_value)
 
     # Sanity?
     if s_data is None:
@@ -704,7 +704,7 @@ def wythoff_optimal(path,
     if tensorboard:
         writer.close()
 
-    return model, env,
+    return model
 
 
 # ---------------------------------------------------------------------------
@@ -754,14 +754,14 @@ def convert_ijv(data):
     return converted
 
 
-def balance_ijv(ijv_data, null_value):
-    """Balance counts of null versus other values"""
+def balance_ijv(ijv_data, target_value):
+    """Balance counts of target versus other values"""
 
     # Separate data based on null_value
     other = []
     null = []
     for c, v in ijv_data:
-        if np.isclose(v, null_value):
+        if np.isclose(v, target_value):
             null.append([c, v])
         else:
             other.append([c, v])
