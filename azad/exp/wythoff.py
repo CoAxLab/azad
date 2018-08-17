@@ -8,8 +8,10 @@ from collections import defaultdict
 from copy import deepcopy
 
 import torch
+import torch as th
 import torch.optim as optim
 import torch.nn.functional as F
+
 from torch.autograd import Variable
 from tensorboardX import SummaryWriter
 from torchviz import make_dot
@@ -78,13 +80,14 @@ def wythoff_stumbler_strategist(num_episodes=10,
     opponent = None
     strategist = None
     bias_board = None
-    influence = 0.0
-    optim = 0.0
 
+    influence = 0.0
+    score_a = 0.0
+    score_b = 0.0
     # ------------------------------------------------------------------------
     for episode in range(num_episodes):
         # Stumbler
-        player, opponent, optim = wythoff_stumbler(
+        (player, opponent), (score_a, _) = wythoff_stumbler(
             num_episodes=num_stumbles,
             game=stumbler_game,
             epsilon=epsilon,
@@ -95,7 +98,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
             opponent=opponent,
             bias_board=bias_board,
             influence=influence,
-            optim=optim,
+            score=score_a,
             tensorboard=tensorboard,
             update_every=update_every,
             initial=episode * num_stumbles,
@@ -103,12 +106,13 @@ def wythoff_stumbler_strategist(num_episodes=10,
             seed=seed)
 
         # Strategist
-        strategist = wythoff_strategist(
+        strategist, score_b = wythoff_strategist(
             player,
             stumbler_game,
             num_episodes=num_strategies,
             game=strategist_game,
             model=strategist,
+            score=score_b,
             cold_threshold=cold_threshold,
             hot_threshold=hot_threshold,
             learning_rate=learning_rate_strategist,
@@ -152,6 +156,8 @@ def wythoff_stumbler_strategist(num_episodes=10,
             writer.add_scalar(
                 os.path.join(tensorboard, 'stategist_influence'), influence,
                 episode)
+            writer.add_scalar(
+                os.path.join(tensorboard, 'stategist_score'), score_b, episode)
 
             plot_wythoff_board(
                 bias_board,
@@ -177,6 +183,8 @@ def wythoff_stumbler_strategist(num_episodes=10,
                 'num_stumbles': num_stumbles,
                 'num_strategies': num_strategies,
                 'influence': influence,
+                'stumbler_score': score_a,
+                'strategist_score': score_b,
                 'stumbler_game': stumbler_game,
                 'strategist_game': strategist_game,
                 'cold_threshold': cold_threshold,
@@ -189,7 +197,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
             }
             torch.save(state, save)
 
-    return player, opponent, strategist
+    return (player, opponent, strategist), (score_a, score_a, score_b)
 
 
 def wythoff_stumbler(num_episodes=10,
@@ -202,7 +210,7 @@ def wythoff_stumbler(num_episodes=10,
                      anneal=False,
                      bias_board=None,
                      influence=0.0,
-                     optim=0.0,
+                     score=0.0,
                      tensorboard=None,
                      update_every=5,
                      initial=0,
@@ -291,7 +299,7 @@ def wythoff_stumbler(num_episodes=10,
             if cold_move_available(x, y, available):
                 if move in locate_cold_moves(x, y, available):
                     best = 1.0
-                optim += (best - optim) / (episode + 1)
+                score += (best - score) / (episode + 1)
 
             # PLAY THE MOVE
             (x, y, board, available), reward, done, _ = env.step(move)
@@ -428,7 +436,7 @@ def wythoff_stumbler(num_episodes=10,
             writer.add_scalar(
                 os.path.join(tensorboard, 'steps'), steps, episode)
             writer.add_scalar(
-                os.path.join(tensorboard, 'optimal'), optim, episode)
+                os.path.join(tensorboard, 'stumbler_score'), score, episode)
             writer.add_scalar(
                 os.path.join(tensorboard, 'epsilon'), epsilon_e, episode)
 
@@ -462,7 +470,7 @@ def wythoff_stumbler(num_episodes=10,
     if tensorboard is not None:
         writer.close()
 
-    return model, opponent, optim
+    return (model, opponent), (score, score)
 
 
 def wythoff_strategist(stumbler_model,
@@ -476,6 +484,7 @@ def wythoff_strategist(stumbler_model,
                        game='Wythoff50x50',
                        model=None,
                        initial=0,
+                       score=0.0,
                        tensorboard=None,
                        stumbler_mode='numpy',
                        update_every=50,
@@ -582,132 +591,138 @@ def wythoff_strategist(stumbler_model,
             writer.add_scalar(
                 os.path.join(tensorboard, 'stategist_error'), loss, episode)
 
-    return model
+    # Score the model:
+    with th.no_grad():
+        pred = create_bias_board(m, n, model, default=0.0).numpy()
+        cold = create_cold_board(m, n, default=hot_value)
+        mae = np.mean(np.abs(pred - cold))
+        score += (mae - score) / (episode + 1)
+
+    return (model), (score)
 
 
-def wythoff_optimal(path,
-                    num_episodes=1000,
-                    learning_rate=0.01,
-                    num_hidden1=100,
-                    num_hidden2=25,
-                    stumbler_game='Wythoff10x10',
-                    strategist_game='Wythoff50x50',
-                    tensorboard=False,
-                    debug=False,
-                    seed=None):
-    """An optimal stumbler teaches the strategist."""
+# def wythoff_optimal(path,
+#                     num_episodes=1000,
+#                     learning_rate=0.01,
+#                     num_hidden1=100,
+#                     num_hidden2=25,
+#                     stumbler_game='Wythoff10x10',
+#                     strategist_game='Wythoff50x50',
+#                     tensorboard=False,
+#                     debug=False,
+#                     seed=None):
+#     """An optimal stumbler teaches the strategist."""
 
-    # ------------------------------------------------------------------------
-    # Setup
-    try:
-        os.makedirs(path)
-    except OSError as exception:
-        if exception.errno != errno.EEXIST:
-            raise
+#     # ------------------------------------------------------------------------
+#     # Setup
+#     try:
+#         os.makedirs(path)
+#     except OSError as exception:
+#         if exception.errno != errno.EEXIST:
+#             raise
 
-    m, n, board, _ = peek(create_env(strategist_game))
-    o, p, _, _ = peek(create_env(stumbler_game))
+#     m, n, board, _ = peek(create_env(strategist_game))
+#     o, p, _, _ = peek(create_env(stumbler_game))
 
-    if debug:
-        print(">>> TRANING AN OPTIMAL STRATEGIST.")
-        print(">>> Train board {}".format(o, p))
-        print(">>> Test board {}".format(m, n))
+#     if debug:
+#         print(">>> TRANING AN OPTIMAL STRATEGIST.")
+#         print(">>> Train board {}".format(o, p))
+#         print(">>> Test board {}".format(m, n))
 
-    # Log setup
-    if tensorboard:
-        writer = SummaryWriter(log_dir=path)
+#     # Log setup
+#     if tensorboard:
+#         writer = SummaryWriter(log_dir=path)
 
-    # Seeding...
-    np.random.seed(seed)
+#     # Seeding...
+#     np.random.seed(seed)
 
-    # Train params
-    strategic_default_value = 0.0
-    batch_size = 64
+#     # Train params
+#     strategic_default_value = 0.0
+#     batch_size = 64
 
-    # ------------------------------------------------------------------------
-    # Build a Strategist, its memory, and its optimizer
+#     # ------------------------------------------------------------------------
+#     # Build a Strategist, its memory, and its optimizer
 
-    # Create a model, of the right size.
-    # model = HotCold2(2, num_hidden1=num_hidden1)
-    model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
+#     # Create a model, of the right size.
+#     # model = HotCold2(2, num_hidden1=num_hidden1)
+#     model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
 
-    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
-    memory = ReplayMemory(10000)
+#     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+#     memory = ReplayMemory(10000)
 
-    # Run learning episodes. The 'stumbler' is just the opt
-    # cold board
-    for episode in range(num_episodes):
-        # The cold spots are '1' everythig else is '0'
-        strategic_value = create_cold_board(o, p)
+#     # Run learning episodes. The 'stumbler' is just the opt
+#     # cold board
+#     for episode in range(num_episodes):
+#         # The cold spots are '1' everythig else is '0'
+#         strategic_value = create_cold_board(o, p)
 
-        # ...Into tuples
-        s_data = convert_ijv(strategic_value)
-        s_data = balance_ijv(s_data, strategic_default_value)
+#         # ...Into tuples
+#         s_data = convert_ijv(strategic_value)
+#         s_data = balance_ijv(s_data, strategic_default_value)
 
-        for d in s_data:
-            memory.push(*d)
+#         for d in s_data:
+#             memory.push(*d)
 
-        loss = 0.0
-        if len(memory) > batch_size:
-            # Sample data....
-            coords = []
-            values = []
-            samples = memory.sample(batch_size)
+#         loss = 0.0
+#         if len(memory) > batch_size:
+#             # Sample data....
+#             coords = []
+#             values = []
+#             samples = memory.sample(batch_size)
 
-            for c, v in samples:
-                coords.append(c)
-                values.append(v)
+#             for c, v in samples:
+#                 coords.append(c)
+#                 values.append(v)
 
-            coords = torch.tensor(
-                np.vstack(coords), requires_grad=True, dtype=torch.float)
-            values = torch.tensor(
-                values, requires_grad=False, dtype=torch.float)
+#             coords = torch.tensor(
+#                 np.vstack(coords), requires_grad=True, dtype=torch.float)
+#             values = torch.tensor(
+#                 values, requires_grad=False, dtype=torch.float)
 
-            # Making some preditions,
-            predicted_values = model(coords).squeeze()
+#             # Making some preditions,
+#             predicted_values = model(coords).squeeze()
 
-            # and find their loss.
-            loss = F.mse_loss(predicted_values, values)
+#             # and find their loss.
+#             loss = F.mse_loss(predicted_values, values)
 
-            # Walk down the hill of righteousness!
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
+#             # Walk down the hill of righteousness!
+#             optimizer.zero_grad()
+#             loss.backward()
+#             optimizer.step()
 
-            if debug:
-                print(">>> Coords: {}".format(coords))
-                print(">>> Values: {}".format(values))
-                print(">>> Predicted values: {}".format(values))
-                print(">>> Loss {}".format(loss))
+#             if debug:
+#                 print(">>> Coords: {}".format(coords))
+#                 print(">>> Values: {}".format(values))
+#                 print(">>> Predicted values: {}".format(values))
+#                 print(">>> Loss {}".format(loss))
 
-        # Use the trained strategist to generate a bias_board,
-        bias_board = create_bias_board(m, n, model)
+#         # Use the trained strategist to generate a bias_board,
+#         bias_board = create_bias_board(m, n, model)
 
-        if tensorboard and (int(episode) % 50) == 0:
-            writer.add_scalar(os.path.join(path, 'error'), loss, episode)
+#         if tensorboard and (int(episode) % 50) == 0:
+#             writer.add_scalar(os.path.join(path, 'error'), loss, episode)
 
-            plot_wythoff_board(
-                strategic_value,
-                vmin=0,
-                vmax=1,
-                path=path,
-                name='strategy_board.png')
-            writer.add_image(
-                'Training board',
-                skimage.io.imread(os.path.join(path, 'strategy_board.png')))
+#             plot_wythoff_board(
+#                 strategic_value,
+#                 vmin=0,
+#                 vmax=1,
+#                 path=path,
+#                 name='strategy_board.png')
+#             writer.add_image(
+#                 'Training board',
+#                 skimage.io.imread(os.path.join(path, 'strategy_board.png')))
 
-            plot_wythoff_board(
-                bias_board, vmin=0, vmax=1, path=path, name='bias_board.png')
-            writer.add_image(
-                'Testing board',
-                skimage.io.imread(os.path.join(path, 'bias_board.png')))
+#             plot_wythoff_board(
+#                 bias_board, vmin=0, vmax=1, path=path, name='bias_board.png')
+#             writer.add_image(
+#                 'Testing board',
+#                 skimage.io.imread(os.path.join(path, 'bias_board.png')))
 
-    # The end
-    if tensorboard:
-        writer.close()
+#     # The end
+#     if tensorboard:
+#         writer.close()
 
-    return model
-
+#     return model
 
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
