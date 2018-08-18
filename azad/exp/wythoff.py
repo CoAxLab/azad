@@ -171,19 +171,8 @@ def wythoff_stumbler_strategist(num_episodes=10,
         influence = np.clip(influence, 0, 1)
 
         # --------------------------------------------------------------------
-        if tensorboard is not None:
+        if tensorboard:
             writer.add_scalar('stategist_influence', influence, episode)
-            plot_wythoff_board(
-                bias_board,
-                vmin=-1.5,
-                vmax=1.5,
-                path=tensorboard,
-                height=10,
-                width=15,
-                name='bias_board.png')
-            writer.add_image(
-                'strategist_bias_board',
-                skimage.io.imread(os.path.join(tensorboard, 'bias_board.png')))
 
         if monitor:
             all_variables = locals()
@@ -256,6 +245,7 @@ def wythoff_stumbler(num_episodes=10,
     Note: Learning is based on a player-opponent joint action formalism 
     and tabular Q-learning.
     """
+
     # ------------------------------------------------------------------------
     # Setup
     if tensorboard is not None:
@@ -474,10 +464,10 @@ def wythoff_stumbler(num_episodes=10,
         if tensorboard and (int(episode) % update_every) == 0:
             writer.add_scalar('reward', r, episode)
             writer.add_scalar('Q', Q, episode)
-            writer.add_scalar('error', loss, episode)
-            writer.add_scalar('steps', steps, episode)
-            writer.add_scalar('stumbler_score', score, episode)
             writer.add_scalar('epsilon_e', epsilon_e, episode)
+            writer.add_scalar('stumber_error', loss, episode)
+            writer.add_scalar('stumber_steps', steps, episode)
+            writer.add_scalar('stumbler_score', score, episode)
 
             # Cold ref:
             cold = create_cold_board(m, n)
@@ -686,6 +676,19 @@ def wythoff_strategist(stumbler_model,
         if tensorboard and (int(episode) % update_every) == 0:
             # Timecourse
             writer.add_scalar('stategist_error', loss, episode)
+
+            bias_board = create_bias_board(m, n, model)
+            plot_wythoff_board(
+                bias_board,
+                vmin=-1.5,
+                vmax=1.5,
+                path=tensorboard,
+                height=10,
+                width=15,
+                name='bias_board.png')
+            writer.add_image(
+                'strategist',
+                skimage.io.imread(os.path.join(tensorboard, 'bias_board.png')))
 
         if monitor and (int(episode) % update_every) == 0:
             all_variables = locals()
