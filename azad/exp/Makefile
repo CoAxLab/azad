@@ -92,10 +92,9 @@ wythoff_exp5:
 
 # ----------------------------------------------------------------------------
 # Hyperparam searches
-
 # 8-17-2018
-# Stumbler
 
+# Stumbler
 # Result: Some sensitivity to these params. Not a lot. See `exp6_ranked.csv`; 
 # lr = 0.4 ep = 0.4, gamma = 0.5 are good middle of the optimal range
 # choices.
