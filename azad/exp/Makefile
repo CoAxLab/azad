@@ -192,14 +192,40 @@ wythoff_exp10:
 		--hot_value=-1 \
 		--cold_value=1 \
 		--debug=False \
-		--update_every=10 \
+		--update_every=50 \
 		--save=$(DATA_PATH)/wythoff/exp10/run \
 		--save_model=True \
-		--stumbler_monitor='('episode', 'loss', 'score')' \
-		--strategist_monitor='('episode', 'loss')' \
-		--monitor='('episode', 'influence')' \
-		--return_none=True \
-		--debug=False 
+		--debug=False \
+		--tensorboard=$(DATA_PATH)/wythoff/exp10 
+
+# wythoff_exp10:
+# 	-rm -rf $(DATA_PATH)/wythoff/exp10
+# 	-mkdir $(DATA_PATH)/wythoff/exp10
+# 	sleep 5  # Wait for tensorboard to notice the deletion
+# 	python run_azad.py wythoff_stumbler_strategist \
+# 		--num_episodes=100 \
+# 		--num_stumbles=500 \
+# 		--learning_rate_stumbler=0.4 \
+# 		--stumbler_game=Wythoff15x15 \
+# 		--epsilon=0.4 \
+# 		--anneal=True \
+# 		--gamma=0.5 \
+# 		--num_strategies=500 \
+# 		--learning_rate_strategist=0.02 \
+# 		--strategist_game=Wythoff50x50 \
+# 		--cold_threshold=-0.2 \
+# 		--hot_threshold=0.2 \
+# 		--hot_value=-1 \
+# 		--cold_value=1 \
+# 		--debug=False \
+# 		--update_every=10 \
+# 		--save=$(DATA_PATH)/wythoff/exp10/run \
+# 		--save_model=True \
+# 		--stumbler_monitor='('episode', 'loss', 'score')' \
+# 		--strategist_monitor='('episode', 'loss')' \
+# 		--monitor='('episode', 'influence')' \
+# 		--return_none=True \
+# 		--debug=False 
 		# --tensorboard=$(DATA_PATH)/wythoff/exp10 
 
 # ----------------------------------------------------------------------------
