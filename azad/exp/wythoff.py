@@ -171,10 +171,10 @@ def wythoff_stumbler_strategist(num_episodes=10,
             writer.add_image(
                 'strategist_bias_board',
                 skimage.io.imread(os.path.join(tensorboard, 'bias_board.png')))
-            writer.close()
 
     # --------------------------------------------------------------------
     if save:
+        # Write model state
         state = {
             'episode': episode,
             'epsilon': epsilon,
@@ -196,10 +196,21 @@ def wythoff_stumbler_strategist(num_episodes=10,
             'stumbler_player_dict': player,
             'stumbler_opponent_dict': opponent
         }
-        torch.save(state, save)
-        return None
+        torch.save(state, save + ".pkl")
+
+        # Save traces
+        if tensorboard is not None:
+            writer.export_scalars_to_json(save + ".json")
+
+        result = None
     else:
-        return (player, opponent, strategist), (score_a, score_a, score_b)
+        result = (player, opponent, strategist), (score_a, score_a, score_b)
+
+    # Clean up
+    if tensorboard is not None:
+        writer.close()
+
+    return result
 
 
 def wythoff_stumbler(num_episodes=10,
@@ -472,13 +483,9 @@ def wythoff_stumbler(num_episodes=10,
                 skimage.io.imread(
                     os.path.join(tensorboard, 'opponent_max_values.png')))
 
-    # ------------------------------------------------------------------------
-    # The end
-    if tensorboard is not None:
-        writer.close()
-
     # --------------------------------------------------------------------
     if save:
+        # Save the model state
         state = {
             'episode': episode,
             'epsilon': epsilon,
@@ -491,10 +498,22 @@ def wythoff_stumbler(num_episodes=10,
             'stumbler_player_dict': model,
             'stumbler_opponent_dict': opponent
         }
-        torch.save(state, save)
-        return None
+        torch.save(state, save + ".pkl")
+
+        # Save traces
+        if tensorboard:
+            writer.export_scalars_to_json(save + ".json")
+
+        # Build return.
+        result = None
     else:
-        return (model, opponent), (score, score)
+        result = (model, opponent), (score, score)
+
+    # Cleanup
+    if tensorboard:
+        writer.close()
+
+    return result
 
 
 def wythoff_strategist(stumbler_model,
