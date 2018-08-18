@@ -54,6 +54,7 @@ wythoff_exp2:
 # ----------------------------------------------------------------------------
 # 7-8-2018
 # Grid-hyper param search for the wythoff_strategist
+# NOT USEFUL. OUTDATED.
 wythoff_exp4:
 	-rm -rf $(DATA_PATH)/wythoff/exp4*
 	sleep 5  # Wait for tensorboard to notice the deletion
@@ -63,6 +64,8 @@ wythoff_exp4:
 		'python run_azad.py wythoff_strategist $(DATA_PATH)/wythoff/exp4/exp4_n{1}_stb{2}_str{3}_ep{4} --num_trials=15000 --num_stumbles={1} --num_evals=1 --stumbler_learning_rate={2} --strategist_learning_rate={3} --epsilon={4} --stumbler_game=Wythoff10x10 --strategist_game=Wythoff50x50 --tensorboard=False --save=True --debug=False' ::: \
 		1 100 ::: 0.01 0.1 0.5 ::: 0.1 0.01 ::: 0 0.1
 
+# An SS network that works, somewhat well.
+# c33b60cab330cddda6e00f9f85ee07debb525e0b
 wythoff_exp5:
 	-rm -rf $(DATA_PATH)/wythoff/exp5
 	sleep 5  # Wait for tensorboard to notice the deletion
