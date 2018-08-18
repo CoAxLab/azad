@@ -56,6 +56,8 @@ def wythoff_stumbler_strategist(num_episodes=10,
                                 num_strategies=1000,
                                 strategist_game='Wythoff50x50',
                                 learning_rate_strategist=0.01,
+                                num_hidden1=100,
+                                num_hidden2=25,
                                 cold_threshold=0.0,
                                 hot_threshold=0.5,
                                 hot_value=1,
@@ -135,6 +137,8 @@ def wythoff_stumbler_strategist(num_episodes=10,
             num_episodes=num_strategies,
             game=strategist_game,
             model=strategist,
+            num_hidden1=num_hidden1,
+            num_hidden2=num_hidden2,
             score=score_b,
             cold_threshold=cold_threshold,
             hot_threshold=hot_threshold,
@@ -542,6 +546,8 @@ def wythoff_strategist(stumbler_model,
                        learning_rate=0.01,
                        game='Wythoff50x50',
                        model=None,
+                       num_hidden1=100,
+                       num_hidden2=25,
                        initial=0,
                        score=0.0,
                        tensorboard=None,
@@ -588,9 +594,11 @@ def wythoff_strategist(stumbler_model,
 
     # Init the strategist net
     if model is None:
-        num_hidden1 = 100
-        num_hidden2 = 25
-        model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
+        if num_hidden2 > 0:
+            model = HotCold3(
+                2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
+        else:
+            model = HotCold2(2, num_hidden1=num_hidden1)
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
     # -----------------------------------------------------------------------
