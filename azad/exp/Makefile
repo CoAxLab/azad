@@ -163,7 +163,8 @@ wythoff_exp8:
 
 # ----------------------------------------------------------------------------
 # Sanity check. Test of run of (manually) choosen 'good' hyper-params (exp6-8)
-
+# Result: both look solid, though opt performance hovers just shy of 90%
+# and it should really get to 100?
 # Stumbler
 wythoff_exp9:
 	-rm -rf $(DATA_PATH)/wythoff/exp9
@@ -198,6 +199,7 @@ wythoff_exp10:
 		--debug=False \
 		--tensorboard=$(DATA_PATH)/wythoff/exp10 
 
+# Old version, testing various monitor*
 # wythoff_exp10:
 # 	-rm -rf $(DATA_PATH)/wythoff/exp10
 # 	-mkdir $(DATA_PATH)/wythoff/exp10
@@ -227,6 +229,22 @@ wythoff_exp10:
 # 		--return_none=True \
 # 		--debug=False 
 		# --tensorboard=$(DATA_PATH)/wythoff/exp10 
+
+# 8-18-2018
+# Adding and tweaking a `learning_rate_influence` to the SS net
+
+wythoff_exp11:
+	-rm -rf $(DATA_PATH)/wythoff/exp11
+	-mkdir $(DATA_PATH)/wythoff/exp11
+	# Generate a grid,
+	python run_azad.py create_grid $(DATA_PATH)/wythoff/exp11/grid.csv \
+		--learning_rate_influence='(0.01, 1.0, 20)' 
+	# and search it.
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp11/exp11.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		'python run_azad.py wythoff_stumbler_strategist --num_episodes=100 --learning_rate_influence={learning_rate_influence} --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save=$(DATA_PATH)/wythoff/exp11/run_{row_code} --debug=False' :::: \
+		$(DATA_PATH)/wythoff/exp11/grid.csv
 
 # ----------------------------------------------------------------------------
 # Exps for paper. Use top N opt params from exp6-7.
