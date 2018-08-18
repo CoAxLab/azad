@@ -64,6 +64,10 @@ def wythoff_stumbler_strategist(num_episodes=10,
                                 tensorboard=None,
                                 update_every=5,
                                 seed=None,
+                                stumbler_monitor=None,
+                                strategist_monitor=None,
+                                monitor=None,
+                                return_none=False,
                                 save=False,
                                 debug=False):
     """Learn Wythoff's with a stumbler-strategist network"""
@@ -112,7 +116,10 @@ def wythoff_stumbler_strategist(num_episodes=10,
             update_every=update_every,
             initial=episode * num_stumbles,
             debug=debug,
-            save=False,
+            save=save + "_stumbler_{}".format(episode),
+            save_model=False,
+            monitor=stumbler_monitor,
+            return_none=True,
             seed=seed)
 
         # Strategist
@@ -132,6 +139,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
             cold_value=cold_value,
             initial=episode * num_strategies,
             debug=debug,
+            return_none=True,
             seed=seed)
 
         # --------------------------------------------------------------------
@@ -156,10 +164,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
 
         # --------------------------------------------------------------------
         if tensorboard is not None:
-
             writer.add_scalar('stategist_influence', influence, episode)
-            writer.add_scalar('stategist_score', score_b, episode)
-
             plot_wythoff_board(
                 bias_board,
                 vmin=-1.5,
@@ -173,7 +178,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
                 skimage.io.imread(os.path.join(tensorboard, 'bias_board.png')))
 
     # --------------------------------------------------------------------
-    if save:
+    if save_model:
         # Write model state
         state = {
             'episode': episode,
@@ -196,19 +201,15 @@ def wythoff_stumbler_strategist(num_episodes=10,
             'stumbler_player_dict': player,
             'stumbler_opponent_dict': opponent
         }
-        torch.save(state, save + ".pkl")
-
-        # Save traces
-        if tensorboard is not None:
-            writer.export_scalars_to_json(save + ".json")
-
-        result = None
-    else:
-        result = (player, opponent, strategist), (score_a, score_a, score_b)
+        torch.save(state, save + ".pytorch")
 
     # Clean up
     if tensorboard is not None:
         writer.close()
+
+    result = (model, opponent), (score, score)
+    if return_none:
+        result = None
 
     return result
 
@@ -228,6 +229,9 @@ def wythoff_stumbler(num_episodes=10,
                      update_every=5,
                      initial=0,
                      save=False,
+                     save_model=False,
+                     monitor=None,
+                     return_none=False,
                      debug=False,
                      seed=None):
     """Learn to play Wythoff's w/ e-greedy random exploration.
@@ -254,6 +258,10 @@ def wythoff_stumbler(num_episodes=10,
 
     env.seed(seed)
     np.random.seed(seed)
+
+    # Build a structure for monitored variables
+    if monitor is not None:
+        monitored = create_monitored(monitor)
 
     # ------------------------------------------------------------------------
     # Build a Q agent, and its optimizer
@@ -479,8 +487,13 @@ def wythoff_stumbler(num_episodes=10,
                 skimage.io.imread(
                     os.path.join(tensorboard, 'opponent_max_values.png')))
 
+        if monitor and (int(episode) % update_every) == 0:
+            all_variables = locals()
+            for k in monitor:
+                monitored[k].append(all_variables[k])
+
     # --------------------------------------------------------------------
-    if save:
+    if save_model:
         # Save the model state
         state = {
             'episode': episode,
@@ -494,20 +507,18 @@ def wythoff_stumbler(num_episodes=10,
             'stumbler_player_dict': model,
             'stumbler_opponent_dict': opponent
         }
-        torch.save(state, save + ".pkl")
+        torch.save(state, save + ".pytorch")
 
-        # Save traces
-        if tensorboard:
-            writer.export_scalars_to_json(save + ".json")
-
-        # Build return.
-        result = None
-    else:
-        result = (model, opponent), (score, score)
+    if monitor:
+        save_monitored(save, monitored)
 
     # Cleanup
     if tensorboard:
         writer.close()
+
+    result = (model, opponent), (score, score)
+    if return_none:
+        result = None
 
     return result
 
@@ -528,7 +539,6 @@ def wythoff_strategist(stumbler_model,
                        stumbler_mode='numpy',
                        balance_cold=False,
                        update_every=50,
-                       num_eval=1,
                        debug=False,
                        seed=None):
     """Learn a generalizable strategy for Wythoffs game"""
@@ -659,7 +669,12 @@ def wythoff_strategist(stumbler_model,
         cold = create_cold_board(m, n, default=hot_value)
         mae = np.median(np.abs(pred - cold))
 
-    return (model), (mae)
+    # Suppress return for parallel runs?
+    result = (model), (mae)
+    if return_none:
+        result = None
+
+    return result
 
 
 # def wythoff_optimal(path,
@@ -785,10 +800,32 @@ def wythoff_strategist(stumbler_model,
 
 #     return model
 
+
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 # HELPER FNs
+def create_monitored(monitor):
+    """Create a dictionary for monitoring"""
+    # Build a structure for monitored variables
+    monitored = {}
+    for k in monitor:
+        monitored[k] = list()
+
+    return monitored
+
+
+def save_monitored(save, monitored):
+    """Save monitored data to a .csv"""
+
+    with open(save + '_monitor.csv', 'w') as csv_file:
+        keys = sorted(monitored.keys())
+        values = [monitored[k] for k in keys]
+
+        w = csv.writer(csv_file)
+        w.writerow(keys)
+        for row in zip(*values):
+            w.writerow(row)
 
 
 def add_bias_board(Qs, available, bias_board, influence):
