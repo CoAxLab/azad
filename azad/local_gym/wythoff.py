@@ -129,7 +129,7 @@ class WythoffEnv(gym.Env):
     
     Note: subclass to use."""
 
-    def __init__(self, m, n, seed=None):
+    def __init__(self, m, n):
         # Board/pile size
         self.m = int(m)
         self.n = int(n)
@@ -142,6 +142,9 @@ class WythoffEnv(gym.Env):
         self.board = None
         self.moves = None
 
+        self.prng = np.random.RandomState(None)
+
+    def seed(self, seed):
         self.prng = np.random.RandomState(seed)
 
     def step(self, move):
