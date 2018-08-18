@@ -92,6 +92,12 @@ wythoff_exp5:
 
 # 8-17-2018
 # Stumbler
+
+# Result: Some sensitivity to these params. Not a lot. See `exp6_ranked.csv`; 
+# lr = 0.4 ep = 0.4, gamma = 0.5 seem to be good middle of the optimal range
+# choises
+# 0d61fc38858adcb8ba53da434734d8a9e68917c4
+
 wythoff_exp6:
 	-rm -rf $(DATA_PATH)/wythoff/exp6
 	-mkdir $(DATA_PATH)/wythoff/exp6
@@ -110,6 +116,12 @@ wythoff_exp6:
 # Stumbler-strategist v1
 # Learning
 # (Stumbler params are based on exp6 results)
+
+# Result: Very little, almost no senstivity to these num ranges. 
+# lr greater 0.02 and < 0.06 are similar. Below lr = 0.01 is very high error.
+# See `exp7_ranked.csv`.
+# 0d61fc38858adcb8ba53da434734d8a9e68917c4
+
 wythoff_exp7:
 	-rm -rf $(DATA_PATH)/wythoff/exp7
 	-mkdir $(DATA_PATH)/wythoff/exp7
@@ -126,8 +138,15 @@ wythoff_exp7:
 		$(DATA_PATH)/wythoff/exp7/grid.csv
 
 # Stumbler-strategist v2
+
 # H/C 
 # (num_* and learning_rate_* take from exp6 and 7)
+
+# Result: the H/C threshold does not seem to matter. See `exp8_ranked.csv`
+# (0/0) will work....
+# It seems safer/more conservative to move a little past that. Going w/
+# 0.2/-0.2 
+# 0d61fc38858adcb8ba53da434734d8a9e68917c4
 wythoff_exp8:
 	-rm -rf $(DATA_PATH)/wythoff/exp8
 	-mkdir $(DATA_PATH)/wythoff/exp8
