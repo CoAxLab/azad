@@ -97,7 +97,6 @@ wythoff_exp5:
 # lr = 0.4 ep = 0.4, gamma = 0.5 seem to be good middle of the optimal range
 # choises
 # 0d61fc38858adcb8ba53da434734d8a9e68917c4
-
 wythoff_exp6:
 	-rm -rf $(DATA_PATH)/wythoff/exp6
 	-mkdir $(DATA_PATH)/wythoff/exp6
@@ -121,7 +120,6 @@ wythoff_exp6:
 # lr greater 0.02 and < 0.06 are similar. Below lr = 0.01 is very high error.
 # See `exp7_ranked.csv`.
 # 0d61fc38858adcb8ba53da434734d8a9e68917c4
-
 wythoff_exp7:
 	-rm -rf $(DATA_PATH)/wythoff/exp7
 	-mkdir $(DATA_PATH)/wythoff/exp7
