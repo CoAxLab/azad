@@ -255,8 +255,8 @@ wythoff_exp12:
 	-mkdir $(DATA_PATH)/wythoff/exp12
 	# Generate a grid,
 	python run_azad.py create_grid $(DATA_PATH)/wythoff/exp12/grid.csv \
-		--learning_rate_influence='(0.01, 1.0, 10)' 
-		--num_hidden1='(10, 300, 10)' \
+		--learning_rate_influence='(0.01, 1.0, 5)' 
+		--num_hidden1='(15, 500, 10)' \
 		--num_hidden2='(0, 50, 10)' \
 	# and search it.
 	parallel -j 8 -v \
