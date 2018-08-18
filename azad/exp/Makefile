@@ -231,8 +231,9 @@ wythoff_exp10:
 		# --tensorboard=$(DATA_PATH)/wythoff/exp10 
 
 # 8-18-2018
-# Adding and tweaking a `learning_rate_influence` to the SS net
-
+# Adding and searching a `learning_rate_influence` to the SS net
+# other params take from exp6-8
+# 9e91f8157cac59ae4e3b49933dd0d23ae600dcc4
 wythoff_exp11:
 	-rm -rf $(DATA_PATH)/wythoff/exp11
 	-mkdir $(DATA_PATH)/wythoff/exp11
