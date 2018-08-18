@@ -75,6 +75,15 @@ def wythoff_stumbler_strategist(num_episodes=10,
     m, n, _, _ = peek(create_env(strategist_game, monitor=False))
     o, p, _, _ = peek(create_env(stumbler_game, monitor=False))
 
+    if tensorboard:
+        try:
+            os.makedirs(tensorboard)
+        except OSError as exception:
+            if exception.errno != errno.EEXIST:
+                raise
+
+        writer = SummaryWriter(log_dir=tensorboard)
+
     # Agents, etc
     player = None
     opponent = None
@@ -147,18 +156,9 @@ def wythoff_stumbler_strategist(num_episodes=10,
 
         # --------------------------------------------------------------------
         if tensorboard is not None:
-            try:
-                os.makedirs(tensorboard)
-            except OSError as exception:
-                if exception.errno != errno.EEXIST:
-                    raise
 
-            writer = SummaryWriter(log_dir=tensorboard)
-            writer.add_scalar(
-                os.path.join(tensorboard, 'stategist_influence'), influence,
-                episode)
-            writer.add_scalar(
-                os.path.join(tensorboard, 'stategist_score'), score_b, episode)
+            writer.add_scalar('stategist_influence', influence, episode)
+            writer.add_scalar('stategist_score', score_b, episode)
 
             plot_wythoff_board(
                 bias_board,
@@ -447,16 +447,12 @@ def wythoff_stumbler(num_episodes=10,
                 print("*** OPPONENT WIN ***")
 
         if tensorboard and (int(episode) % update_every) == 0:
-            writer.add_scalar(os.path.join(tensorboard, 'reward'), r, episode)
-            writer.add_scalar(os.path.join(tensorboard, 'Q'), Q, episode)
-            writer.add_scalar(
-                os.path.join(tensorboard, 'error'), loss, episode)
-            writer.add_scalar(
-                os.path.join(tensorboard, 'steps'), steps, episode)
-            writer.add_scalar(
-                os.path.join(tensorboard, 'stumbler_score'), score, episode)
-            writer.add_scalar(
-                os.path.join(tensorboard, 'epsilon'), epsilon_e, episode)
+            writer.add_scalar('reward', r, episode)
+            writer.add_scalar('Q', Q, episode)
+            writer.add_scalar('error', loss, episode)
+            writer.add_scalar('steps', steps, episode)
+            writer.add_scalar('stumbler_score', score, episode)
+            writer.add_scalar('epsilon_e', epsilon_e, episode)
 
             # Cold ref:
             cold = create_cold_board(m, n)
@@ -655,8 +651,7 @@ def wythoff_strategist(stumbler_model,
 
         if tensorboard and (int(episode) % update_every) == 0:
             # Timecourse
-            writer.add_scalar(
-                os.path.join(tensorboard, 'stategist_error'), loss, episode)
+            writer.add_scalar('stategist_error', loss, episode)
 
     # Score the model:
     with th.no_grad():
