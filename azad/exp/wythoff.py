@@ -61,6 +61,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
                                 hot_value=1,
                                 cold_value=-1,
                                 num_eval=1,
+                                learning_rate_influence=0.01,
                                 tensorboard=None,
                                 update_every=5,
                                 seed=None,
@@ -165,9 +166,9 @@ def wythoff_stumbler_strategist(num_episodes=10,
 
         # Update the influence and then the bias_board
         if win > 0.5:
-            influence += learning_rate_strategist
+            influence += learning_rate_influence
         else:
-            influence -= learning_rate_strategist
+            influence -= learning_rate_influence
         influence = np.clip(influence, 0, 1)
 
         # --------------------------------------------------------------------
@@ -204,6 +205,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
             'hot_threshold': hot_threshold,
             'learning_rate_stumbler': learning_rate_stumbler,
             'learning_rate_strategist': learning_rate_strategist,
+            'learning_rate_influence': learning_rate_influence,
             'strategist_state_dict': strategist.state_dict(),
             'stumbler_player_dict': player,
             'stumbler_opponent_dict': opponent
