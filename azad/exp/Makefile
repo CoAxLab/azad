@@ -109,14 +109,15 @@ wythoff_exp6:
 
 # Stumbler-strategist v1
 # Learning
+# (Stumbler params are based on exp6 results)
 wythoff_exp7:
 	-rm -rf $(DATA_PATH)/wythoff/exp7
 	-mkdir $(DATA_PATH)/wythoff/exp7
 	# Generate a grid,
 	python run_azad.py create_grid $(DATA_PATH)/wythoff/exp7/grid.csv --fmt='%i,%.6f,%i,%i' \
 		--learning_rate_strategist='(0.001, 0.1, 10)' \
-		--num_strategies='(100, 1000, 10)' \
-		--num_stumbles='(100, 1000, 10)' 
+		--num_strategies='(100, 1000, 3)' \
+		--num_stumbles='(100, 1000, 3)' 
 	# and search it.
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp7/exp7.parallel.log' \
@@ -126,6 +127,7 @@ wythoff_exp7:
 
 # Stumbler-strategist v2
 # H/C 
+# (num_* and learning_rate_* take from exp6 and 7)
 wythoff_exp8:
 	-rm -rf $(DATA_PATH)/wythoff/exp8
 	-mkdir $(DATA_PATH)/wythoff/exp8
@@ -137,7 +139,7 @@ wythoff_exp8:
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp8/exp8.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		'python run_azad.py wythoff_stumbler_strategist TODO' :::: \
+		'python run_azad.py wythoff_stumbler_strategist --num_episodes=100 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold={cold_threshold} --hot_threshold={hot_threshold} --hot_value=-1 --cold_value=1 --debug=False --save=$(DATA_PATH)/wythoff/exp8/run_{row_code}.pkl --debug=False' :::: \
 		$(DATA_PATH)/wythoff/exp8/grid.csv
 
 
