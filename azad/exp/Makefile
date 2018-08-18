@@ -248,20 +248,21 @@ wythoff_exp11:
 		$(DATA_PATH)/wythoff/exp11/grid.csv
 
 # 8-18-2018
-# Exploring layer sizes in the strategist
+# Exploring layer sizes in the strategist, and it's influence
 # 821aa24b0af90d4472d5042ed1458cf3286f5d5d
 wythoff_exp12:
 	-rm -rf $(DATA_PATH)/wythoff/exp12
 	-mkdir $(DATA_PATH)/wythoff/exp12
 	# Generate a grid,
 	python run_azad.py create_grid $(DATA_PATH)/wythoff/exp12/grid.csv \
-		--num_hidden1='(10, 300, 50)' \
-		--num_hidden2='(0, 100, 50)' \
+		--learning_rate_influence='(0.01, 1.0, 10)' 
+		--num_hidden1='(10, 300, 10)' \
+		--num_hidden2='(0, 50, 10)' \
 	# and search it.
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp12/exp12.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		'python run_azad.py wythoff_stumbler_strategist --num_episodes=100 --num_hidden1={num_hidden1} --num_hidden2={num_hidden2} --learning_rate_influence=0.025 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save=$(DATA_PATH)/wythoff/exp12/run_{row_code} --save_model=True --return_none=True --debug=False' :::: \
+		'python run_azad.py wythoff_stumbler_strategist --num_episodes=100 --num_hidden1={num_hidden1} --num_hidden2={num_hidden2} --learning_rate_influence={learning_rate_influence} --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save=$(DATA_PATH)/wythoff/exp12/run_{row_code} --save_model=True --return_none=True --debug=False' :::: \
 		$(DATA_PATH)/wythoff/exp12/grid.csv
 	
 # ----------------------------------------------------------------------------
