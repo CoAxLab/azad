@@ -64,11 +64,12 @@ def wythoff_stumbler_strategist(num_episodes=10,
                                 tensorboard=None,
                                 update_every=5,
                                 seed=None,
+                                save=None,
+                                save_model=False,
                                 stumbler_monitor=None,
                                 strategist_monitor=None,
                                 monitor=None,
                                 return_none=False,
-                                save=False,
                                 debug=False):
     """Learn Wythoff's with a stumbler-strategist network"""
 
@@ -97,6 +98,10 @@ def wythoff_stumbler_strategist(num_episodes=10,
     influence = 0.0
     score_a = 0.0
     score_b = 0.0
+
+    if monitor:
+        monitored = create_monitored(monitor)
+
     # ------------------------------------------------------------------------
     for episode in range(num_episodes):
         # Stumbler
@@ -116,10 +121,10 @@ def wythoff_stumbler_strategist(num_episodes=10,
             update_every=update_every,
             initial=episode * num_stumbles,
             debug=debug,
-            save=save + "_stumbler_{}".format(episode),
+            save=save + "_{}_stumbler".format(episode),
             save_model=False,
             monitor=stumbler_monitor,
-            return_none=True,
+            return_none=False,
             seed=seed)
 
         # Strategist
@@ -139,7 +144,10 @@ def wythoff_stumbler_strategist(num_episodes=10,
             cold_value=cold_value,
             initial=episode * num_strategies,
             debug=debug,
-            return_none=True,
+            save=save + "_{}_strategist".format(episode),
+            monitor=strategist_monitor,
+            save_model=False,
+            return_none=False,
             seed=seed)
 
         # --------------------------------------------------------------------
@@ -177,7 +185,17 @@ def wythoff_stumbler_strategist(num_episodes=10,
                 'strategist_bias_board',
                 skimage.io.imread(os.path.join(tensorboard, 'bias_board.png')))
 
+        if monitor:
+            all_variables = locals()
+            for k in monitor:
+                monitored[k].append(float(all_variables[k]))
+
     # --------------------------------------------------------------------
+    # Clean up
+    if tensorboard:
+        writer.close()
+
+    # Save?
     if save_model:
         # Write model state
         state = {
@@ -203,11 +221,10 @@ def wythoff_stumbler_strategist(num_episodes=10,
         }
         torch.save(state, save + ".pytorch")
 
-    # Clean up
-    if tensorboard is not None:
-        writer.close()
+    if monitor:
+        save_monitored(save, monitored)
 
-    result = (model, opponent), (score, score)
+    result = (player, strategist), (score_a, influence)
     if return_none:
         result = None
 
@@ -490,7 +507,7 @@ def wythoff_stumbler(num_episodes=10,
         if monitor and (int(episode) % update_every) == 0:
             all_variables = locals()
             for k in monitor:
-                monitored[k].append(all_variables[k])
+                monitored[k].append(float(all_variables[k]))
 
     # --------------------------------------------------------------------
     if save_model:
@@ -539,6 +556,10 @@ def wythoff_strategist(stumbler_model,
                        stumbler_mode='numpy',
                        balance_cold=False,
                        update_every=50,
+                       save=None,
+                       save_model=False,
+                       monitor=None,
+                       return_none=False,
                        debug=False,
                        seed=None):
     """Learn a generalizable strategy for Wythoffs game"""
@@ -563,6 +584,9 @@ def wythoff_strategist(stumbler_model,
 
     env.seed(seed)
     np.random.seed(seed)
+
+    if monitor:
+        monitored = create_monitored(monitor)
 
     m, n, board, _ = peek(env)
     all_possible_moves = create_all_possible_moves(m, n)
@@ -663,11 +687,35 @@ def wythoff_strategist(stumbler_model,
             # Timecourse
             writer.add_scalar('stategist_error', loss, episode)
 
+        if monitor and (int(episode) % update_every) == 0:
+            all_variables = locals()
+            for k in monitor:
+                monitored[k].append(float(all_variables[k]))
+
     # Score the model:
     with th.no_grad():
         pred = create_bias_board(m, n, model, default=0.0).numpy()
         cold = create_cold_board(m, n, default=hot_value)
         mae = np.median(np.abs(pred - cold))
+
+    # Save?
+    if save_model:
+        state = {
+            'episode': episode,
+            'num_stumbles': num_stumbles,
+            'score': mae,
+            'game': game,
+            'cold_threshold': cold_threshold,
+            'hot_threshold': hot_threshold,
+            'cold_value': cold_value,
+            'hot_value': hot_value,
+            'learning_rate': learning_rate,
+            'model': model.state_dict()
+        }
+        th.save(state, save + ".pytorch")
+
+    if monitor:
+        save_monitored(save, monitored)
 
     # Suppress return for parallel runs?
     result = (model), (mae)
