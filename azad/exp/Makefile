@@ -234,6 +234,11 @@ wythoff_exp10:
 # Adding and searching a `learning_rate_influence` to the SS net
 # other params take from exp6-8
 # 9e91f8157cac59ae4e3b49933dd0d23ae600dcc4
+#
+# Result: `learning_rate_influence` is very slack. 
+# Anything less than 0.5 is interchangeable. Above that stumbler score 
+# variance MAY increase a bit (low n. can't be certain).
+# See `exp11_ranked.csv`.
 wythoff_exp11:
 	-rm -rf $(DATA_PATH)/wythoff/exp11
 	-mkdir $(DATA_PATH)/wythoff/exp11
@@ -250,19 +255,23 @@ wythoff_exp11:
 # 8-18-2018
 # Exploring layer sizes in the strategist, and it's influence
 # 821aa24b0af90d4472d5042ed1458cf3286f5d5d
+#
+# Result: shallow strategists greatly reduce _stumbler_ scores. 
+# Any `learning_rate_influence` above 0.2 is prefered.
+# See `exp12_ranked.csv`.
 wythoff_exp12:
 	-rm -rf $(DATA_PATH)/wythoff/exp12
 	-mkdir $(DATA_PATH)/wythoff/exp12
 	# Generate a grid,
 	python run_azad.py create_grid $(DATA_PATH)/wythoff/exp12/grid.csv \
-		--learning_rate_influence='(0.01, 1.0, 5)' 
+		--learning_rate_influence='(0.01, 1.0, 5)' \
 		--num_hidden1='(15, 500, 10)' \
 		--num_hidden2='(0, 50, 10)' \
 	# and search it.
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp12/exp12.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		'python run_azad.py wythoff_stumbler_strategist --num_episodes=20 --num_hidden1={num_hidden1} --num_hidden2={num_hidden2} --learning_rate_influence={learning_rate_influence} --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save=$(DATA_PATH)/wythoff/exp12/run_{row_code} --save_model=True --return_none=True --debug=False' :::: \
+		'python run_azad.py wythoff_stumbler_strategist --num_episodes=10 --num_hidden1={num_hidden1} --num_hidden2={num_hidden2} --learning_rate_influence={learning_rate_influence} --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save=$(DATA_PATH)/wythoff/exp12/run_{row_code} --save_model=True --return_none=True --debug=False' :::: \
 		$(DATA_PATH)/wythoff/exp12/grid.csv
 	
 # ----------------------------------------------------------------------------
