@@ -593,6 +593,8 @@ def wythoff_strategist(stumbler_model,
     o, p, _, _ = peek(create_env(stumbler_game, monitor=False))
 
     # Init the strategist net
+    num_hidden1 = int(num_hidden1)
+    num_hidden2 = int(num_hidden2)
     if model is None:
         if num_hidden2 > 0:
             model = HotCold3(
