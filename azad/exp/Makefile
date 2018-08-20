@@ -276,7 +276,10 @@ wythoff_exp12:
 		$(DATA_PATH)/wythoff/exp12/grid.csv
 	
 # ----------------------------------------------------------------------------
-# Exps for paper. Use top N opt params from exp6-7.
+# Exps for paper. Use hand picked params, based on hyperparam opt. 
+# There is lot of slack in many params. I manually choose middle values 
+# in slack cases hoping to end up with a good robust set. 
+# Parameter sensitivity testing will check these choices later on.
 
 # Stumbler 
 wythoff_exp13:
