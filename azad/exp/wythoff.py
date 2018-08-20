@@ -96,6 +96,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
                                 update_every=5,
                                 seed=None,
                                 save=None,
+                                load_model=None,
                                 save_model=False,
                                 stumbler_monitor=None,
                                 strategist_monitor=None,
@@ -105,9 +106,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
     """Learn Wythoff's with a stumbler-strategist network"""
 
     # -----------------------------------------------------------------------
-    # Init
-
-    # Game sizes
+    # Init games
     m, n, _, _ = peek(create_env(strategist_game, monitor=False))
     o, p, _, _ = peek(create_env(stumbler_game, monitor=False))
 
@@ -120,30 +119,38 @@ def wythoff_stumbler_strategist(num_episodes=10,
 
         writer = SummaryWriter(log_dir=tensorboard)
 
-    # Agents, etc
+    if monitor:
+        monitored = create_monitored(monitor)
+
+    # -----------------------------------------------------------------------
+    # Init agents
     player = None
     opponent = None
+    strategist = None
     bias_board = None
 
+    # Override w/ data from disk?
+    if load_model is not None:
+        if debug:
+            print(">>> Loading model from {}".format(load_model))
+
+        player, opponent = load_stumbler(player, opponent, load_model)
+        strategist = init_strategist(num_hidden1, num_hidden2)
+        strategist = load_strategist(strategist, load_model)
+
+    # Optimal overrides all others
     if optimal_strategist:
         strategist = WythoffOptimalStrategist(
             m, n, hot_value=hot_value, cold_value=cold_value)
         score_b = 0.0
-    else:
-        strategist = None
 
+    # -----------------------------------------------------------------------
     influence = 0.0
     score_a = 0.0
     score_b = 0.0
     total_reward_a = 0.0
-
-    if monitor:
-        monitored = create_monitored(monitor)
-
-    # ------------------------------------------------------------------------
     for episode in range(num_episodes):
         # Stumbler
-
         save_a = None
         if save is not None:
             save_a = save + "_{}_stumbler".format(episode)
@@ -238,26 +245,10 @@ def wythoff_stumbler_strategist(num_episodes=10,
 
     # Save?
     if save_model:
-        # Write model state
         state = {
-            'episode': episode,
-            'epsilon': epsilon,
-            'anneal': anneal,
-            'gamma': gamma,
-            'num_episodes': num_episodes,
-            'num_stumbles': num_stumbles,
-            'num_strategies': num_strategies,
-            'influence': influence,
-            'stumbler_score': score_a,
-            'strategist_score': score_b,
-            'stumbler_game': stumbler_game,
-            'strategist_game': strategist_game,
-            'cold_threshold': cold_threshold,
-            'hot_threshold': hot_threshold,
-            'learning_rate_stumbler': learning_rate_stumbler,
-            'learning_rate_strategist': learning_rate_strategist,
-            'learning_rate_influence': learning_rate_influence,
-            'strategist_state_dict': strategist.state_dict(),
+            'strategist_model_dict': strategist.state_dict(),
+            "num_hidden1": num_hidden1,
+            "num_hidden2": num_hidden2,
             'stumbler_player_dict': player,
             'stumbler_opponent_dict': opponent
         }
@@ -271,6 +262,14 @@ def wythoff_stumbler_strategist(num_episodes=10,
         result = None
 
     return result
+
+
+def load_stumbler(model, opponent, load_model):
+    state = th.load(load_model)
+    model = state["stumbler_player_dict"]
+    opponent = state["stumbler_opponent_dict"]
+
+    return model, opponent
 
 
 def wythoff_stumbler(num_episodes=10,
@@ -289,7 +288,7 @@ def wythoff_stumbler(num_episodes=10,
                      update_every=5,
                      initial=0,
                      save=False,
-                     load=None,
+                     load_model=None,
                      save_model=False,
                      monitor=None,
                      return_none=False,
@@ -309,7 +308,6 @@ def wythoff_stumbler(num_episodes=10,
         except OSError as exception:
             if exception.errno != errno.EEXIST:
                 raise
-
         writer = SummaryWriter(log_dir=tensorboard)
 
     # Create env
@@ -317,7 +315,6 @@ def wythoff_stumbler(num_episodes=10,
         env = create_env(game, monitor=True)
     else:
         env = create_env(game, monitor=False)
-
     env.seed(seed)
     np.random.seed(seed)
 
@@ -325,27 +322,19 @@ def wythoff_stumbler(num_episodes=10,
     if monitor is not None:
         monitored = create_monitored(monitor)
 
-    # ------------------------------------------------------------------------
     # Build a Q agent, and its optimizer
     default_Q = 0.0
     m, n, board, available = peek(env)
+    if model is None:
+        model = {}
+    if opponent is None:
+        opponent = {}
 
-    if load is not None:
-        if (model is not None) or (opponent is not None):
-            raise ValueError("load can't be used with model/opponent.")
+    # Override from file?
+    if load_model is not None:
         if debug:
-            print(">>> Loadiing model/opponent from {}".format(load))
-
-        # Load or
-        state = th.load(load)
-        model = state["stumbler_player_dict"]
-        opponent = state["stumbler_opponent_dict"]
-    else:
-        # ...init the lookup tables?
-        if model is None:
-            model = {}
-        if opponent is None:
-            opponent = {}
+            print(">>> Loadiing model/opponent from {}".format(load_model))
+        model, opponent = load_stumbler(model, opponent, load_model)
 
     # ------------------------------------------------------------------------
     for episode in range(initial, initial + num_episodes):
@@ -572,14 +561,6 @@ def wythoff_stumbler(num_episodes=10,
     if save_model:
         # Save the model state
         state = {
-            'episode': episode,
-            'epsilon': epsilon,
-            'anneal': anneal,
-            'gamma': gamma,
-            'num_episodes': num_episodes,
-            'stumbler_score': score,
-            'stumbler_game': game,
-            'learning_rate_stumbler': learning_rate,
             'stumbler_player_dict': model,
             'stumbler_opponent_dict': opponent
         }
@@ -597,6 +578,27 @@ def wythoff_stumbler(num_episodes=10,
         result = None
 
     return result
+
+
+def load_strategist(model, load_model):
+    """Override model with parameters from file"""
+    state = th.load(load_model)
+    model.load_state_dict(state["strategist_model_dict"])
+
+    return model
+
+
+def init_strategist(num_hidden1, num_hidden2):
+    """Create a Wythoff's game strategist"""
+
+    num_hidden1 = int(num_hidden1)
+    num_hidden2 = int(num_hidden2)
+    if num_hidden2 > 0:
+        model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
+    else:
+        model = HotCold2(2, num_hidden1=num_hidden1)
+
+    return model
 
 
 def wythoff_strategist(stumbler_model,
@@ -619,6 +621,7 @@ def wythoff_strategist(stumbler_model,
                        reflect_cold=True,
                        update_every=50,
                        save=None,
+                       load_model=None,
                        save_model=False,
                        monitor=None,
                        return_none=False,
@@ -638,36 +641,37 @@ def wythoff_strategist(stumbler_model,
         writer = SummaryWriter(log_dir=tensorboard)
 
     # Create env and find all moves in it
+
     # Create env
     if tensorboard is not None:
         env = create_env(game, monitor=True)
     else:
         env = create_env(game, monitor=False)
-
     env.seed(seed)
     np.random.seed(seed)
-
-    if monitor:
-        monitored = create_monitored(monitor)
+    o, p, _, _ = peek(create_env(stumbler_game, monitor=False))
 
     m, n, board, _ = peek(env)
     all_possible_moves = create_all_possible_moves(m, n)
 
-    # Peek at stumbler env
-    o, p, _, _ = peek(create_env(stumbler_game, monitor=False))
+    # Watch vars?
+    if monitor:
+        monitored = create_monitored(monitor)
 
-    # Init the strategist net
-    num_hidden1 = int(num_hidden1)
-    num_hidden2 = int(num_hidden2)
+    # Init strategist
     if model is None:
-        if num_hidden2 > 0:
-            model = HotCold3(
-                2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
-        else:
-            model = HotCold2(2, num_hidden1=num_hidden1)
+        model = init_strategist(num_hidden1, num_hidden2)
+
+    # Add old weights from file?
+    if load_model is not None:
+        if debug:
+            print(">>> Loading model from {}".format(load_model))
+        model = load_strategist(model, load_model)
+
+    # Init SGD.
     optimizer = optim.Adam(model.parameters(), lr=learning_rate)
 
-    # -----------------------------------------------------------------------
+    # ------------------------------------------------------------------------
     # Extract strategic data from the stumbler
     strategic_default_value = 0.0
     if hot_threshold is None:
@@ -699,7 +703,7 @@ def wythoff_strategist(stumbler_model,
             reflect_cold=reflect_cold,
             default_value=strategic_default_value)
 
-    # Convert format
+    # Convert format.
     s_data = convert_ijv(strategic_value)
     if balance_cold:
         s_data = balance_ijv(s_data, cold_value)
@@ -708,13 +712,13 @@ def wythoff_strategist(stumbler_model,
     if s_data is None:
         return model, None
 
-    # Define a memory to sample
+    # Define a memory to sample.
     memory = ReplayMemory(len(s_data))
     batch_size = len(s_data)
     for d in s_data:
         memory.push(*d)
 
-    # -----------------------------------------------------------------------
+    # ------------------------------------------------------------------------
     # Sample the memory to teach the strategist
     bias_board = None
     for episode in range(initial, initial + num_episodes):
@@ -748,8 +752,6 @@ def wythoff_strategist(stumbler_model,
             print(">>> Values: {}".format(values))
             print(">>> Predicted values: {}".format(values))
             print(">>> Loss {}".format(loss))
-
-            print(">>> Last win {}".format(win))
 
         if tensorboard and (int(episode) % update_every) == 0:
             # Timecourse
@@ -788,16 +790,9 @@ def wythoff_strategist(stumbler_model,
     # Save?
     if save_model:
         state = {
-            'episode': episode,
-            'num_stumbles': num_stumbles,
-            'score': mae,
-            'game': game,
-            'cold_threshold': cold_threshold,
-            'hot_threshold': hot_threshold,
-            'cold_value': cold_value,
-            'hot_value': hot_value,
-            'learning_rate': learning_rate,
-            'model': model.state_dict()
+            'strategist_model_dict': model.state_dict(),
+            "num_hidden1": num_hidden1,
+            "num_hidden2": num_hidden2
         }
         th.save(state, save + ".pytorch")
 
