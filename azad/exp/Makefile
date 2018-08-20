@@ -332,5 +332,23 @@ wythoff_exp17:
 
 # - SS w/ perfect strategy (+ control)
 
+
+# ----------------------------------------------------------------------------
+# Sample top 20 parameters
+# In exp13-17 I explored random seeds w/ fixed hyperparameters.
+# Here I fix the seed but explore the top N hyperparameters,
+# taken from the joint experiments exp6-12.
+
+# Stumbler
+
+# SS
+
+
+# ----------------------------------------------------------------------------
+# Transfer exps for paper
+
+# Larger boards (up to 500).
+
+# New games
 # - S: Train Wythoff: relearn Nim, Euclid
 # - SS: Train Wythoff: relearn Nim, Euclid
