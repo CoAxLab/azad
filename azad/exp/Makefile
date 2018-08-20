@@ -336,8 +336,16 @@ wythoff_exp17:
 		"python run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp17/run_{1} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --reflect_cold=False --debug=False --save_model=True --return_none=True --debug=False --seed={1}" ::: \
 		{1..20}
 
-# - SS w/ perfect strategy (+ control)
-
+# - SS w/ perfect a strategist all the time 
+# (a positive control/no strategist learning)
+wythoff_exp18:
+	-rm -rf $(DATA_PATH)/wythoff/exp18
+	-mkdir $(DATA_PATH)/wythoff/exp18
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp18/exp18.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"python run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp18/run_{1} --optimal_strategist=True --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1}" ::: \
+		{1..20}
 
 # --- Sample top 20 hyperparameters.
 # In exp13-17 I explored random seeds w/ fixed hyperparameters.
