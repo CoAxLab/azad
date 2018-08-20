@@ -62,6 +62,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
                                 hot_threshold=0.5,
                                 hot_value=1,
                                 cold_value=-1,
+                                reflect_cold=True,
                                 num_eval=1,
                                 learning_rate_influence=0.01,
                                 tensorboard=None,
@@ -101,6 +102,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
     influence = 0.0
     score_a = 0.0
     score_b = 0.0
+    total_reward_a = 0.0
 
     if monitor:
         monitored = create_monitored(monitor)
@@ -108,7 +110,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
     # ------------------------------------------------------------------------
     for episode in range(num_episodes):
         # Stumbler
-        (player, opponent), (score_a, _) = wythoff_stumbler(
+        (player, opponent), (score_a, total_reward_a) = wythoff_stumbler(
             num_episodes=num_stumbles,
             game=stumbler_game,
             epsilon=epsilon,
@@ -120,6 +122,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
             bias_board=bias_board,
             influence=influence,
             score=score_a,
+            total_reward=total_reward_a,
             tensorboard=tensorboard,
             update_every=update_every,
             initial=episode * num_stumbles,
@@ -147,6 +150,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
             update_every=update_every,
             hot_value=hot_value,
             cold_value=cold_value,
+            reflect_cold=reflect_cold,
             initial=episode * num_strategies,
             debug=debug,
             save=save + "_{}_strategist".format(episode),
@@ -237,6 +241,7 @@ def wythoff_stumbler(num_episodes=10,
                      bias_board=None,
                      influence=0.0,
                      score=0.0,
+                     total_reward=0.0,
                      tensorboard=None,
                      update_every=5,
                      initial=0,
@@ -424,6 +429,9 @@ def wythoff_stumbler(num_episodes=10,
             else:
                 r = -1 * t_reward[i + 1]
 
+            # Update running reward total for player
+            total_reward += r
+
             # Loss and learn
             next_Q = r + (gamma * max_Q)
             loss = next_Q - Q
@@ -529,7 +537,7 @@ def wythoff_stumbler(num_episodes=10,
     if tensorboard:
         writer.close()
 
-    result = (model, opponent), (score, score)
+    result = (model, opponent), (score, total_reward)
     if return_none:
         result = None
 
@@ -553,6 +561,7 @@ def wythoff_strategist(stumbler_model,
                        tensorboard=None,
                        stumbler_mode='numpy',
                        balance_cold=False,
+                       reflect_cold=True,
                        update_every=50,
                        save=None,
                        save_model=False,
@@ -613,6 +622,7 @@ def wythoff_strategist(stumbler_model,
             stumbler_model,
             threshold=cold_threshold,
             value=cold_value,
+            reflect=reflect_cold,
             default_value=strategic_default_value)
     elif cold_threshold is None:
         strategic_value = estimate_hot(
@@ -631,6 +641,7 @@ def wythoff_strategist(stumbler_model,
             cold_threshold=cold_threshold,
             hot_value=hot_value,
             cold_value=cold_value,
+            reflect_cold=reflect_cold,
             default_value=strategic_default_value)
 
     # Convert format
@@ -703,11 +714,17 @@ def wythoff_strategist(stumbler_model,
                 skimage.io.imread(os.path.join(tensorboard, 'bias_board.png')))
 
         if monitor and (int(episode) % update_every) == 0:
+            # Score the model:
+            with th.no_grad():
+                pred = create_bias_board(m, n, model, default=0.0).numpy()
+                cold = create_cold_board(m, n, default=hot_value)
+                mae = np.median(np.abs(pred - cold))
+
             all_variables = locals()
             for k in monitor:
                 monitored[k].append(float(all_variables[k]))
 
-    # Score the model:
+    # Final score for the model:
     with th.no_grad():
         pred = create_bias_board(m, n, model, default=0.0).numpy()
         cold = create_cold_board(m, n, default=hot_value)
@@ -986,7 +1003,13 @@ def expected_value(m, n, model, default_value=0.0):
     return values
 
 
-def estimate_cold(m, n, model, threshold=0.0, value=-1, default_value=0.0):
+def estimate_cold(m,
+                  n,
+                  model,
+                  threshold=0.0,
+                  value=-1,
+                  default_value=0.0,
+                  reflect=True):
     """Estimate cold positions, enforcing symmetry on the diagonal"""
     values = expected_value(m, n, model, default_value=default_value)
     cold = np.zeros_like(values)
@@ -994,7 +1017,9 @@ def estimate_cold(m, n, model, threshold=0.0, value=-1, default_value=0.0):
     # Cold
     mask = values < threshold
     cold[mask] = value
-    cold[mask.transpose()] = value
+
+    if reflect:
+        cold[mask.transpose()] = value
 
     return cold
 
@@ -1017,6 +1042,7 @@ def estimate_hot_cold(m,
                       cold_threshold=0.25,
                       cold_value=-1,
                       hot_value=1,
+                      reflect_cold=True,
                       default_value=0.0):
     """Estimate hot and cold positions"""
     hot = estimate_hot(
@@ -1032,6 +1058,7 @@ def estimate_hot_cold(m,
         model,
         cold_threshold,
         value=cold_value,
+        reflect=reflect_cold,
         default_value=default_value)
 
     return hot + cold
