@@ -301,7 +301,7 @@ def wythoff_stumbler(num_episodes=10,
     """
 
     # ------------------------------------------------------------------------
-    # Setup
+    # Init env
     if tensorboard is not None:
         try:
             os.makedirs(tensorboard)
@@ -318,11 +318,11 @@ def wythoff_stumbler(num_episodes=10,
     env.seed(seed)
     np.random.seed(seed)
 
-    # Build a structure for monitored variables
     if monitor is not None:
         monitored = create_monitored(monitor)
 
-    # Build a Q agent, and its optimizer
+    # ------------------------------------------------------------------------
+    # Init Agents
     default_Q = 0.0
     m, n, board, available = peek(env)
     if model is None:
@@ -334,6 +334,7 @@ def wythoff_stumbler(num_episodes=10,
     if load_model is not None:
         if debug:
             print(">>> Loadiing model/opponent from {}".format(load_model))
+
         model, opponent = load_stumbler(model, opponent, load_model)
 
     # ------------------------------------------------------------------------
@@ -366,7 +367,7 @@ def wythoff_stumbler(num_episodes=10,
             epsilon_e = episode
 
         # -------------------------------------------------------------------
-        # Play a game!
+        # Play!
         done = False
         player_win = False
         while not done:
@@ -449,7 +450,7 @@ def wythoff_stumbler(num_episodes=10,
                     t_reward.append(reward)
 
         # ----------------------------------------------------------------
-        # Learn by unrolling the game...
+        # Learn by unrolling the last game...
 
         # PLAYER (model)
         s_idx = np.arange(0, steps - 1, 2)
@@ -559,7 +560,6 @@ def wythoff_stumbler(num_episodes=10,
 
     # --------------------------------------------------------------------
     if save_model:
-        # Save the model state
         state = {
             'stumbler_player_dict': model,
             'stumbler_opponent_dict': opponent
@@ -569,7 +569,6 @@ def wythoff_stumbler(num_episodes=10,
     if monitor:
         save_monitored(save, monitored)
 
-    # Cleanup
     if tensorboard:
         writer.close()
 
