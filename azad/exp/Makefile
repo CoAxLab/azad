@@ -281,6 +281,7 @@ wythoff_exp12:
 # in slack cases hoping to end up with a good robust set. 
 # Parameter sensitivity testing will check these choices later on.
 
+# --- Main effect.
 # Stumbler 
 wythoff_exp13:
 	-rm -rf $(DATA_PATH)/wythoff/exp13
@@ -303,6 +304,8 @@ wythoff_exp14:
 		"python run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp14/run_{1} --stumbler_monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1}" ::: \
 		{1..20}
 
+
+# --- Heuristic controls
 # SS w/ only cold
 wythoff_exp15:
 	-rm -rf $(DATA_PATH)/wythoff/exp15
@@ -336,8 +339,7 @@ wythoff_exp17:
 # - SS w/ perfect strategy (+ control)
 
 
-# ----------------------------------------------------------------------------
-# Sample top 20 parameters
+# --- Sample top 20 hyperparameters.
 # In exp13-17 I explored random seeds w/ fixed hyperparameters.
 # Here I fix the seed but explore the top N hyperparameters,
 # taken from the joint experiments exp6-12.
