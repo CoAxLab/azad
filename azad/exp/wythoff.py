@@ -47,7 +47,7 @@ from azad.policy import softmax
 
 
 class WythoffOptimalStrategist(object):
-    """Mimic an optimal Wythoffs board."""
+    """Mimic an optimal Wythoffs player, while behaving like a pytorch model."""
 
     def __init__(self, m, n, hot_value=-1, cold_value=1):
         self.m = int(m)
