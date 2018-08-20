@@ -13,15 +13,15 @@ def create_board(i, j, m, n):
     return board
 
 
-def create_cold_board(m, n, default=0.0):
+def create_cold_board(m, n, default=0.0, cold_value=1):
     """Create a (m, n) binary board with cold moves as '1'"""
     cold_board = np.ones((m, n)) * default
     for k in range(m - 1):
         mk = int(k * golden)
         nk = int(k * golden**2)
         if (nk < m) and (mk < n):
-            cold_board[mk, nk] = 1
-            cold_board[nk, mk] = 1
+            cold_board[mk, nk] = cold_value
+            cold_board[nk, mk] = cold_value
 
     return cold_board
 
