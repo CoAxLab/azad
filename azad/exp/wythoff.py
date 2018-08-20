@@ -46,6 +46,32 @@ from azad.policy import epsilon_greedy
 from azad.policy import softmax
 
 
+class WythoffOptimalStrategist(object):
+    """Mimic an optimal Wythoffs board."""
+
+    def __init__(self, m, n, hot_value=-1, cold_value=1):
+        self.m = int(m)
+        self.n = int(m)
+        self.hot_value = float(hot_value)
+        self.cold_value = float(cold_value)
+
+        self.board = create_cold_board(
+            self.m, self.n, cold_value=cold_value, default=hot_value)
+
+    def forward(self, x):
+        try:
+            x = tuple(x.detach().numpy().flatten())
+        except AttributeError:
+            pass
+
+        i, j = x
+
+        return self.board[int(i), int(j)]
+
+    def __call__(self, x):
+        return self.forward(x)
+
+
 def wythoff_stumbler_strategist(num_episodes=10,
                                 num_stumbles=1000,
                                 stumbler_game='Wythoff10x10',
@@ -63,6 +89,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
                                 hot_value=1,
                                 cold_value=-1,
                                 reflect_cold=True,
+                                optimal_strategist=False,
                                 num_eval=1,
                                 learning_rate_influence=0.01,
                                 tensorboard=None,
@@ -96,8 +123,14 @@ def wythoff_stumbler_strategist(num_episodes=10,
     # Agents, etc
     player = None
     opponent = None
-    strategist = None
     bias_board = None
+
+    if optimal_strategist:
+        strategist = WythoffOptimalStrategist(
+            m, n, hot_value=hot_value, cold_value=cold_value)
+        score_b = 0.0
+    else:
+        strategist = None
 
     influence = 0.0
     score_a = 0.0
@@ -110,6 +143,11 @@ def wythoff_stumbler_strategist(num_episodes=10,
     # ------------------------------------------------------------------------
     for episode in range(num_episodes):
         # Stumbler
+
+        save_a = None
+        if save is not None:
+            save_a = save + "_{}_stumbler".format(episode)
+
         (player, opponent), (score_a, total_reward_a) = wythoff_stumbler(
             num_episodes=num_stumbles,
             game=stumbler_game,
@@ -127,37 +165,42 @@ def wythoff_stumbler_strategist(num_episodes=10,
             update_every=update_every,
             initial=episode * num_stumbles,
             debug=debug,
-            save=save + "_{}_stumbler".format(episode),
+            save=save_a,
             save_model=False,
             monitor=stumbler_monitor,
             return_none=False,
             seed=seed)
 
         # Strategist
-        strategist, score_b = wythoff_strategist(
-            player,
-            stumbler_game,
-            num_episodes=num_strategies,
-            game=strategist_game,
-            model=strategist,
-            num_hidden1=num_hidden1,
-            num_hidden2=num_hidden2,
-            score=score_b,
-            cold_threshold=cold_threshold,
-            hot_threshold=hot_threshold,
-            learning_rate=learning_rate_strategist,
-            tensorboard=tensorboard,
-            update_every=update_every,
-            hot_value=hot_value,
-            cold_value=cold_value,
-            reflect_cold=reflect_cold,
-            initial=episode * num_strategies,
-            debug=debug,
-            save=save + "_{}_strategist".format(episode),
-            monitor=strategist_monitor,
-            save_model=False,
-            return_none=False,
-            seed=seed)
+        if not optimal_strategist:
+            save_b = None
+            if save is not None:
+                save_b = save + "_{}_strategist".format(episode)
+
+            strategist, score_b = wythoff_strategist(
+                player,
+                stumbler_game,
+                num_episodes=num_strategies,
+                game=strategist_game,
+                model=strategist,
+                num_hidden1=num_hidden1,
+                num_hidden2=num_hidden2,
+                score=score_b,
+                cold_threshold=cold_threshold,
+                hot_threshold=hot_threshold,
+                learning_rate=learning_rate_strategist,
+                tensorboard=tensorboard,
+                update_every=update_every,
+                hot_value=hot_value,
+                cold_value=cold_value,
+                reflect_cold=reflect_cold,
+                initial=episode * num_strategies,
+                debug=debug,
+                save=save_b,
+                monitor=strategist_monitor,
+                save_model=False,
+                return_none=False,
+                seed=seed)
 
         # --------------------------------------------------------------------
         # Use the trained strategist to generate a bias_board,
@@ -1240,6 +1283,6 @@ def evaluate_models(stumbler,
                 wins += 1.0
 
         if debug:
-            print("Wins {}".format(wins / episode + 1))
+            print("Wins {}".format(wins / (episode + 1)))
 
     return wins / num_episodes
