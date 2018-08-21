@@ -99,6 +99,8 @@ wythoff_exp5:
 # lr = 0.4 ep = 0.4, gamma = 0.5 are good middle of the optimal range
 # choices.
 # 0d61fc38858adcb8ba53da434734d8a9e68917c4
+#
+# See `notebooks/wythoff_exp6.ipynb` 
 wythoff_exp6:
 	-rm -rf $(DATA_PATH)/wythoff/exp6
 	-mkdir $(DATA_PATH)/wythoff/exp6
@@ -120,7 +122,10 @@ wythoff_exp6:
 
 # Result: Very little, almost no, senstivity to these num ranges. 
 # lr > 0.02 and < 0.06 are similiar. Below lr = 0.01 is very high error. Avoid.
+#
 # See `exp7_ranked.csv`.
+# See `notebooks/wythoff_exp7.ipynb` 
+#
 # 0d61fc38858adcb8ba53da434734d8a9e68917c4
 wythoff_exp7:
 	-rm -rf $(DATA_PATH)/wythoff/exp7
@@ -144,9 +149,12 @@ wythoff_exp7:
 
 # Result: the H/C threshold does not seem to matter. See `exp8_ranked.csv`
 # (0/0) will work.... but....
+#
 # seems safer/more conservative to move a little past that. 
 # Going w/ 0.2/-0.2.
 # 0d61fc38858adcb8ba53da434734d8a9e68917c4
+#
+# See `notebooks/wythoff_exp8.ipynb` 
 wythoff_exp8:
 	-rm -rf $(DATA_PATH)/wythoff/exp8
 	-mkdir $(DATA_PATH)/wythoff/exp8
@@ -239,6 +247,7 @@ wythoff_exp10:
 # Anything less than 0.5 is interchangeable. Above that stumbler score 
 # variance MAY increase a bit (low n. can't be certain).
 # See `exp11_ranked.csv`.
+# See `notebooks/wythoff_exp11.ipynb` 
 wythoff_exp11:
 	-rm -rf $(DATA_PATH)/wythoff/exp11
 	-mkdir $(DATA_PATH)/wythoff/exp11
@@ -260,6 +269,7 @@ wythoff_exp11:
 # Any `learning_rate_influence` above 0.2 is prefered.
 # Layer size doesn't matter
 # See `exp12_ranked.csv`.
+# See `notebooks/wythoff_exp12.ipynb` 
 wythoff_exp12:
 	-rm -rf $(DATA_PATH)/wythoff/exp12
 	-mkdir $(DATA_PATH)/wythoff/exp12
@@ -351,14 +361,34 @@ wythoff_exp18:
 # In exp13-17 I explored random seeds w/ fixed hyperparameters.
 # Here I fix the seed but explore the top N hyperparameters,
 # taken from the joint experiments exp6-12.
-
+#
+# See `notebooks/wythoff_joint_param.ipynb` 
+#
 # Available params:
-# cold_threshold,epsilon,gamma,hot_threshold,learning_rate_influence,learning_rate_strategist,learning_rate_stumbler,num_hidden1,num_hidden2,num_strategies,num_stumbles
+# cold_threshold,epsilon,gamma,hot_threshold,learning_rate_influence,
+# learning_rate_strategist,learning_rate_stumbler,num_hidden1,
+# num_hidden2,num_strategies,num_stumbles
 
 # Stumbler
+wythoff_exp19:
+	-rm -rf $(DATA_PATH)/wythoff/exp19
+	-mkdir $(DATA_PATH)/wythoff/exp19
+	sleep 5  
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp19/exp19.parallel.log' \
+		--nice 19 --delay 2  --header : --colsep ',' \
+		"python run_azad.py wythoff_stumbler --save=$(DATA_PATH)/wythoff/exp19/run_{row_code} --monitor='('episode', 'loss', 'score', 'total_reward')' --num_episodes=75000 --update_every=10 --learning_rate={learning_rate_stumbler} --epsilon={epsilon} --gamma={gamma} --game=Wythoff15x15 --debug=False --anneal=True --return_none=True --save_model=True --seed=42" :::: \
+		$(DATA_PATH)/wythoff/joint_ranked.csv
 
 # SS
-
+wythoff_exp20:
+	-rm -rf $(DATA_PATH)/wythoff/exp20
+	-mkdir $(DATA_PATH)/wythoff/exp20
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp20/exp20.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"python run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp20/run_{row_code} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence={learning_rate_influence} --num_stumbles={num_stumbles} --learning_rate_stumbler={learning_rate_stumbler} --stumbler_game=Wythoff15x15 --epsilon={epsilon} --anneal=True --gamma={gamma} --num_strategies={num_strategies} --learning_rate_strategist={learning_rate_strategist} --strategist_game=Wythoff50x50 --cold_threshold={cold_threshold} --hot_threshold={hot_threshold} --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed=42" :::: \
+		$(DATA_PATH)/wythoff/joint_ranked.csv
 
 # ----------------------------------------------------------------------------
 # Transfer exps for paper
