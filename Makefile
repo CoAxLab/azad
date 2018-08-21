@@ -305,6 +305,8 @@ wythoff_exp13:
 		{1..20}
 
 # SS
+# Result: compared to exp13, the SS strongly accelerated learning of optimal play
+# and strongly reduced the variance during learning (stabilized learning).
 wythoff_exp14:
 	-rm -rf $(DATA_PATH)/wythoff/exp14
 	-mkdir $(DATA_PATH)/wythoff/exp14
