@@ -307,7 +307,8 @@ wythoff_exp13:
 # SS
 # Result: compared to exp13, the SS strongly accelerated learning of optimal play
 # and strongly reduced the variance during learning (stabilized learning).
-# 
+# 47c5cef52af8680eb028c6161f3c0e681325e0fa
+#
 # See `notebooks/wythoff_exp13_14.ipynb`
 wythoff_exp14:
 	-rm -rf $(DATA_PATH)/wythoff/exp14
@@ -341,6 +342,12 @@ wythoff_exp16:
 		{1..20}
 
 # SS w/ no sym cold sampling
+# 47c5cef52af8680eb028c6161f3c0e681325e0fa
+#
+# Result: HC- (HC sampling without projecting cold spots) gives the best 
+# performance, when comparing between exp14-17.
+#
+# See `notebooks/wythoff_exp15_18.ipynb`
 wythoff_exp17:
 	-rm -rf $(DATA_PATH)/wythoff/exp17
 	-mkdir $(DATA_PATH)/wythoff/exp17
@@ -350,8 +357,13 @@ wythoff_exp17:
 		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp17/run_{1} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --reflect_cold=False --debug=False --save_model=True --return_none=True --debug=False --seed={1}" ::: \
 		{1..20}
 
+
+
 # - SS w/ perfect a strategist all the time 
 # (a positive control/no strategist learning)
+# 47c5cef52af8680eb028c6161f3c0e681325e0f
+#
+# Result: the perfect strategists HARM performance?!
 wythoff_exp18:
 	-rm -rf $(DATA_PATH)/wythoff/exp18
 	-mkdir $(DATA_PATH)/wythoff/exp18
