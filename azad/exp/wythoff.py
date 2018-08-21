@@ -153,7 +153,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
         # Stumbler
         save_a = None
         if save is not None:
-            save_a = save + "_{}_stumbler".format(episode)
+            save_a = save + "_episode{}_stumbler".format(episode)
 
         (player, opponent), (score_a, total_reward_a) = wythoff_stumbler(
             num_episodes=num_stumbles,
@@ -182,7 +182,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
         if not optimal_strategist:
             save_b = None
             if save is not None:
-                save_b = save + "_{}_strategist".format(episode)
+                save_b = save + "_episode{}_strategist".format(episode)
 
             strategist, score_b = wythoff_strategist(
                 player,
