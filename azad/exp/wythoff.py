@@ -849,19 +849,6 @@ def add_bias_board(Qs, available, bias_board, influence):
     return Qs
 
 
-def estimate_strategic_value(m, n, hotcold):
-    """Create a board to bias a stumblers moves."""
-
-    strategic_value = np.zeros((m, n))
-    with torch.no_grad():
-        for i in range(m):
-            for j in range(n):
-                coord = torch.tensor([i, j], dtype=torch.float)
-                strategic_value[i, j] = hotcold(coord)
-
-    return strategic_value
-
-
 def convert_ijv(data):
     """Convert a (m,n) matrix into a list of (i, j, value)"""
 
@@ -987,37 +974,6 @@ def estimate_hot_cold(m,
         default_value=default_value)
 
     return hot + cold
-
-
-def pad_board(m, n, board, value):
-    """Given a board-shaped array, pad it to (m,n) with value."""
-
-    padded = np.ones((m, n)) * value
-    o, p = board.shape
-    padded[0:o, 0:p] = board
-
-    return padded
-
-
-def estimate_alp_hot_cold(m, n, model, conf=0.05, default=0.5):
-    """Estimate hot and cold positions"""
-
-    values = expected_value(m, n, model)
-    values = (values + 1.0) / 2.0
-
-    hotcold = np.ones_like(values) * default
-
-    # Cold
-    mask = values < (conf * 1.3)
-    hotcold[mask] = values[mask]
-    hotcold[mask.transpose()] = values[mask]
-
-    # Hot?
-    # TODO? Skipped the random part....
-    mask = values > (1 - conf)
-    hotcold[mask] = values[mask]
-
-    return hotcold
 
 
 def create_bias_board(m, n, strategist_model, default=0.0):
