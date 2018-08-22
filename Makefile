@@ -384,6 +384,11 @@ wythoff_exp18:
 # num_hidden2,num_strategies,num_stumbles
 
 # Stumbler
+# Result: top_20 params give a 5% bump in score compared to the middle road
+# sets used in exp13-18. 
+# d9b66f525d82fabadacd3c70a419582869b830c4
+#
+# See `notebooks/wythoff_exp19_20.ipynb`
 wythoff_exp19:
 	-rm -rf $(DATA_PATH)/wythoff/exp19
 	-mkdir $(DATA_PATH)/wythoff/exp19
@@ -404,7 +409,14 @@ wythoff_exp20:
 		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp20/run_{row_code} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence={learning_rate_influence} --num_stumbles={num_stumbles} --learning_rate_stumbler={learning_rate_stumbler} --stumbler_game=Wythoff15x15 --epsilon={epsilon} --anneal=True --gamma={gamma} --num_strategies={num_strategies} --learning_rate_strategist={learning_rate_strategist} --strategist_game=Wythoff50x50 --cold_threshold={cold_threshold} --hot_threshold={hot_threshold} --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed=42" :::: \
 		$(DATA_PATH)/wythoff/joint_ranked.csv
 
-# --- Self-play 
+# --- Self-play
+# Result: I thought an older implementation w/ self-play went to 100%
+# optimal play. Here that does not hold up. Beyod the params below (from exp13)
+# I played w/ several variations. None helped. 
+# What has changed? Why no 1.0 score anymore? Epsilon annealing?
+# 8771a408d4fc51ca3de658d110e4c434c733c79e 
+#
+# See `notebooks/wythoff_exp21.ipynb`
 wythoff_exp21:
 	-rm -rf $(DATA_PATH)/wythoff/exp21
 	-mkdir $(DATA_PATH)/wythoff/exp21
