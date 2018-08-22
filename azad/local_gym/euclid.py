@@ -25,8 +25,8 @@ class EuclidEnv(WythoffEnv):
     
     Note: subclass to use."""
 
-    def __init__(self, m, n, seed=None):
-        super().__init__(m, n, seed)
+    def __init__(self, m, n):
+        super().__init__(m, n)
 
     def _create_moves(self):
         self.moves = create_moves(self.x, self.y)
