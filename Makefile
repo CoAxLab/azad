@@ -357,8 +357,6 @@ wythoff_exp17:
 		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp17/run_{1} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --reflect_cold=False --debug=False --save_model=True --return_none=True --debug=False --seed={1}" ::: \
 		{1..20}
 
-
-
 # - SS w/ perfect a strategist all the time 
 # (a positive control/no strategist learning)
 # 47c5cef52af8680eb028c6161f3c0e681325e0f
@@ -405,6 +403,18 @@ wythoff_exp20:
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp20/run_{row_code} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence={learning_rate_influence} --num_stumbles={num_stumbles} --learning_rate_stumbler={learning_rate_stumbler} --stumbler_game=Wythoff15x15 --epsilon={epsilon} --anneal=True --gamma={gamma} --num_strategies={num_strategies} --learning_rate_strategist={learning_rate_strategist} --strategist_game=Wythoff50x50 --cold_threshold={cold_threshold} --hot_threshold={hot_threshold} --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed=42" :::: \
 		$(DATA_PATH)/wythoff/joint_ranked.csv
+
+# --- Self-play 
+wythoff_exp21:
+	-rm -rf $(DATA_PATH)/wythoff/exp21
+	-mkdir $(DATA_PATH)/wythoff/exp21
+	sleep 5  # Wait for tensorboard to notice the deletion
+		# and search it.
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp21/exp21.parallel.log' \
+		--nice 19 --delay 2 \
+		"run_azad.py wythoff_stumbler --save=$(DATA_PATH)/wythoff/exp21/run_{1} --self_play=True --monitor='('episode', 'loss', 'score', 'total_reward')' --num_episodes=75000 --update_every=10 --learning_rate=0.4 --epsilon=0.4 --gamma=0.5 --game=Wythoff15x15 --debug=False --anneal=True --return_none=True --save_model=True --seed={1}" ::: \
+		{1..20}
 
 # ----------------------------------------------------------------------------
 # Transfer exps for paper
