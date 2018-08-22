@@ -122,6 +122,14 @@ def wythoff_stumbler_strategist(num_episodes=10,
     if monitor:
         monitored = create_monitored(monitor)
 
+    # Force some casts, mostly to make CL invocation seamless
+    num_episodes = int(num_episodes)
+    num_strategies = int(num_strategies)
+    num_stumbles = int(num_stumbles)
+    num_eval = int(num_eval)
+    num_hidden1 = int(num_hidden1)
+    num_hidden2 = int(num_hidden2)
+
     # -----------------------------------------------------------------------
     # Init agents
     player = None
@@ -287,6 +295,7 @@ def wythoff_stumbler(num_episodes=10,
                      tensorboard=None,
                      update_every=5,
                      initial=0,
+                     self_play=False,
                      save=False,
                      load_model=None,
                      save_model=False,
@@ -329,6 +338,8 @@ def wythoff_stumbler(num_episodes=10,
         model = {}
     if opponent is None:
         opponent = {}
+    if self_play:
+        opponent = model
 
     # Override from file?
     if load_model is not None:
@@ -483,31 +494,32 @@ def wythoff_stumbler(num_episodes=10,
             model[s][m_i] = Q + (learning_rate * loss)
 
         # OPPONENT
-        s_idx = np.arange(1, steps - 1, 2)
-        for i in s_idx:
-            # States and actions
-            s = t_state[i]
-            next_s = t_state[i + 2]
-            m_i = t_move_i[i]
+        if not self_play:
+            s_idx = np.arange(1, steps - 1, 2)
+            for i in s_idx:
+                # States and actions
+                s = t_state[i]
+                next_s = t_state[i + 2]
+                m_i = t_move_i[i]
 
-            # Value and reward
-            Q = opponent[s][m_i]
+                # Value and reward
+                Q = opponent[s][m_i]
 
-            try:
-                max_Q = opponent[next_s].max()
-            except KeyError:
-                opponent[next_s] = np.ones(len(t_available[i])) * default_Q
-                max_Q = opponent[next_s].max()
+                try:
+                    max_Q = opponent[next_s].max()
+                except KeyError:
+                    opponent[next_s] = np.ones(len(t_available[i])) * default_Q
+                    max_Q = opponent[next_s].max()
 
-            if not player_win:
-                r = t_reward[i]
-            else:
-                r = -1 * t_reward[i + 1]
+                if not player_win:
+                    r = t_reward[i]
+                else:
+                    r = -1 * t_reward[i + 1]
 
-            # Loss and learn
-            next_Q = r + (gamma * max_Q)
-            loss = next_Q - Q
-            opponent[s][m_i] = Q + (learning_rate * loss)
+                # Loss and learn
+                next_Q = r + (gamma * max_Q)
+                loss = next_Q - Q
+                opponent[s][m_i] = Q + (learning_rate * loss)
 
         # ----------------------------------------------------------------
         # Update the log
