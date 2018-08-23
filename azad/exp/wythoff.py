@@ -1165,7 +1165,12 @@ def evaluate_wythoff(stumbler=None,
             print("Wins {}, Score {}".format(wins, score))
 
     if save is not None:
-        np.savetxt(save, wins)
+        np.savetxt(
+            save,
+            np.asarray([wins, score]).reshape(1, 2),
+            fmt='%.1f,%.4f',
+            comments="",
+            header="wins,score")
 
     result = wins / num_episodes, score
     if return_none:
