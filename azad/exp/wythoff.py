@@ -1091,6 +1091,7 @@ def evaluate_wythoff(stumbler=None,
     # ------------------------------------------------------------------------
     # A stumbler and a strategist take turns playing a (m,n) game of wythoffs
     wins = 0.0
+    score = 0.0
     for episode in range(num_episodes):
         # Re-init
         steps = 0
@@ -1137,14 +1138,21 @@ def evaluate_wythoff(stumbler=None,
 
             # ----------------------------------------------------------------
             # STRATEGIST
+            # Choose.
             hot_cold_move_values = [hot_cold_table[x, y] for x, y in available]
-
             move_i = epsilon_greedy(
                 np.asarray(hot_cold_move_values), epsilon=0.0, mode='numpy')
             move = available[move_i]
 
             if debug:
                 print(">>> STRATEGIST move {}".format(move))
+
+            # Analyze the choice
+            best = 0.0
+            if cold_move_available(x, y, available):
+                if move in locate_cold_moves(x, y, available):
+                    best = 1.0
+                score += (best - score) / (episode + 1)
 
             # Make a move
             (x, y, board, available), reward, done, _ = env.step(move)
@@ -1154,12 +1162,12 @@ def evaluate_wythoff(stumbler=None,
                 break
 
         if debug:
-            print("Wins {}".format(wins))
+            print("Wins {}, Score {}".format(wins, score))
 
     if save is not None:
         np.savetxt(save, wins)
 
-    result = wins / num_episodes
+    result = wins / num_episodes, score
     if return_none:
         result = None
 
