@@ -222,7 +222,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
         bias_board = create_bias_board(m, n, strategist)
 
         # Est performance. Count strategist wins.
-        win = evaluate_models(
+        win = evaluate_wythoff(
             player,
             strategist,
             stumbler_game,
@@ -338,8 +338,6 @@ def wythoff_stumbler(num_episodes=10,
         model = {}
     if opponent is None:
         opponent = {}
-    if self_play:
-        opponent = model
 
     # Override from file?
     if load_model is not None:
@@ -494,32 +492,31 @@ def wythoff_stumbler(num_episodes=10,
             model[s][m_i] = Q + (learning_rate * loss)
 
         # OPPONENT
-        if not self_play:
-            s_idx = np.arange(1, steps - 1, 2)
-            for i in s_idx:
-                # States and actions
-                s = t_state[i]
-                next_s = t_state[i + 2]
-                m_i = t_move_i[i]
+        s_idx = np.arange(1, steps - 1, 2)
+        for i in s_idx:
+            # States and actions
+            s = t_state[i]
+            next_s = t_state[i + 2]
+            m_i = t_move_i[i]
 
-                # Value and reward
-                Q = opponent[s][m_i]
+            # Value and reward
+            Q = opponent[s][m_i]
 
-                try:
-                    max_Q = opponent[next_s].max()
-                except KeyError:
-                    opponent[next_s] = np.ones(len(t_available[i])) * default_Q
-                    max_Q = opponent[next_s].max()
+            try:
+                max_Q = opponent[next_s].max()
+            except KeyError:
+                opponent[next_s] = np.ones(len(t_available[i])) * default_Q
+                max_Q = opponent[next_s].max()
 
-                if not player_win:
-                    r = t_reward[i]
-                else:
-                    r = -1 * t_reward[i + 1]
+            if not player_win:
+                r = t_reward[i]
+            else:
+                r = -1 * t_reward[i + 1]
 
-                # Loss and learn
-                next_Q = r + (gamma * max_Q)
-                loss = next_Q - Q
-                opponent[s][m_i] = Q + (learning_rate * loss)
+            # Loss and learn
+            next_Q = r + (gamma * max_Q)
+            loss = next_Q - Q
+            opponent[s][m_i] = Q + (learning_rate * loss)
 
         # ----------------------------------------------------------------
         # Update the log
@@ -1048,13 +1045,29 @@ def plot_wythoff_board(board,
     plt.close('all')
 
 
-def evaluate_models(stumbler,
-                    strategist,
-                    stumbler_game,
-                    strategist_game,
-                    num_episodes=100,
-                    mode='random',
-                    debug=False):
+def load_for_eval(stumbler_strategist):
+    """Load a saved model."""
+    state = th.load(stumbler_strategist)
+    num_hidden1 = state["num_hidden1"]
+    num_hidden2 = state["num_hidden2"]
+    strategist = init_strategist(num_hidden1, num_hidden2)
+    strategist = load_strategist(strategist, stumbler_strategist)
+
+    player, opponent = None, None
+    player, opponent = load_stumbler(player, opponent, stumbler_strategist)
+
+    return player, opponent, strategist
+
+
+def evaluate_wythoff(stumbler=None,
+                     strategist=None,
+                     stumbler_game='Wythoff10x10',
+                     strategist_game='Wythoff50x50',
+                     load_model=None,
+                     save=None,
+                     return_none=False,
+                     num_episodes=100,
+                     debug=False):
     """Compare stumblers to strategists.
     
     Returns 
@@ -1063,6 +1076,9 @@ def evaluate_models(stumbler,
         the fraction of games won by the strategist.
     """
     # ------------------------------------------------------------------------
+    if load_model is not None:
+        stumbler, _, strategist = load_for_eval(load_model)
+
     # Init boards, etc
     # Stratgist
     env = create_env(strategist_game, monitor=False)
@@ -1087,7 +1103,6 @@ def evaluate_models(stumbler,
             print("---------------------------------------")
             print(">>> NEW MODEL EVALUATION ({}).".format(episode))
             print(">>> Initial position ({}, {})".format(x, y))
-            print(">>> Initial moves {}".format(available))
 
         done = False
         while not done:
@@ -1101,11 +1116,16 @@ def evaluate_models(stumbler,
                     move_i = epsilon_greedy(values, epsilon=0.0, mode='numpy')
                     move = s_available[move_i]
                 except KeyError:
-                    move_i = np.random.randint(0, len(available))
-                    move = available[move_i]
+                    move_i = np.random.randint(0, len(s_available))
+                    move = s_available[move_i]
             else:
                 move_i = np.random.randint(0, len(available))
                 move = available[move_i]
+
+            # ----------------------------------------------------------------
+            # RANDOM PLAYER
+            # move_i = np.random.randint(0, len(available))
+            # move = available[move_i]
 
             (x, y, board, available), reward, done, _ = env.step(move)
             board = tuple(flatten_board(board))
@@ -1131,8 +1151,16 @@ def evaluate_models(stumbler,
             board = tuple(flatten_board(board))
             if done:
                 wins += 1.0
+                break
 
         if debug:
-            print("Wins {}".format(wins / (episode + 1)))
+            print("Wins {}".format(wins))
 
-    return wins / num_episodes
+    if save is not None:
+        np.savetxt(save, wins)
+
+    result = wins / num_episodes
+    if return_none:
+        result = None
+
+    return result
