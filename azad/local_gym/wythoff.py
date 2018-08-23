@@ -233,3 +233,66 @@ class Wythoff50x50(WythoffEnv):
 
     def __init__(self):
         WythoffEnv.__init__(self, m=50, n=50)
+
+
+class Wythoff100x100(WythoffEnv):
+    """A 100 by 100 Wythoff game"""
+
+    def __init__(self):
+        WythoffEnv.__init__(self, m=100, n=100)
+
+
+class Wythoff150x150(WythoffEnv):
+    """A 150 by 150 Wythoff game"""
+
+    def __init__(self):
+        WythoffEnv.__init__(self, m=150, n=150)
+
+
+class Wythoff200x200(WythoffEnv):
+    """A 200 by 200 Wythoff game"""
+
+    def __init__(self):
+        WythoffEnv.__init__(self, m=200, n=200)
+
+
+class Wythoff250x250(WythoffEnv):
+    """A 250 by 250 Wythoff game"""
+
+    def __init__(self):
+        WythoffEnv.__init__(self, m=250, n=250)
+
+
+class Wythoff300x300(WythoffEnv):
+    """A 300 by 300 Wythoff game"""
+
+    def __init__(self):
+        WythoffEnv.__init__(self, m=300, n=300)
+
+
+class Wythoff350x350(WythoffEnv):
+    """A 350 by 350 Wythoff game"""
+
+    def __init__(self):
+        WythoffEnv.__init__(self, m=350, n=350)
+
+
+class Wythoff400x400(WythoffEnv):
+    """A 400 by 400 Wythoff game"""
+
+    def __init__(self):
+        WythoffEnv.__init__(self, m=400, n=400)
+
+
+class Wythoff450x450(WythoffEnv):
+    """A 450 by 450 Wythoff game"""
+
+    def __init__(self):
+        WythoffEnv.__init__(self, m=450, n=450)
+
+
+class Wythoff500x500(WythoffEnv):
+    """A 500 by 500 Wythoff game"""
+
+    def __init__(self):
+        WythoffEnv.__init__(self, m=500, n=500)
