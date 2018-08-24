@@ -439,8 +439,8 @@ wythoff_exp24:
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp24/exp24.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py evaluate_wythoff --save=$(DATA_PATH)/wythoff/exp24/run_{1}_{2} --load_model=$(DATA_PATH)/wythoff/exp14/run_{1} --num_episodes=1000 --strategist_game={2} --stumber_game=Wythoff15x15 --return_none=True" ::: \
-		{2..20} ::: Wythoff50x50 Wythoff100x100 Wythoff150x150 Wythoff200x200 Wythoff250x250 Wythoff300x300 Wythoff350x350 Wythoff400x400 Wythoff450x450 Wythoff500x500
+		"run_azad.py evaluate_wythoff --save=$(DATA_PATH)/wythoff/exp24/run_{1}_{2} --load_model=$(DATA_PATH)/wythoff/exp14/run_{1}.pytorch --num_episodes=1000 --strategist_game={2} --stumbler_game=Wythoff15x15 --return_none=True" ::: \
+		{1..20} ::: Wythoff5x5 Wythoff10x10 Wythoff15x15 Wythoff50x50 Wythoff100x100 Wythoff150x150 Wythoff200x200 Wythoff250x250 Wythoff300x300 Wythoff350x350 Wythoff400x400 Wythoff450x450 Wythoff500x500
 
 # New games
 # - SS: 
