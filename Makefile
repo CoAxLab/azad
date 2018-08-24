@@ -307,7 +307,7 @@ wythoff_exp13:
 # SS
 # Result: compared to exp13, the SS strongly accelerated learning of optimal play
 # and strongly reduced the variance during learning (stabilized learning).
-# 47c5cef52af8680eb028c6161f3c0e681325e0fa
+# 211f18c154ae3cac12af74f82d75aceb22f71b92
 #
 # See `notebooks/wythoff_exp13_14.ipynb`
 wythoff_exp14:
@@ -342,10 +342,9 @@ wythoff_exp16:
 		{1..20}
 
 # SS w/ no sym cold sampling
-# 47c5cef52af8680eb028c6161f3c0e681325e0fa
+# 211f18c154ae3cac12af74f82d75aceb22f71b92
 #
-# Result: HC- (HC sampling without projecting cold spots) gives the best 
-# performance, when comparing between exp14-17.
+# Result: HC- and HC are the same. Both offer better performance the H or C
 #
 # See `notebooks/wythoff_exp15_18.ipynb`
 wythoff_exp17:
@@ -359,9 +358,10 @@ wythoff_exp17:
 
 # - SS w/ perfect a strategist all the time 
 # (a positive control/no strategist learning)
-# 47c5cef52af8680eb028c6161f3c0e681325e0f
+# 211f18c154ae3cac12af74f82d75aceb22f71b92
 #
-# Result: the perfect strategists HARM performance?!
+# Result: the perfect strategist offers only a small improvement in performance
+# compared to the emperical version
 wythoff_exp18:
 	-rm -rf $(DATA_PATH)/wythoff/exp18
 	-mkdir $(DATA_PATH)/wythoff/exp18
@@ -384,9 +384,11 @@ wythoff_exp18:
 # num_hidden2,num_strategies,num_stumbles
 
 # Stumbler
-# Result: top_20 params give a 5% bump in score compared to the middle road
+# Result: top_20 params are bad. Stumbler and strategist provide
+# equal performance here. Aggregate hyper-params are the choise.
+
 # sets used in exp13-18. 
-# d9b66f525d82fabadacd3c70a419582869b830c4
+# 211f18c154ae3cac12af74f82d75aceb22f71b92
 #
 # See `notebooks/wythoff_exp19_20.ipynb`
 wythoff_exp19:
@@ -406,7 +408,7 @@ wythoff_exp20:
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp20/exp20.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp20/run_{row_code} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence={learning_rate_influence} --num_stumbles={num_stumbles} --learning_rate_stumbler={learning_rate_stumbler} --stumbler_game=Wythoff15x15 --epsilon={epsilon} --anneal=True --gamma={gamma} --num_strategies={num_strategies} --learning_rate_strategist={learning_rate_strategist} --strategist_game=Wythoff50x50 --cold_threshold={cold_threshold} --hot_threshold={hot_threshold} --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed=42" :::: \
+		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp20/run_{row_code} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence={learning_rate_influence} --num_stumbles=550 --learning_rate_stumbler={learning_rate_stumbler} --stumbler_game=Wythoff15x15 --epsilon={epsilon} --anneal=True --gamma={gamma} --num_strategies={num_strategies} --learning_rate_strategist={learning_rate_strategist} --strategist_game=Wythoff50x50 --cold_threshold={cold_threshold} --hot_threshold={hot_threshold} --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed=42" :::: \
 		$(DATA_PATH)/wythoff/joint_ranked.csv
 
 # --- Self-play
@@ -421,7 +423,6 @@ wythoff_exp21:
 	-rm -rf $(DATA_PATH)/wythoff/exp21
 	-mkdir $(DATA_PATH)/wythoff/exp21
 	sleep 5  # Wait for tensorboard to notice the deletion
-		# and search it.
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp21/exp21.parallel.log' \
 		--nice 19 --delay 2 \
@@ -432,6 +433,15 @@ wythoff_exp21:
 # Transfer exps for paper
 
 # Larger boards (up to 500).
+# TODO set load_model path
+wythoff_exp24:
+	-rm -rf $(DATA_PATH)/wythoff/exp24
+	-mkdir $(DATA_PATH)/wythoff/exp24
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp24/exp24.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py evaluate_wythoff --save=$(DATA_PATH)/wythoff/exp24/run_{1}_{2} --load_model=$(DATA_PATH)/wythoff/exp14/run_{1} --num_episodes=1000 --strategist_game={2} --stumber_game=Wythoff15x15 --return_none=True" ::: \
+		{1..20} ::: Wythoff50x50 Wythoff100x100 Wythoff150x150 Wythoff200x200 Wythoff250x250 Wythoff300x300 Wythoff350x350 Wythoff400x400 Wythoff450x450 Wythoff500x500
 
 # New games
 # - S: Train Wythoff: relearn Nim, Euclid
