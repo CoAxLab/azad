@@ -222,7 +222,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
         bias_board = create_bias_board(m, n, strategist)
 
         # Est performance. Count strategist wins.
-        win = evaluate_wythoff(
+        wins, _ = evaluate_wythoff(
             player,
             strategist,
             stumbler_game,
@@ -231,6 +231,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
             debug=debug)
 
         # Update the influence and then the bias_board
+        win = wins / num_eval
         if win > 0.5:
             influence += learning_rate_influence
         else:
@@ -1048,10 +1049,15 @@ def plot_wythoff_board(board,
 def load_for_eval(stumbler_strategist):
     """Load a saved model."""
     state = th.load(stumbler_strategist)
-    num_hidden1 = state["num_hidden1"]
-    num_hidden2 = state["num_hidden2"]
-    strategist = init_strategist(num_hidden1, num_hidden2)
-    strategist = load_strategist(strategist, stumbler_strategist)
+    try:
+        num_hidden1 = state["num_hidden1"]
+        num_hidden2 = state["num_hidden2"]
+        strategist = init_strategist(num_hidden1, num_hidden2)
+        strategist = load_strategist(strategist, stumbler_strategist)
+    except KeyError:
+        print(
+            ">>> Couldn't load strategist from {}".format(stumbler_strategist))
+        strategist = None
 
     player, opponent = None, None
     player, opponent = load_stumbler(player, opponent, stumbler_strategist)
@@ -1083,7 +1089,10 @@ def evaluate_wythoff(stumbler=None,
     # Stratgist
     env = create_env(strategist_game, monitor=False)
     m, n, board, _ = peek(env)
-    hot_cold_table = create_bias_board(m, n, strategist)
+    if strategist is not None:
+        hot_cold_table = create_bias_board(m, n, strategist)
+    else:
+        hot_cold_table = np.zeros_like(board)
 
     # Stumbler
     o, p, _, _ = peek(create_env(stumbler_game, monitor=False))
@@ -1091,7 +1100,8 @@ def evaluate_wythoff(stumbler=None,
     # ------------------------------------------------------------------------
     # A stumbler and a strategist take turns playing a (m,n) game of wythoffs
     wins = 0.0
-    score = 0.0
+    strategist_score = 0.0
+    stumbler_score = 0.0
     for episode in range(num_episodes):
         # Re-init
         steps = 0
@@ -1120,14 +1130,23 @@ def evaluate_wythoff(stumbler=None,
                     move_i = np.random.randint(0, len(s_available))
                     move = s_available[move_i]
             else:
-                move_i = np.random.randint(0, len(available))
-                move = available[move_i]
+                s_available = available
+                move_i = np.random.randint(0, len(s_available))
+                move = s_available[move_i]
 
             # ----------------------------------------------------------------
             # RANDOM PLAYER
             # move_i = np.random.randint(0, len(available))
             # move = available[move_i]
 
+            # Analyze the choice
+            best = 0.0
+            if cold_move_available(x, y, s_available):
+                if move in locate_cold_moves(x, y, s_available):
+                    best = 1.0
+                stumbler_score += (best - stumbler_score) / (episode + 1)
+
+            # Move
             (x, y, board, available), reward, done, _ = env.step(move)
             board = tuple(flatten_board(board))
             if debug:
@@ -1152,7 +1171,7 @@ def evaluate_wythoff(stumbler=None,
             if cold_move_available(x, y, available):
                 if move in locate_cold_moves(x, y, available):
                     best = 1.0
-                score += (best - score) / (episode + 1)
+                strategist_score += (best - strategist_score) / (episode + 1)
 
             # Make a move
             (x, y, board, available), reward, done, _ = env.step(move)
@@ -1162,17 +1181,18 @@ def evaluate_wythoff(stumbler=None,
                 break
 
         if debug:
-            print("Wins {}, Score {}".format(wins, score))
+            print("Wins {}, Scores ({}, {})".format(wins, stumbler_score,
+                                                    strategist_score))
 
     if save is not None:
         np.savetxt(
             save,
-            np.asarray([wins, score]).reshape(1, 2),
-            fmt='%.1f,%.4f',
+            np.asarray([wins, stumbler_score, strategist_score]).reshape(1, 3),
+            fmt='%.1f,%.4f,%.4f',
             comments="",
-            header="wins,score")
+            header="wins,stumbler_score,strategist_score")
 
-    result = wins / num_episodes, score
+    result = (wins / num_episodes), stumbler_score, strategist_score
     if return_none:
         result = None
 
