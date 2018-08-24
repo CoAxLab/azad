@@ -433,7 +433,6 @@ wythoff_exp21:
 # Transfer exps for paper
 
 # Larger boards (up to 500).
-# TODO set load_model path
 wythoff_exp24:
 	-rm -rf $(DATA_PATH)/wythoff/exp24
 	-mkdir $(DATA_PATH)/wythoff/exp24
@@ -441,8 +440,9 @@ wythoff_exp24:
 		--joblog '$(DATA_PATH)/wythoff/exp24/exp24.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py evaluate_wythoff --save=$(DATA_PATH)/wythoff/exp24/run_{1}_{2} --load_model=$(DATA_PATH)/wythoff/exp14/run_{1} --num_episodes=1000 --strategist_game={2} --stumber_game=Wythoff15x15 --return_none=True" ::: \
-		{1..20} ::: Wythoff50x50 Wythoff100x100 Wythoff150x150 Wythoff200x200 Wythoff250x250 Wythoff300x300 Wythoff350x350 Wythoff400x400 Wythoff450x450 Wythoff500x500
+		{2..20} ::: Wythoff50x50 Wythoff100x100 Wythoff150x150 Wythoff200x200 Wythoff250x250 Wythoff300x300 Wythoff350x350 Wythoff400x400 Wythoff450x450 Wythoff500x500
 
 # New games
-# - S: Train Wythoff: relearn Nim, Euclid
-# - SS: Train Wythoff: relearn Nim, Euclid
+# - SS: 
+# 1. Train Nim or Euclid
+# 2. Pre-train Wythoff (exp14): Train Nim, Euclid
