@@ -47,3 +47,12 @@ def join_monitored(files, sort_key='episode'):
             joined[k] = [v[i] for i in idx]
 
     return joined
+
+
+def score_summary(exp):
+    """Summarize lists of exps"""
+    avg = np.zeros_like(exp[0]['score'])
+    for n, mon in enumerate(exp):
+        avg += mon["score"]
+    avg /= len(exp)
+    return mon["episode"], avg
