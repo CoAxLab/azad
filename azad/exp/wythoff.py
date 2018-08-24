@@ -222,7 +222,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
         bias_board = create_bias_board(m, n, strategist)
 
         # Est performance. Count strategist wins.
-        wins, _ = evaluate_wythoff(
+        wins, eval_score_a, eval_score_b = evaluate_wythoff(
             player,
             strategist,
             stumbler_game,
@@ -241,6 +241,8 @@ def wythoff_stumbler_strategist(num_episodes=10,
         # --------------------------------------------------------------------
         if tensorboard:
             writer.add_scalar('stategist_influence', influence, episode)
+            writer.add_scalar('stategist_eval_score', eval_score_b, episode)
+            writer.add_scalar('stumbler_eval_score', eval_score_a, episode)
 
         if monitor:
             all_variables = locals()
@@ -1158,7 +1160,7 @@ def evaluate_wythoff(stumbler=None,
             # ----------------------------------------------------------------
             # STRATEGIST
             # Choose.
-            hot_cold_move_values = [hot_cold_table[x, y] for x, y in available]
+            hot_cold_move_values = [hot_cold_table[i, j] for i, j in available]
             move_i = epsilon_greedy(
                 np.asarray(hot_cold_move_values), epsilon=0.0, mode='numpy')
             move = available[move_i]
