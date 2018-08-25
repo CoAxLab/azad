@@ -315,7 +315,7 @@ wythoff_exp14:
 	-mkdir $(DATA_PATH)/wythoff/exp14
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp14/exp14.parallel.log' \
-		--nice 19 --delay 2 --header : --colsep ',' \
+		--nice 19 --delay 2 \
 		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp14/run_{1} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1}" ::: \
 		{1..20}
 
@@ -327,7 +327,7 @@ wythoff_exp15:
 	-mkdir $(DATA_PATH)/wythoff/exp15
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp15/exp15.parallel.log' \
-		--nice 19 --delay 2 --header : --colsep ',' \
+		--nice 19 --delay 2  \
 		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp15/run_{1} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=None --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1}" ::: \
 		{1..20}
 
@@ -337,7 +337,7 @@ wythoff_exp16:
 	-mkdir $(DATA_PATH)/wythoff/exp16
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp16/exp16.parallel.log' \
-		--nice 19 --delay 2 --header : --colsep ',' \
+		--nice 19 --delay 2 \
 		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp16/run_{1} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=None --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1}" ::: \
 		{1..20}
 
@@ -352,7 +352,7 @@ wythoff_exp17:
 	-mkdir $(DATA_PATH)/wythoff/exp17
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp17/exp17.parallel.log' \
-		--nice 19 --delay 2 --header : --colsep ',' \
+		--nice 19 --delay 2 \
 		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp17/run_{1} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --reflect_cold=False --debug=False --save_model=True --return_none=True --debug=False --seed={1}" ::: \
 		{1..20}
 
@@ -367,7 +367,7 @@ wythoff_exp18:
 	-mkdir $(DATA_PATH)/wythoff/exp18
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp18/exp18.parallel.log' \
-		--nice 19 --delay 2 --header : --colsep ',' \
+		--nice 19 --delay 2 \
 		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp18/run_{1} --optimal_strategist=True --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --return_none=True --debug=False --seed={1}" ::: \
 		{1..20}
 
@@ -438,7 +438,7 @@ wythoff_exp24:
 	-mkdir $(DATA_PATH)/wythoff/exp24
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp24/exp24.parallel.log' \
-		--nice 19 --delay 2 --header : --colsep ',' \
+		--nice 19 --delay 2 \
 		"run_azad.py evaluate_wythoff --save=$(DATA_PATH)/wythoff/exp24/run_{1}_{2} --load_model=$(DATA_PATH)/wythoff/exp14/run_{1}.pytorch --num_episodes=1000 --strategist_game={2} --stumbler_game=Wythoff15x15 --return_none=True" ::: \
 		{1..20} ::: Wythoff5x5 Wythoff10x10 Wythoff15x15 Wythoff50x50 Wythoff100x100 Wythoff150x150 Wythoff200x200 Wythoff250x250 Wythoff300x300 Wythoff350x350 Wythoff400x400 Wythoff450x450 Wythoff500x500
 
@@ -452,7 +452,7 @@ wythoff_exp25:
 	-mkdir $(DATA_PATH)/wythoff/exp25
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp25/exp25.parallel.log' \
-		--nice 19 --delay 2 --header : --colsep ',' \
+		--nice 19 --delay 2 \
 		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp25/run_{1} --monitor='('episode', 'influence', 'eval_score_a', 'eval_score_b')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Nim15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Nim50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1}" ::: \
 		{1..20}
 
@@ -462,7 +462,7 @@ wythoff_exp26:
 	-mkdir $(DATA_PATH)/wythoff/exp26
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp26/exp26.parallel.log' \
-		--nice 19 --delay 2 --header : --colsep ',' \
+		--nice 19 --delay 2 \
 		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp26/run_{1} --monitor='('episode', 'influence', 'eval_score_a', 'eval_score_b')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Euclid15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Euclid50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1}" ::: \
 		{1..20}
 
@@ -473,7 +473,7 @@ wythoff_exp27:
 	-mkdir $(DATA_PATH)/wythoff/exp27
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp27/exp27.parallel.log' \
-		--nice 19 --delay 2 --header : --colsep ',' \
+		--nice 19 --delay 2 \
 		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp27/run_{1} --load_model=$(DATA_PATH)/wythoff/exp14/run_{1}.pytorch --monitor='('episode', 'influence', 'eval_score_a', 'eval_score_b')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Nim15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Nim50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1}" ::: \
 		{1..20}
 
@@ -483,7 +483,7 @@ wythoff_exp28:
 	-mkdir $(DATA_PATH)/wythoff/exp28
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp28/exp28.parallel.log' \
-		--nice 19 --delay 2 --header : --colsep ',' \
+		--nice 19 --delay 2 \
 		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp28/run_{1} --load_model=$(DATA_PATH)/wythoff/exp14/run_{1}.pytorch --monitor='('episode', 'influence', 'eval_score_a', 'eval_score_b')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Nim15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Nim50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1}" ::: \
 		{1..20}
 
