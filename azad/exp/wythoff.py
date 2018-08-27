@@ -1071,6 +1071,7 @@ def evaluate_wythoff(stumbler=None,
                      strategist=None,
                      stumbler_game='Wythoff10x10',
                      strategist_game='Wythoff50x50',
+                     random_stumbler=False,
                      load_model=None,
                      save=None,
                      return_none=False,
@@ -1138,8 +1139,9 @@ def evaluate_wythoff(stumbler=None,
 
             # ----------------------------------------------------------------
             # RANDOM PLAYER
-            # move_i = np.random.randint(0, len(available))
-            # move = available[move_i]
+            if random_stumbler:
+                move_i = np.random.randint(0, len(available))
+                move = available[move_i]
 
             # Analyze the choice
             best = 0.0

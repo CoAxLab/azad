@@ -433,14 +433,26 @@ wythoff_exp21:
 # Transfer exps for paper
 
 # --- Larger boards (up to 500).
-wythoff_exp24:
-	-rm -rf $(DATA_PATH)/wythoff/exp24
-	-mkdir $(DATA_PATH)/wythoff/exp24
+# Greedy stumbler
+wythoff_exp24a:
+	-rm -rf $(DATA_PATH)/wythoff/exp24a
+	-mkdir $(DATA_PATH)/wythoff/exp24a
 	parallel -j 8 -v \
-		--joblog '$(DATA_PATH)/wythoff/exp24/exp24.parallel.log' \
+		--joblog '$(DATA_PATH)/wythoff/exp24a/exp24a.aparallel.log' \
 		--nice 19 --delay 2 \
-		"run_azad.py evaluate_wythoff --save=$(DATA_PATH)/wythoff/exp24/run_{1}_{2} --load_model=$(DATA_PATH)/wythoff/exp14/run_{1}.pytorch --num_episodes=1000 --strategist_game={2} --stumbler_game=Wythoff15x15 --return_none=True" ::: \
+		"run_azad.py evaluate_wythoff --save=$(DATA_PATH)/wythoff/exp24a/run_{1}_{2}.csv --load_model=$(DATA_PATH)/wythoff/exp14/run_{1}.pytorch --num_episodes=1000 --strategist_game={2} --stumbler_game=Wythoff15x15 --return_none=True" ::: \
 		{1..20} ::: Wythoff5x5 Wythoff10x10 Wythoff15x15 Wythoff50x50 Wythoff100x100 Wythoff150x150 Wythoff200x200 Wythoff250x250 Wythoff300x300 Wythoff350x350 Wythoff400x400 Wythoff450x450 Wythoff500x500
+
+# Random stumbler
+wythoff_exp24b:
+	-rm -rf $(DATA_PATH)/wythoff/exp24b
+	-mkdir $(DATA_PATH)/wythoff/exp24b
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp24b/exp24b.aparallel.log' \
+		--nice 19 --delay 2 \
+		"run_azad.py evaluate_wythoff --save=$(DATA_PATH)/wythoff/exp24b/run_{1}_{2}.csv --load_model=$(DATA_PATH)/wythoff/exp14/run_{1}.pytorch --random_stumbler=True --num_episodes=1000 --strategist_game={2} --stumbler_game=Wythoff15x15 --return_none=True" ::: \
+		{1..20} ::: Wythoff5x5 Wythoff10x10 Wythoff15x15 Wythoff50x50 Wythoff100x100 Wythoff150x150 Wythoff200x200 Wythoff250x250 Wythoff300x300 Wythoff350x350 Wythoff400x400 Wythoff450x450 Wythoff500x500
+
 
 # --- Play new games
 # 94dee42aa7f0ba985e7d0086f251f81867d287a2 
