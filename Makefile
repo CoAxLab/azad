@@ -534,22 +534,33 @@ wythoff_exp33:
 	-rm -rf $(DATA_PATH)/wythoff/exp33
 	-mkdir $(DATA_PATH)/wythoff/exp33
 	run_azad.py create_grid $(DATA_PATH)/wythoff/exp33/grid.csv \
-		--hot_threshold='(0.0, 0.4, 10)' \
-		--cold_threshold='(0.0, -0.4, 10)'
+		--hot_threshold='(0.0, 0.4, 10)' 
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp33/exp33.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp33/run_{row_code} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold={cold_threshold} --hot_threshold={hot_threshold} --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1}" :::: \
 		$(DATA_PATH)/wythoff/exp33/grid.csv
 
-# epsilon
+
 wythoff_exp34:
 	-rm -rf $(DATA_PATH)/wythoff/exp34
 	-mkdir $(DATA_PATH)/wythoff/exp34
 	run_azad.py create_grid $(DATA_PATH)/wythoff/exp34/grid.csv \
-		--epsilon='(0.01, 0.8, 20)' 
+		--cold_threshold='(0.0, -0.4, 10)'
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp34/exp34.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp34/run_{row_code} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon={epsilon} --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1}" :::: \
+		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp34/run_{row_code} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold={cold_threshold} --hot_threshold={hot_threshold} --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1}" :::: \
 		$(DATA_PATH)/wythoff/exp34/grid.csv
+
+# epsilon
+wythoff_exp35:
+	-rm -rf $(DATA_PATH)/wythoff/exp35
+	-mkdir $(DATA_PATH)/wythoff/exp35
+	run_azad.py create_grid $(DATA_PATH)/wythoff/exp35/grid.csv \
+		--epsilon='(0.01, 0.8, 20)' 
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp35/exp35.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp35/run_{row_code} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon={epsilon} --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1}" :::: \
+		$(DATA_PATH)/wythoff/exp35/grid.csv
