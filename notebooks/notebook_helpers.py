@@ -1,5 +1,6 @@
 from collections import defaultdict
 from csv import DictReader
+import scipy.stats as st
 import numpy as np
 
 
@@ -49,10 +50,13 @@ def join_monitored(files, sort_key='episode'):
     return joined
 
 
-def score_summary(exp):
+def score_summary(exp, ):
     """Summarize lists of exps"""
-    avg = np.zeros_like(exp[0]['score'])
-    for n, mon in enumerate(exp):
-        avg += mon["score"]
-    avg /= len(exp)
-    return mon["episode"], avg
+    t = len(exp[0]["score"])
+    l = len(exp)
+    X = np.zeros((t, l))
+
+    for i, mon in enumerate(exp):
+        X[:, i] = mon["score"]
+
+    return exp[0]["episode"], X.mean(1), st.sem(X, axis=1)
