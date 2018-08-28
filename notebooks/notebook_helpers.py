@@ -15,6 +15,26 @@ def load_params(file):
     return table
 
 
+def load_evaluated(files, game_code):
+    """Load tabular data from an evaulation"""
+    table = defaultdict(list)
+
+    for i, fi in enumerate(files):
+        fi_name = fi.split('/')[-1].split('.')[0]
+
+        with open(fi, 'r') as f:
+            reader = DictReader(f)
+            for row in reader:
+                table["game_code"].append(game_code)
+                table["file_index"].append(i)
+                table["file_name"].append(fi_name)
+
+                for col, dat in row.items():
+                    table[col].append(float(dat))
+
+    return table
+
+
 def load_monitored(file):
     """Load monitored data."""
 
