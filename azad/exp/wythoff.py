@@ -92,6 +92,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
                                 optimal_strategist=False,
                                 num_eval=1,
                                 learning_rate_influence=0.01,
+                                new_rules=False,
                                 tensorboard=None,
                                 update_every=5,
                                 seed=None,
@@ -145,6 +146,11 @@ def wythoff_stumbler_strategist(num_episodes=10,
         player, opponent = load_stumbler(player, opponent, load_model)
         strategist = init_strategist(num_hidden1, num_hidden2)
         strategist = load_strategist(strategist, load_model)
+
+    # If the rules have changed (wythoff -> nim,euclid) only the stumblers
+    # action spaces don't match, and should be reset.
+    if new_rules:
+        player, opponent = None, None
 
     # Optimal overrides all others
     if optimal_strategist:
