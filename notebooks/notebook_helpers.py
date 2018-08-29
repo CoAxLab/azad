@@ -70,13 +70,13 @@ def join_monitored(files, sort_key='episode'):
     return joined
 
 
-def score_summary(exp, ):
+def score_summary(exp, key="score"):
     """Summarize lists of exps"""
-    t = len(exp[0]["score"])
+    t = len(exp[0][key])
     l = len(exp)
     X = np.zeros((t, l))
 
     for i, mon in enumerate(exp):
-        X[:, i] = mon["score"]
+        X[:, i] = mon[key]
 
     return exp[0]["episode"], X.mean(1), st.sem(X, axis=1)
