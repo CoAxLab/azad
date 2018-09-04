@@ -824,6 +824,151 @@ def wythoff_strategist(stumbler_model,
     return result
 
 
+def wythoff_oracular_strategy(path,
+                              num_episodes=1000,
+                              learning_rate=0.025,
+                              num_hidden1=100,
+                              num_hidden2=25,
+                              stumbler_game='Wythoff10x10',
+                              strategist_game='Wythoff50x50',
+                              tensorboard=None,
+                              update_every=50,
+                              save=None,
+                              return_none=False,
+                              debug=False,
+                              seed=None):
+    """Train a strategist layer on perfact data."""
+
+    # ------------------------------------------------------------------------
+    # Setup
+    if tensorboard is not None:
+        try:
+            os.makedirs(tensorboard)
+        except OSError as exception:
+            if exception.errno != errno.EEXIST:
+                raise
+
+        writer = SummaryWriter(log_dir=tensorboard)
+
+    # Create env
+    if tensorboard is not None:
+        env = create_env(game, monitor=True)
+    else:
+        env = create_env(game, monitor=False)
+
+    # Boards, etc
+    m, n, board, _ = peek(create_env(strategist_game))
+    o, p, _, _ = peek(create_env(stumbler_game))
+    if debug:
+        print(">>> TRANING AN OPTIMAL STRATEGIST.")
+        print(">>> Train board {}".format(o, p))
+        print(">>> Test board {}".format(m, n))
+
+    # Seeding...
+    env.seed(seed)
+    np.random.seed(seed)
+
+    # Train params
+    strategic_default_value = 0.0
+    batch_size = 64
+
+    # ------------------------------------------------------------------------
+    # Build a Strategist, its memory, and its optimizer
+
+    # Create a model, of the right size.
+    # model = HotCold2(2, num_hidden1=num_hidden1)
+    model = HotCold3(2, num_hidden1=num_hidden1, num_hidden2=num_hidden2)
+
+    optimizer = optim.Adam(model.parameters(), lr=learning_rate)
+    memory = ReplayMemory(10000)
+
+    # Run learning episodes. The 'stumbler' is just the opt
+    # cold board
+    for episode in range(num_episodes):
+        # The cold spots are '1' everythig else is '0'
+        strategic_value = create_cold_board(o, p)
+
+        # ...Into tuples
+        s_data = convert_ijv(strategic_value)
+        s_data = balance_ijv(s_data, strategic_default_value)
+
+        for d in s_data:
+            memory.push(*d)
+
+        loss = 0.0
+        if len(memory) > batch_size:
+            # Sample data....
+            coords = []
+            values = []
+            samples = memory.sample(batch_size)
+
+            for c, v in samples:
+                coords.append(c)
+                values.append(v)
+
+            coords = torch.tensor(
+                np.vstack(coords), requires_grad=True, dtype=torch.float)
+            values = torch.tensor(
+                values, requires_grad=False, dtype=torch.float)
+
+            # Making some preditions,
+            predicted_values = model(coords).squeeze()
+
+            # and find their loss.
+            loss = F.mse_loss(predicted_values, values)
+
+            # Walk down the hill of righteousness!
+            optimizer.zero_grad()
+            loss.backward()
+            optimizer.step()
+
+            if debug:
+                print(">>> Coords: {}".format(coords))
+                print(">>> Values: {}".format(values))
+                print(">>> Predicted values: {}".format(values))
+                print(">>> Loss {}".format(loss))
+
+        # Use the trained strategist to generate a bias_board,
+        bias_board = create_bias_board(m, n, model)
+
+        if tensorboard and (int(episode) % update_every) == 0:
+            writer.add_scalar(os.path.join(path, 'error'), loss, episode)
+
+            plot_wythoff_board(
+                strategic_value,
+                vmin=0,
+                vmax=1,
+                path=path,
+                name='strategy_board_{}.png'.format(episode))
+            writer.add_image(
+                'Training board',
+                skimage.io.imread(
+                    os.path.join(path,
+                                 'strategy_board_{}.png'.format(episode))))
+
+            plot_wythoff_board(
+                bias_board,
+                vmin=0,
+                vmax=1,
+                path=path,
+                name='bias_board_{}.png'.format(episode))
+            writer.add_image(
+                'Testing board',
+                skimage.io.imread(
+                    os.path.join(path, 'bias_board_{}.png'.format(episode))))
+
+    # The end
+    if tensorboard:
+        writer.close()
+
+    # Suppress return for parallel runs?
+    result = (model), (loss)
+    if return_none:
+        result = None
+
+    return result
+
+
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
 # ---------------------------------------------------------------------------
