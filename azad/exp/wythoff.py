@@ -824,8 +824,10 @@ def wythoff_strategist(stumbler_model,
     return result
 
 
-def wythoff_oracular_strategy(path,
-                              num_episodes=1000,
+# TODO - export this
+# TDOO - test this
+# TODO - use to update figs
+def wythoff_oracular_strategy(num_episodes=1000,
                               learning_rate=0.025,
                               num_hidden1=100,
                               num_hidden2=25,
@@ -850,12 +852,6 @@ def wythoff_oracular_strategy(path,
 
         writer = SummaryWriter(log_dir=tensorboard)
 
-    # Create env
-    if tensorboard is not None:
-        env = create_env(game, monitor=True)
-    else:
-        env = create_env(game, monitor=False)
-
     # Boards, etc
     m, n, board, _ = peek(create_env(strategist_game))
     o, p, _, _ = peek(create_env(stumbler_game))
@@ -865,7 +861,6 @@ def wythoff_oracular_strategy(path,
         print(">>> Test board {}".format(m, n))
 
     # Seeding...
-    env.seed(seed)
     np.random.seed(seed)
 
     # Train params
@@ -932,30 +927,30 @@ def wythoff_oracular_strategy(path,
         bias_board = create_bias_board(m, n, model)
 
         if tensorboard and (int(episode) % update_every) == 0:
-            writer.add_scalar(os.path.join(path, 'error'), loss, episode)
+            writer.add_scalar(os.path.join(tensorboard, 'error'), loss, episode)
 
             plot_wythoff_board(
                 strategic_value,
                 vmin=0,
                 vmax=1,
-                path=path,
+                path=tensorboard,
                 name='strategy_board_{}.png'.format(episode))
             writer.add_image(
                 'Training board',
                 skimage.io.imread(
-                    os.path.join(path,
+                    os.path.join(tensorboard,
                                  'strategy_board_{}.png'.format(episode))))
 
             plot_wythoff_board(
                 bias_board,
                 vmin=0,
                 vmax=1,
-                path=path,
+                path=tensorboard,
                 name='bias_board_{}.png'.format(episode))
             writer.add_image(
                 'Testing board',
                 skimage.io.imread(
-                    os.path.join(path, 'bias_board_{}.png'.format(episode))))
+                    os.path.join(tensorboard, 'bias_board_{}.png'.format(episode))))
 
     # The end
     if tensorboard:
