@@ -2,7 +2,7 @@
 
 Game-playing ANNs that use a stumbler-strategist architecture. Stumblers learn to map states to actions using model-free RL. Strategists _only_ study stumblers, using the combination of a deep net and a human-derived heuristic to find the structure between the states. Adding in a heuristic means the strategist layer is model-based, and so our overall architecture is related the classic [DYNA-Q](https://medium.com/@ranko.mosic/online-planning-agent-dyna-q-algorithm-and-dyna-maze-example-sutton-and-barto-2016-7ad84a6dc52b) form.
 
-Adding in a neuristic--it turns out-- leads to robust transfer between games, and lead to natutally interpretable representations.
+A heuristic--it turns out--leads to robust transfer between games, and lead to natutally interpretable representations.
 
 Philosophically, we are interested in co-operative AI. By sharing strategies and heuristics our ANNs can try and help people, not replace them. 
 
