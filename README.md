@@ -10,7 +10,7 @@ Philosophically, we are interested in co-operative AI. By sharing strategies and
 
 - Peterson, E.J., Muyesser, N.A., Verstynen, T. & Dunovan, K. 2018. Keep it Stupid Simple, ArXiv 1809.03406. Available at: https://arxiv.org/abs/1809.03406.
 
-We tried a {`good`, `bad`} heuristic, where complex `Q(s,a)` values get mapped to either `good` or `bad` classes. We use these classes to transfer knowledge to new games. Using this network we studied a partial combinatorial game, Wythoff's game, and some of its relatives.
+We tried a {`good`, `bad`} heuristic, where complex `Q(s,a)` values get mapped to either `good` or `bad` classes. We use these classes, in combination with an imagination module, to transfer knowledge to new games. Using this network we studied a partial combinatorial game, Wythoff's game, and some of its relatives.
 
 # Values
 
