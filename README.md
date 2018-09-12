@@ -1,11 +1,16 @@
 # Azad
 
-Game-playing ANNs that use a stumbler-strategist architecture.  Stumblers learn to map states to actions. Strategists study stumblers, learning to find the structure within the states.
+Game-playing ANNs that use a stumbler-strategist architecture. Stumblers learn to map states to actions using model-free RL. Strategists study stumblers, using a deep net to find the structure between the states. 
 
-We focus on co-operative AI. By sharing strategies our ANNs try and help people, not replace them. 
+Strategies in Azad are heuristics, which offer--it turns out--robust transfer between games and lead to natutally interpretable representations.
 
-Based on ideas from: Muyesser, N.A., Dunovan, K. & Verstynen, T., 2018. Learning model-based strategies in simple environments with hierarchical q-networks. , pp.1–29. Available at: http://arxiv.org/abs/1801.06689.
+Philosophically, we are interested in co-operative AI. By sharing strategies and heuristics our ANNs can try and help people, not replace them. 
 
+# Papers
+
+- Peterson, E.J., Muyesser, N.A., Verstynen, T. & Dunovan, K. 2018. Keep it Stupid Simple, ArXiv 1809.03406. Available at: https://arxiv.org/abs/1809.03406.
+
+We tried a {`good`, `bad`} heuristic, where complex `Q(s,a)` values get mapped to either `good` or `bad` classes. We use these classes to transfer knowledge to new games. Using this network we studied a partial combinatorial game, Wythoff's game, and some of its relatives.
 
 # Values
 
