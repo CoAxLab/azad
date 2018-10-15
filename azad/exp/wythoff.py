@@ -81,6 +81,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
                                 gamma=1.0,
                                 num_strategies=1000,
                                 strategist_game='Wythoff50x50',
+                                heuristic=True,
                                 learning_rate_strategist=0.01,
                                 num_hidden1=100,
                                 num_hidden2=25,
@@ -221,6 +222,7 @@ def wythoff_stumbler_strategist(num_episodes=10,
                 monitor=strategist_monitor,
                 save_model=False,
                 return_none=False,
+                heuristic=heuristic,
                 seed=seed)
 
         # --------------------------------------------------------------------
@@ -643,6 +645,7 @@ def wythoff_strategist(stumbler_model,
                        monitor=None,
                        return_none=False,
                        debug=False,
+                       heuristic=True,
                        seed=None):
     """Learn a generalizable strategy for Wythoffs game"""
 
@@ -691,34 +694,38 @@ def wythoff_strategist(stumbler_model,
     # ------------------------------------------------------------------------
     # Extract strategic data from the stumbler
     strategic_default_value = 0.0
-    if hot_threshold is None:
-        strategic_value = estimate_cold(
-            m,
-            n,
-            stumbler_model,
-            threshold=cold_threshold,
-            value=cold_value,
-            reflect=reflect_cold,
-            default_value=strategic_default_value)
-    elif cold_threshold is None:
-        strategic_value = estimate_hot(
-            m,
-            n,
-            stumbler_model,
-            threshold=hot_threshold,
-            value=hot_value,
-            default_value=strategic_default_value)
+    if heuristic:
+        if hot_threshold is None:
+            strategic_value = estimate_cold(
+                m,
+                n,
+                stumbler_model,
+                threshold=cold_threshold,
+                value=cold_value,
+                reflect=reflect_cold,
+                default_value=strategic_default_value)
+        elif cold_threshold is None:
+            strategic_value = estimate_hot(
+                m,
+                n,
+                stumbler_model,
+                threshold=hot_threshold,
+                value=hot_value,
+                default_value=strategic_default_value)
+        else:
+            strategic_value = estimate_hot_cold(
+                o,
+                p,
+                stumbler_model,
+                hot_threshold=hot_threshold,
+                cold_threshold=cold_threshold,
+                hot_value=hot_value,
+                cold_value=cold_value,
+                reflect_cold=reflect_cold,
+                default_value=strategic_default_value)
     else:
-        strategic_value = estimate_hot_cold(
-            o,
-            p,
-            stumbler_model,
-            hot_threshold=hot_threshold,
-            cold_threshold=cold_threshold,
-            hot_value=hot_value,
-            cold_value=cold_value,
-            reflect_cold=reflect_cold,
-            default_value=strategic_default_value)
+        strategic_value = expected_value(
+            o, p, stumbler_model, default_value=strategic_default_value)
 
     # Convert format.
     s_data = convert_ijv(strategic_value)
@@ -927,7 +934,8 @@ def wythoff_oracular_strategy(num_episodes=1000,
         bias_board = create_bias_board(m, n, model)
 
         if tensorboard and (int(episode) % update_every) == 0:
-            writer.add_scalar(os.path.join(tensorboard, 'error'), loss, episode)
+            writer.add_scalar(
+                os.path.join(tensorboard, 'error'), loss, episode)
 
             plot_wythoff_board(
                 strategic_value,
@@ -950,7 +958,8 @@ def wythoff_oracular_strategy(num_episodes=1000,
             writer.add_image(
                 'Testing board',
                 skimage.io.imread(
-                    os.path.join(tensorboard, 'bias_board_{}.png'.format(episode))))
+                    os.path.join(tensorboard,
+                                 'bias_board_{}.png'.format(episode))))
 
     # The end
     if tensorboard:
