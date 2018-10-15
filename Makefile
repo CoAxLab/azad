@@ -590,3 +590,13 @@ wythoff_exp36:
 		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp36/run_{1} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1} --heuristic=False" ::: \
 		{1..20}
 	
+# Try exp37 on larger boards (up to 500).
+# (against a Greedy stumbler)
+wythoff_exp37:
+	-rm -rf $(DATA_PATH)/wythoff/exp37
+	-mkdir $(DATA_PATH)/wythoff/exp37
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp37/exp37.aparallel.log' \
+		--nice 19 --delay 2 \
+		"run_azad.py evaluate_wythoff --save=$(DATA_PATH)/wythoff/exp37/run_{1}_{2}.csv --load_model=$(DATA_PATH)/wythoff/exp36/run_{1}.pytorch --num_episodes=1000 --strategist_game={2} --stumbler_game=Wythoff15x15 --return_none=True" ::: \
+		{1..20} ::: Wythoff5x5 Wythoff10x10 Wythoff15x15 Wythoff50x50 Wythoff100x100 Wythoff150x150 Wythoff200x200 Wythoff250x250 Wythoff300x300 Wythoff350x350 Wythoff400x400 Wythoff450x450 Wythoff500x500
