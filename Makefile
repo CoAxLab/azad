@@ -576,3 +576,17 @@ wythoff_exp35:
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp35/run_{row_code} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon={epsilon} --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1}" :::: \
 		$(DATA_PATH)/wythoff/exp35/grid.csv
+
+# ----------------------------------------------------------------------------
+# AAAI reviewer response runs:
+# Added a way to turn off the hot/cold part of the strategist. Does learning
+# just expected values in the strategist help?
+wythoff_exp36:
+	-rm -rf $(DATA_PATH)/wythoff/exp36
+	-mkdir $(DATA_PATH)/wythoff/exp36
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp36/exp36.parallel.log' \
+		--nice 19 --delay 2 \
+		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp36/run_{1} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=0.4 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1} --heuristic=False" ::: \
+		{1..20}
+	
