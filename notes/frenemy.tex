@@ -1,0 +1,114 @@
+\documentclass[8pt]{article}
+
+\usepackage{geometry}
+% \geometry{landsc  aape,margin=.2in}
+
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[hidelinks]{hyperref}
+% \hypersetup{
+%     colorlinks=false,
+%     linkcolor=white,
+%     filecolor=magenta,      
+%     urlcolor=white,
+% }
+
+\bibliographystyle{abbrv}
+\usepackage{multicol}
+\usepackage{parskip}
+
+\DeclareMathOperator*{\argmin}{argmin}
+
+% ------------------------------------------------------------------------
+\title{The benefit of enemies and the cost of friendships.}
+
+\begin{document}
+\abstract{Friendship come with a cost. Enemies come benefits. In a rate-limited world--one far more complex than the agents living in it--both these uncomfortable truths are worth quantifying along side, that is, the more traditional benefits of friendship and harm that enemies do.}
+
+\section*{}
+Information is valuable \cite{Kakade2002,Bunzeck2006,Dezza2017}. By acting differnetly--by using a different strategy--a good enemey can provide unique and valauble information, creating indirect rewards.  Enemies are also costly. However if the environment is not zero-sum, so both enemy and agent can earn with some positive reward, there is rooom to balance the immediate outcome with the longer-term benefit of novel information.
+
+Friends tend to synchonize, and develop correlated strategies. This coordination can make immediate success more likely, also limits each agent's direct experience of the world. That is, friendships that synchonize can limit information. So the immediate benefit coordination is, to some degree anyway, offset by a loss of individual experience. 
+
+% TODO the loss of personal experience translates into a kind of strategic dependence. If a friend/ANN reliable handles a portion of a task, the agent is less able to do that task themselves. How to quantify this?
+
+We quantify the value of information in terms of its ability improve the loss function in rate-limited (i.e., capacity constrained) environments. We then use the tools from evoultionary game theory to see how  this information effects the stability of stratgies in a series of common normal-form games.
+
+\section*{Results}
+The world contains more information than anyone agent can process, which leaves agents rate-limited. 
+
+If $X = (x_1, x_2, .... x_N)$ represents some situtation in the world, the information present in $X$ is defined by.
+
+\begin{equation}
+H(X) = \sum^{N}_{i} p(x_i) \ \text{log} \ p(x_i)
+\end{equation}
+
+Practially speaking, its  reasonable to assume that the capacity of any agent in the world to perieve $X$ as $Y = (y_1, y_2, ... y_M)$ is limited by a finite capacity $C > 0$. That is the shared information between $X$ and $Y$ is given by
+
+\begin{equation}
+    I(X,Y) \leq C
+\end{equation}
+
+\begin{equation}
+    I(X,Y) = \sum^{N}_{1} \sum^{M}_{j} \ p(y_j|x_i) p(x_i) \ \text{log} \ \frac{p(y_j|x_i)}{p(y_i)}
+\end{equation}
+
+To measure how much information is lost due the constraint the formalism of rate-distortion theory adds a loss function $\mathcal{L}(X,Y)$ whose expectation defines the distortion between $X$ and $Y$.
+
+\begin{equation}
+    D(X,Y) = \mathbb E [\mathcal{L}(x_i,y_j)] = \sum^{N}_{1} \sum^{M}_{j} \mathcal{L}(x_i,y_j) \ p(y_j|x_i) \ p(x_i)
+\end{equation}
+
+An optimal channel $S^{*}$ to convey information seeks to minimize $D$.
+
+\begin{equation}
+    S^{*} = \operatorname*{argmin}_S D_S(X,Y)
+\end{equation}
+
+The aim of the agent then is find the optimal channel $S$ from the space of all possible channels. We'll assume that $S*$ is not innate to our agent, but must be learned from experience with the environment. 
+
+One way to iterativly imporve $S$ is for the agent to explore the environment directly. Another way is to observe other agents exploring the environment and learn from there successes and mistakes. There are two ways other agents can improve $D$, a direct where they pass along information about their own obervations, so $Y = Y_s + Y_o$. And indirect way where the learning agent tries to learn their loss function $\mathcal{L}_o$.
+
+...
+
+$A$ is the immediate payoff matrix for some game played between fiends, enemies, or both.
+
+
+\subsection*{A benefit of enemies.}
+An enemy that also operates on $X$ will make it's own observations $Z$. If our agent can incorperated $Z$ into $Y$, $D$ can decline even though its own channel $S$ has not changed. This means an enemy is beneficial when,
+
+\begin{equation}
+    \mathbb E [\mathcal{L}(x_i,(y_j, z_j)] < \mathbb E [\mathcal{L}(x_i,y_j)] 
+\end{equation}
+
+The less information $Y$ and $Z$ have in common, the greater the potential benefit for $D$.
+
+\begin{equation}
+    \text{min} \ I(Y,Z)
+\end{equation}
+
+As both $X$ and $Z$ are learned by strategies $\pi_y$ and $\pi_z$, it may be useful to suggest that the greater the two stretegies differ, the more surprising and therefor information each offers the other. On the other hand the more surprising the strategy of one's enemies, the more likely the victory. 
+
+From a player's point of view, an optimal enemy is one whose behavoir maxmizes information, while minimiing immediate losses from the payoff table. 
+
+\textbf{Developing the math of this is the first aim of this work.}
+
+
+\subsection*{A cost of friends.}
+If strategies of correlated then the surprising information they provide decreases. 
+
+Define a policy distance, $d(self, friend)$ and suggest $d(.) \tilde E [\mathcal{L}(x_i,(y_j, z_j)]^{-1}$
+
+But friends don't take from $R_\text{total}$ ..... They add to it.
+
+Still it might be better to lessen $A$ outcomes to $ min I(X,Z)$. 
+
+\textbf{Developing the math of this is second the aim of this work.}
+
+\textit{The intuition}: Strategy sets that both max $A$ and max $d$ are optimal compared to those that max $A$ alone.
+
+\bibliography{library}
+\end{document}

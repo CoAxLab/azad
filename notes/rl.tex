@@ -1,0 +1,241 @@
+\documentclass[8pt]{article}
+
+\usepackage{geometry}
+\geometry{landscape,margin=.2in}
+
+\usepackage[utf8]{inputenc}
+\usepackage[english]{babel}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage[hidelinks]{hyperref}
+% \hypersetup{
+%     colorlinks=false,
+%     linkcolor=white,
+%     filecolor=magenta,      
+%     urlcolor=white,
+% }
+
+\bibliographystyle{abbrv}
+\usepackage{multicol}
+\usepackage{parskip}
+
+\DeclareMathOperator*{\argmin}{argmin}
+
+% ------------------------------------------------------------------------
+\begin{document}
+
+% ------------------------------------------------------------------------
+% Overall intro
+\section*{The math of reinforcement learning}
+All the math for learning and choosing, in a common place and notation.
+
+% ------------------------------------------------------------------------
+% Start the sheet...
+\begin{multicols}{4}
+
+The aim of all reinforcement learning it to maximize reward recieved. Call this $\rho$.
+
+\subsection*{Some formality} 
+In all reinforcement leaning problems there is a set of $\textbf{S}$ states, $\textbf{A}$ actions, and $\textbf{R}$ rewards. 
+
+A model always start of in some state $s_0 \in \textbf{S}$. Using policy $\pi$ it takes action $a \in \textbf{A}$. Each action leads to a new state $s' \in \textbf{S}$, and sometimes a reward $r \in \textbf{R}$. Eventually, a terminal state is found. 
+
+We don't know to find $\rho$ so it is estimated incrementally by an \emph{expected value} $V$. Said another way, $V \approx \rho$. 
+
+As we will see there are many ways to define $V$. Many of the proofs in reinforcement learning want to show that for some way of calculating $V$, $V \rightarrow \rho$ as $t \rightarrow \infty$.
+
+Here the expected value at $s$ is $V$. The expected value at $s'$ is $V'$. 
+
+The intial value $V_0$ is arbitrary, but is important by Bellman's optimality principle \footnote{\url{https://en.wikipedia.org/wiki/Bellman_equation}}.
+
+The size of each set is denoted by $k = |\textbf{A}|$, $m = |\textbf{S}|$, and $o = |\textbf{R}|$.
+
+\subsection*{A recursive notion of time}
+To keep the notation simple, we don't mantion time explicitly. Learning happens recursively, with changes denoted by the `$\leftarrow$'.  
+
+For example, $V \leftarrow V + r$ is equivilant to $V(t+\delta t) = V(t) + r(t)$.
+
+\subsection*{Other simplifications}
+
+Commonly $V$ is denoted as function of $s$, $a$, and $t$. That is as $V(s,a,t)$, or even as $V(s,a, s', a', t)$.
+
+To keep the notation compact--at the cost of precision--this kind of thing is left implicit. Only when really needed is the complete notation used. 
+
+
+% ------------------------------------------------------------------------
+% Begin denoting all the models
+% \vfill\null
+% \columnbreak
+\section*{The models}
+\subsection*{The minimal}
+
+The simplest possible reinforcement learning is:
+
+\begin{eqnarray}
+    V \leftarrow V + r \\
+    \pi \leftarrow \frac{V}{\sum_\textbf{A}{V}} 
+\end{eqnarray}
+
+Where the intial value is free $V_0 = \mathbb{R}$, and $\sum_\textbf{A}{V}$ is the sum of the values for all actions $A$. The difference in size between $V$ and $r$ determines the learning rate. 
+
+Which is equivilant to:
+
+\begin{eqnarray}
+    V \leftarrow V + \alpha r 
+\end{eqnarray}
+
+Where the learning rate is explicit as, $(0 < \alpha \leq 1)$ and $V_0 = 0$.
+
+\subsubsection*{Other policies}
+
+Different policies can be calculated with the same values. The linear version above is not common. Two common alternatives are softmax,
+
+\begin{eqnarray}
+    \pi \leftarrow \frac{e^{V}}{\sum_\textbf{A}{e^{V}}} 
+\end{eqnarray}
+
+and $\epsilon$-greedy
+
+\begin{eqnarray}
+    TODO
+\end{eqnarray}
+
+\textbf{Note:} these, or any other policy, can be mixed and matched arbitrarily with any learning rule.  
+
+
+\subsection*{The minimal, discounted}
+The effect of recent values can be modulated with:
+
+\begin{eqnarray}
+    V \leftarrow \gamma V + \alpha r 
+\end{eqnarray}
+
+Where $(0 < \gamma \leq 1)$, $(0 < \alpha \leq 1)$, and $V_0 = 0$. 
+
+Once the ratio $\alpha/\gamma > 0.5$ current rewards begin to matter more than past values.
+
+This general method for controlling recent values carries on to more complex models, and longer time horizons. Use it as needed.
+
+\subsection*{The discount}
+Often values or summed rewards will be discounted as time passes. A common form is:
+
+\begin{eqnarray}
+    \gamma \leftarrow \gamma ^ t
+\end{eqnarray}
+
+Where $0 < \gamma \leq 1$ and $t \in \mathbb{N}_1$ is an integer code for the elapsed discrete time.
+
+Another form is exponential decay \cite{Francois-Lavet2015}:
+\begin{eqnarray}
+    \gamma \leftarrow \gamma - \gamma \tau
+\end{eqnarray}
+
+Where $\tau \in \mathbb{R}_+$. Typically $\tau \approx 0.02$.
+
+\textbf{Note}: anywhere $\gamma$ is used here assume a discounted form can--and often is--substituted in.
+
+
+% \vfill\null
+% \columnbreak
+\subsection*{The temporal difference}
+If the reward is delayed, the minimal model can't give credit to past states. 
+
+One solution is to take the difference between the current $V$ next, $V'$, as in the \emph{SARSA} rule:
+
+\begin{eqnarray}
+    V \leftarrow V + \alpha (r  + \gamma V' - V) 
+\end{eqnarray}
+
+Where $(0 < \gamma \leq 1)$, $(0 < \alpha \leq 1)$, and $V_0 = 0$. Unlike the minimal model here $\gamma$ wieghs the influence of the future, not the past.
+
+
+\subsection*{The maximum difference}
+\emph{Q learning} takes the difference between the current value $V$ and the maximum value, $\argmin_A \textbf{V}$.
+
+\begin{eqnarray}
+    V \leftarrow V + \alpha (r + \gamma \argmin_A \textbf{V} - V) 
+\end{eqnarray}
+
+Where $(0 < \gamma \leq 1)$, $(0 < \alpha \leq 1)$, and $V_0 = 0$.
+
+\textbf{Note:} as policies are define by their target action $a$, \emph{Q learning} is often called an \emph{off-policy} learning rule, while the temporal difference is \emph{on-policy}.
+
+\subsection*{The average difference}
+\emph{Avantage learning} works with relative changes in value, comparing $V$ to its average $\bar{V}$.
+\begin{eqnarray}
+    V \leftarrow V + \alpha (r + \gamma \bar{V} - V) \\
+    \bar{V} = \frac{1}{k} \sum_\textbf{A}{V} 
+\end{eqnarray}
+
+In practice $\bar{V}$ is approximated online, often with a discounting scheme.
+
+\textbf{Note}: advantages play an important role in policy gradients.
+
+\subsection*{The regretable difference}
+
+TODO....
+
+
+\vfill\null
+\columnbreak
+\subsection*{The policy gradient}
+Policy gradients learn to map states to directly to actions. They are most useful when problems are continious in action spaace and time, or when promises of local optima are needed.  
+
+Policy gradients tend however to be sample inefficient, and by definition they are also \emph{on policy} methods, which can also slow learning down.
+
+A policy is the probability of taking an action $a$, given a state $s$ and some generic parameters $\theta$.
+
+\begin{eqnarray}
+\pi = P(a, s, \theta)
+\end{eqnarray}
+
+To learn a good policy $\pi$, the parameter gradient should follow the reward gradient. 
+
+\begin{eqnarray}
+\theta \leftarrow \theta + \alpha \frac{\partial \rho}{\partial \theta}
+\end{eqnarray}
+
+As with other reinforcement leaning methods, finding a suitable way to estimate $\rho$ becomes a major concern, and our problem becomes:
+
+\begin{eqnarray}
+\theta \leftarrow \theta + \alpha \frac{\partial V}{\partial \theta}
+\label{eq:grad}
+\end{eqnarray}
+
+\subsection*{The average (again)}
+In a gradient setting \emph{avantage learning} increases in $V$ are by definition better than average, $\bar{V}$.
+
+\begin{eqnarray}
+    V \leftarrow V + \alpha (r + \gamma \bar{V} - V) \\
+    \bar{V} = \frac{1}{k} \sum_\textbf{A}{V} 
+\end{eqnarray}
+
+ Gradients driven by advatage updates ensure learning is always better than average \cite{Sutton}. By eq. \ref{eq:grad}, purturbations to $\theta \leftarrow \theta + \delta \theta$ which increase $V$ must, by definition, be better than average. 
+
+\subsection*{The generalized advantage}
+Discounting values can introduce a bias to the final estimate. The generalized advantage scheme takes this into account \cite{Schulman2015a}. 
+
+\subsection*{Actor-critic}
+Value learning and policy can be joined into a single \emph{actor-critic architecture}.
+
+TODO\ldots
+
+
+% ------------------------------------------------------------------------
+\vfill\null
+\columnbreak
+\section*{The planning models}
+Planning means the learner has, or creates, an \emph{explicit map} of the state-space. This map can come from outside the system, from some useful oracle, or can be learned.
+
+\subsection*{The DYNA}
+
+\subsection*{The prioritized sweep}
+
+\subsection*{The successor}
+
+\end{multicols}
+
+\newpage
+\bibliography{library}
+\end{document}
