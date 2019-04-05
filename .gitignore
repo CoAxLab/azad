@@ -4,3 +4,4 @@
 *.pyc
 wythoff/*
 *.DS_Store
+*checkpoint.ipynb
