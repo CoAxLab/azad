@@ -1,0 +1,6 @@
+*.json
+*.local
+*.png
+*.pyc
+wythoff/*
+*.DS_Store
