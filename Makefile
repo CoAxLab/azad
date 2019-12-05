@@ -1,6 +1,7 @@
 SHELL=/bin/bash -O expand_aliases
 DATA_PATH=/Users/type/Code/azad/data/
 # DATA_PATH=/home/ejp/src/azad/data/
+DATA_PATH=/home/stitch/Code/azad/data/
 
 # ----------------------------------------------------------------------------
 # 5-10-2018
