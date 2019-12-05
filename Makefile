@@ -613,9 +613,10 @@ wythoff_exp37:
 wythoff_exp38:
 	-rm -rf $(DATA_PATH)/wythoff/exp38
 	-mkdir $(DATA_PATH)/wythoff/exp38
-	parallel -j 20 -v \
+	sleep 5  # Wait for tensorboard to notice the deletion
+		# and search it.
+	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp38/exp38.parallel.log' \
 		--nice 19 --delay 2 \
-		"run_azad.py wythoff_stumbler_strategist --save=$(DATA_PATH)/wythoff/exp38/run_{1} --monitor='('episode', 'influence')' --stumbler_monitor='('episode', 'loss', 'score', 'total_reward')' --strategist_monitor='('episode', 'loss', 'mae')' --num_episodes=150 --update_every=10 --learning_rate_influence=0.2 --num_stumbles=500 --learning_rate_stumbler=1.0 --stumbler_game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --num_strategies=500 --learning_rate_strategist=0.025 --strategist_game=Wythoff50x50 --cold_threshold=-0.2 --hot_threshold=0.2 --hot_value=-1 --cold_value=1 --debug=False --save_model=True --return_none=True --debug=False --seed={1}" ::: \
+		"run_azad.py wythoff_stumbler --save=$(DATA_PATH)/wythoff/exp38/run_{1} --monitor='('episode', 'loss', 'score', 'total_reward')' --num_episodes=75000 --update_every=10 --learning_rate=1.0 --epsilon=0.4 --gamma=0.5 --game=Wythoff15x15 --debug=False --anneal=True --return_none=True --save_model=True --seed={1}" ::: \
 		{1..20}
-	
