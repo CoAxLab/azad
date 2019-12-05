@@ -615,7 +615,7 @@ wythoff_exp38:
 	-mkdir $(DATA_PATH)/wythoff/exp38
 	sleep 5  # Wait for tensorboard to notice the deletion
 		# and search it.
-	parallel -j 8 -v \
+	parallel -j 20 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp38/exp38.parallel.log' \
 		--nice 19 --delay 2 \
 		"run_azad.py wythoff_stumbler --save=$(DATA_PATH)/wythoff/exp38/run_{1} --monitor='('episode', 'loss', 'score', 'total_reward')' --num_episodes=75000 --update_every=10 --learning_rate=1.0 --epsilon=0.4 --gamma=0.5 --game=Wythoff15x15 --debug=False --anneal=True --return_none=True --save_model=True --seed={1}" ::: \
