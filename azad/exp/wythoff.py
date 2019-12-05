@@ -13,7 +13,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 
 from torch.autograd import Variable
-from torch.utils.tensorboard import SummaryWriter
+from tensorboardX import SummaryWriter
 from torchviz import make_dot
 
 import numpy as np
