@@ -33,7 +33,7 @@ We come at ANN design as scientists and humanists. Meaning we take three strong 
 
 - tensorflow
 - tensorboard
-- tensorboardX 
+- torch.utils.tensorboard 
 
 Install instructions: https://github.com/lanpa/tensorboard-pytorch
 
