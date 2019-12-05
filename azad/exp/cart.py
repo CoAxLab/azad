@@ -11,7 +11,7 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.autograd import Variable
-from tensorboardX import SummaryWriter
+from torch.utils.tensorboard import SummaryWriter
 # from torchviz import make_dot
 
 from azad.models import ReLu2
