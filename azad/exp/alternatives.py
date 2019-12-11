@@ -8,7 +8,6 @@ from collections import defaultdict
 from copy import deepcopy
 
 import torch
-import torch as th
 import torch.optim as optim
 import torch.nn.functional as F
 
@@ -39,9 +38,7 @@ from azad.local_gym.wythoff import locate_cold_moves
 
 from azad.models import DQN
 from azad.models import ReplayMemory
-from azad.models import Transition
 from azad.policy import epsilon_greedy as e_greedy
-from azad.policy import softmax
 
 from azad.exp.wythoff import peek
 from azad.exp.wythoff import create_env
@@ -56,14 +53,15 @@ Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
 
 
-def train_dqn(batch_size, gamma, model, memory, optimizer, device):
+def train_dqn(batch_size, model, memory, optimizer, device, gamma=1):
     # Sample the data
     transitions = memory.sample(batch_size)
     batch = Transition(*zip(*transitions))
     state = torch.cat(batch.state)
     state_next = torch.cat(batch.next_state)
-    action = torch.cat(batch.action)
-    reward = torch.cat(batch.reward)
+    action = np.vstack(batch.action)
+    action = torch.from_numpy(action)
+    reward = torch.from_numpy(np.asarray(batch.reward)).unsqueeze(1)
 
     # Pass it through the model
     Qs = model(state).gather(1, action)
@@ -90,7 +88,7 @@ def train_dqn(batch_size, gamma, model, memory, optimizer, device):
 
 
 def estimate_Q(available, model):
-    Qs = [float(model(torch.array(a))) for a in available]
+    Qs = [float(model(torch.tensor([a])).detach()) for a in available]
     return np.asarray(Qs)
 
 
@@ -99,6 +97,20 @@ def shift_mover(mover):
         return 'opponent'
     else:
         return 'player'
+
+
+def shift_memory(mover, player_memory, opponent_memory):
+    if mover == 'player':
+        return opponent_memory
+    else:
+        return player_memory
+
+
+def shift_model(mover, player, opponent):
+    if mover == 'player':
+        return opponent
+    else:
+        return player
 
 
 def analyze_move(score, move, available, episode):
@@ -111,12 +123,32 @@ def analyze_move(score, move, available, episode):
     return score
 
 
+def use_board(state, flatten=False):
+    (_, _, board, _) = state
+    if flatten:
+        board = flatten_board(board)
+    return board
+
+
+def use_last_n_moves(past_moves, n, default_move):
+    state = []  # first form (s, .)
+    for i in range(n):
+        k = n - i
+        if k < 0:
+            state.extend(default_move)
+        else:
+            state.extend(past_moves[k])
+
+    return np.asarray(state)
+
+
 def wythoff_dqn(epsilon=0.1,
                 gamma=0.8,
                 learning_rate=0.1,
                 num_episodes=10,
                 batch_size=100,
                 memory_capacity=10000,
+                last_n=None,
                 game='Wythoff10x10',
                 model=None,
                 opponent=None,
@@ -138,8 +170,8 @@ def wythoff_dqn(epsilon=0.1,
     """
 
     # ------------------------------------------------------------------------
-    # TODO device setup....
-    device = None
+    # if gpu is to be used
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Init env
     if tensorboard is not None:
@@ -167,8 +199,14 @@ def wythoff_dqn(epsilon=0.1,
     default_Q = 0.0
     m, n, board, available = peek(env)
 
-    player = DQN(in_channels=2, num_actions=board.size)
-    opponent = DQN(in_channels=2, num_actions=board.size)
+    if last_n is not None:
+        player = DQN(in_channels=last_n + 1, num_actions=1)
+        opponent = DQN(in_channels=last_n + 1, num_actions=1)
+    else:
+        m, n, _, _ = peek(env)
+        all_possible_moves = create_all_possible_moves(m, n)
+        player = DQN(in_channels=n * m, num_actions=len(all_possible_moves))
+        opponent = DQN(in_channels=n * m, num_actions=len(all_possible_moves))
 
     player_memory = ReplayMemory(memory_capacity)
     opponent_memory = ReplayMemory(memory_capacity)
@@ -179,14 +217,14 @@ def wythoff_dqn(epsilon=0.1,
     # ------------------------------------------------------------------------
     for episode in range(initial, initial + num_episodes):
         # Re-init
-        x, y, board, available = env.reset()
+        state = env.reset()
+        x, y, board, available = state
         board = tuple(flatten_board(board))
         if debug:
             print(f"---------------------------------------")
             print(f">>> NEW GAME ({episode}).")
             print(f">>> Initial position ({x}, {y})")
             print(f">>> Initial moves {available}")
-            print(f"---------------------------------------")
 
         # -------------------------------------------------------------------
         # Anneal epsilon?
@@ -198,65 +236,121 @@ def wythoff_dqn(epsilon=0.1,
         # -------------------------------------------------------------------
         # Play a game
         steps = 1
+        score = 0
+        total_reward = 0
+        reward_last = 0
         done = False
         player_win = False
-        reward_last = 0
         available_last = deepcopy(available)
         mover = 'opponent'  # This will shift to player on the first move.
+        past_moves = []
         while not done:
             # Choose a mover
             mover = shift_mover(mover)
-            if mover == 'player':
-                model = player
-                memory = opponent_memory  # memory is updated leapfrog
+            memory = shift_memory(mover, player_memory, opponent_memory)
+            model = shift_model(mover, player, opponent)
+
+            # Build that state representation, state_hat
+            if last_n is not None:
+                # Build the state
+                state_hat = use_last_n_moves(past_moves, last_n, (m, n))
+                state_hat = torch.from_numpy(state_hat).unsqueeze(0)
+
+                # Sample the available actions
+                Qs = []
+                for a in available:
+                    Qs.append(model(torch.cat(state_hat, a)).detach().numpy())
+
             else:
-                model = opponent
-                memory = player_memory
+                # Build the state
+                state_hat = use_board(state)
+                state_hat = torch.from_numpy(state_hat)
+                state_hat = state_hat.unsqueeze(0).unsqueeze(1).float()
+                Qs = model(state_hat).detach()
+                Qs = Qs.numpy()
+
+                # Filter the actions
+                board = np.asarray(board).reshape(m, n)
+                Qs_a = np.zeros_like(board)
+                Qs = Qs.reshape(*board.shape)
+                for a in available:
+                    Qs_a[a[0], a[1]] = Qs[a[0], a[1]]
+                Qs = Qs_a[np.nonzero(Qs_a)]
 
             # Choose a move
-            Qs = estimate_Q(available, model)
-            move_i = e_greedy(Qs, epsilon=epsilon_e, mode='numpy')
+            move_i = e_greedy(
+                Qs.flatten(),
+                epsilon=epsilon_e,
+                mode='numpy',
+            )
             move = available[move_i]
 
             # Analyze it...
-            score = analyze_move(score, move, available, episode)
+            if mover == 'player':
+                score = analyze_move(score, move, available, episode)
 
             # Play it
             state_next, reward, done, _ = env.step(move)
             (x_next, y_next, _, available_next) = state_next
             total_reward += reward
-            if debug: print(f">>> {mover}: {move}")
-
+            if debug:
+                print(f">>> {mover}: {move}")
+                print(f">>> new position: ({x_next}, {y_next})")
+                if done: print(f">>> Final move.")
             # Update memory for __last__ players move.
             # But only if have played at least once....
             # If mover wins first play, that gets handled below.
             if steps > 1:
                 R = reward_last - reward
-                memory.push(available_last, move_last, available, R)
+                memory.push(state_hat_last, np.asarray(past_moves[-1]),
+                            state_hat, R)
 
             # Shift
             reward_last = deepcopy(reward)
-            available_last = deepcopy(available)
-            move_last = deepcopy(move)
-            available = deepcopy(available_next)
+            state_hat_last = deepcopy(state_hat)
+            past_moves.append(move)
             state = deepcopy(state_next)
+            available = deepcopy(available_next)
 
             steps += 1
 
         # ----------------------------------------------------------------
-        # Update winner's memory
-        if mover == 'player':
-            memory = player_memory
+        # Update winner's memory. Find the right, memory, and build final
+        # state, then push the update.
+        memory = shift_memory(mover, player_memory, opponent_memory)
+        if last_n is not None:
+            state_hat = use_last_n_moves(past_moves, last_n, (m, n))
         else:
-            memory = opponent_memory
-        memory.push(state, move, available, state_next, reward_last)
+            state_hat = use_board(state)
+
+        memory.push(state_hat, move, state_hat, reward_last)
 
         # ----------------------------------------------------------------
+        # Bypass is we don't have enough in memory to learn
+        if episode < batch_size:
+            continue
+
         # Learn by unrolling the last game...
-        player, loss = train_dqn(batch_size, player, player_memory,
-                                 player_optimizer, device)
-        opponent, loss = train_dqn(batch_size, opponent, opponent_memory,
-                                   opponent_optimizer, device)
+        player, player_loss = train_dqn(
+            batch_size,
+            player,
+            player_memory,
+            player_optimizer,
+            device,
+            gamma=gamma)
+        opponent, opponent_loss = train_dqn(
+            batch_size,
+            opponent,
+            opponent_memory,
+            opponent_optimizer,
+            device,
+            gamma=gamma)
+
+        if debug:
+            print(
+                f">>> loss (player: {player_loss}, opponent: {opponent_loss})")
+            print(f">>> player score: {score}")
+            print(f">>> epsilon: {epsilon_e}")
 
         # ----------------------------------------------------------------
         if tensorboard and (int(episode) % update_every) == 0:
