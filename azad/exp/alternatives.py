@@ -308,18 +308,21 @@ def wythoff_dqn1(epsilon=0.1,
                 print(f">>> {mover}: {move}")
                 print(f">>> new position: ({x_next}, {y_next})")
             if done and debug:
-                print(f">>> Final move.")
+                print(f">>> Winner: {mover}.")
 
         # ----------------------------------------------------------------
         # Update winner's memory. Find the right, memory, and build final
         # state, then push the update.
         memory = shift_memory(mover, player_memory, opponent_memory)
-        state_hat = use_board(state)
+
+        # Convert board to a model(state)
+        state_hat = torch.from_numpy(np.array(board).reshape(m, n))
+        state_hat = state_hat.unsqueeze(0).unsqueeze(1).float()
+
         memory.push(
-            torch.from_numpy(state_hat).float().to(device),
+            state_hat.to(device),
             torch.from_numpy(mask).to(device),
-            torch.tensor(move_i).to(device),
-            torch.from_numpy(state_hat).float().to(device),
+            torch.tensor(move_i).to(device), state_hat.to(device),
             torch.tensor([reward_last]).unsqueeze(0).float().to(device))
 
         # ----------------------------------------------------------------
