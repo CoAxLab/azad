@@ -211,6 +211,7 @@ def wythoff_dqn1(epsilon=0.1,
     # ------------------------------------------------------------------------
     # Init Agents
     default_Q = 0.0
+    score = 0
     m, n, board, available = peek(env)
     all_possible_moves = create_all_possible_moves(m, n)
     player = DQN(in_channels=n * m, num_actions=len(all_possible_moves))
@@ -222,6 +223,7 @@ def wythoff_dqn1(epsilon=0.1,
     opponent_optimizer = optim.Adam(opponent.parameters(), learning_rate)
 
     # ------------------------------------------------------------------------
+
     for episode in range(initial, initial + num_episodes):
         # Re-init
         state = env.reset()
@@ -243,7 +245,6 @@ def wythoff_dqn1(epsilon=0.1,
         # -------------------------------------------------------------------
         # Play a game
         steps = 1
-        score = 0
         total_reward = 0
         reward_last = 0
         done = False
