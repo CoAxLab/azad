@@ -175,6 +175,7 @@ def wythoff_dqn1(epsilon=0.1,
                  monitor=None,
                  return_none=False,
                  debug=False,
+                 progress=False,
                  seed=None):
     """Learn to play Wythoff's w/ e-greedy random exploration.
     
@@ -307,8 +308,6 @@ def wythoff_dqn1(epsilon=0.1,
             if debug:
                 print(f">>> {mover}: {move}")
                 print(f">>> new position: ({x_next}, {y_next})")
-            if done and debug:
-                print(f">>> Winner: {mover}.")
 
         # ----------------------------------------------------------------
         # Update winner's memory. Find the right, memory, and build final
@@ -346,7 +345,12 @@ def wythoff_dqn1(epsilon=0.1,
             device,
             gamma=gamma)
 
-        if debug:
+        if progress:
+            print(f"---")
+        if progress or debug:
+            print(f">>> episode: {episode}")
+            print(f">>> winner: {mover}")
+        if debug or progress:
             print(
                 f">>> loss (player: {player_loss}, opponent: {opponent_loss})")
             print(f">>> player score: {score}")
