@@ -71,11 +71,11 @@ def train_dqn(batch_size, model, memory, optimizer, device, gamma=1):
     # on the "older" target_net; selecting their best reward with max(1)[0].
     # This is merged based on the mask, such that we'll have either the expected
     # state value or 0 in case the state was final.
-    Qs_next = model(state_next).max(1)[0].detach()
+    Qs_next = model(state_next).max(1)[0].detach().unsqueeze(1)
     J = (Qs_next * gamma) + reward
 
     # Compute Huber loss
-    loss = F.smooth_l1_loss(Qs, J.unsqueeze(1))
+    loss = F.smooth_l1_loss(Qs, J)
 
     # Optimize the model
     optimizer.zero_grad()
