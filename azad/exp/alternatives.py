@@ -185,10 +185,10 @@ def wythoff_dqn1(epsilon=0.1,
     """
 
     # ------------------------------------------------------------------------
-    # if gpu is to be used
+    # Init
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Init env
+    # Logs...
     if tensorboard is not None:
         try:
             os.makedirs(tensorboard)
@@ -197,22 +197,25 @@ def wythoff_dqn1(epsilon=0.1,
                 raise
         writer = SummaryWriter(log_dir=tensorboard)
 
-    # Create env
+    if monitor is not None:
+        monitored = create_monitored(monitor)
+
+    # Env...
     if tensorboard is not None:
         env = create_env(game, monitor=True)
     else:
         env = create_env(game, monitor=False)
-
     env.seed(seed)
     np.random.seed(seed)
 
-    if monitor is not None:
-        monitored = create_monitored(monitor)
-
     # ------------------------------------------------------------------------
-    # Init Agents
-    default_Q = 0.0
+    # Init
+    #
+    # Scores
     score = 0
+    total_reward = 0
+
+    # Agents, etc
     m, n, board, available = peek(env)
     all_possible_moves = create_all_possible_moves(m, n)
     player = DQN(in_channels=n * m, num_actions=len(all_possible_moves))
@@ -224,9 +227,14 @@ def wythoff_dqn1(epsilon=0.1,
     opponent_optimizer = optim.Adam(opponent.parameters(), learning_rate)
 
     # ------------------------------------------------------------------------
-
     for episode in range(initial, initial + num_episodes):
         # Re-init
+        #
+        steps = 1
+        done = False
+        mover = 'opponent'  # This will shift to player on the first move.
+        transitions = []
+
         state = env.reset()
         x, y, board, available = state
         board = tuple(flatten_board(board))
@@ -247,14 +255,6 @@ def wythoff_dqn1(epsilon=0.1,
 
         # -------------------------------------------------------------------
         # Play a game
-        steps = 1
-        total_reward = 0
-        reward_last = 0
-        done = False
-        player_win = False
-        available_last = deepcopy(available)
-        mover = 'opponent'  # This will shift to player on the first move.
-        transitions = []
         while not done:
             # Choose a mover
             mover = shift_mover(mover)
