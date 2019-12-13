@@ -35,6 +35,7 @@ from azad.local_gym.wythoff import create_board
 from azad.local_gym.wythoff import cold_move_available
 from azad.local_gym.wythoff import locate_closest_cold_move
 from azad.local_gym.wythoff import locate_cold_moves
+from azad.local_gym.wythoff import locate_all_cold_moves
 
 from azad.models import DQN
 from azad.models import ReplayMemory
@@ -234,6 +235,8 @@ def wythoff_dqn1(epsilon=0.1,
             print(f">>> NEW GAME ({episode}).")
             print(f">>> Initial position ({x}, {y})")
             print(f">>> Initial moves {available}")
+            print(f">>> Cold available {locate_cold_moves(x, y, available)}")
+            print(f">>> All cold {locate_all_cold_moves(x, y)}")
 
         # -------------------------------------------------------------------
         # Anneal epsilon?
@@ -251,7 +254,7 @@ def wythoff_dqn1(epsilon=0.1,
         player_win = False
         available_last = deepcopy(available)
         mover = 'opponent'  # This will shift to player on the first move.
-        past_moves = []
+        transitions = []
         while not done:
             # Choose a mover
             mover = shift_mover(mover)
@@ -275,34 +278,31 @@ def wythoff_dqn1(epsilon=0.1,
             move = available[move_i]
 
             # Analyze it...
-            if mover == 'player':
-                score = analyze_move(score, move, available, episode)
+            # if mover == 'player':
+            score = analyze_move(score, move, available, episode)
 
             # Play it
             state_next, reward, done, _ = env.step(move)
             (x_next, y_next, board_next, available_next) = state_next
             total_reward += reward
 
-            # Update memory for __last__ players move.
-            # But only if have played at least once....
-            # If mover wins first play, that gets handled below.
-            if steps > 1:
-                R = reward_last - reward
-                memory.push(state_hat_last.float().to(device),
-                            torch.from_numpy(mask).to(device),
-                            torch.tensor(move_i).to(device),
-                            state_hat.float().to(device),
-                            torch.tensor([R]).unsqueeze(0).float().to(device))
+            # Save transitions, as tensors to be used at training time
+            state_hat_next = torch.from_numpy(
+                np.array(board_next).reshape(m, n))
+            state_hat_next = state_hat_next.unsqueeze(0).unsqueeze(1).float()
 
-            # Shift
-            reward_last = deepcopy(reward)
-            state_hat_last = deepcopy(state_hat)
+            transitions.append([
+                state_hat.float(),
+                torch.from_numpy(mask),
+                torch.tensor(move_i),
+                state_hat_next.float(),
+                torch.tensor([reward]).unsqueeze(0).float()
+            ])
 
+            # Shift states
             state = deepcopy(state_next)
             board = deepcopy(board_next)
             available = deepcopy(available_next)
-
-            # Moves this g
             steps += 1
 
             # -
@@ -311,26 +311,28 @@ def wythoff_dqn1(epsilon=0.1,
                 print(f">>> new position: ({x_next}, {y_next})")
 
         # ----------------------------------------------------------------
-        # Update winner's memory. Find the right, memory, and build final
-        # state, then push the update.
-        memory = shift_memory(mover, player_memory, opponent_memory)
+        # Find the losers transition and update its reward w/ -reward
+        if steps > 2:
+            transitions[-2][4] = transitions[-2][4] * -1
 
-        # Convert board to a model(state)
-        state_hat = torch.from_numpy(np.array(board).reshape(m, n))
-        state_hat = state_hat.unsqueeze(0).unsqueeze(1).float()
-
-        memory.push(
-            state_hat.to(device),
-            torch.from_numpy(mask).to(device),
-            torch.tensor(move_i).to(device), state_hat.to(device),
-            torch.tensor([reward_last]).unsqueeze(0).float().to(device))
+        # Update the memories using the transitions from this game
+        for i in range(0, len(transitions), 1):
+            s, x, a, sn, r = transitions[i]
+            player_memory.push(
+                s.to(device), x.to(device), a.to(device), sn.to(device),
+                r.to(device))
+        for i in range(1, len(transitions), 1):
+            s, x, a, sn, r = transitions[i]
+            opponent_memory.push(
+                s.to(device), x.to(device), a.to(device), sn.to(device),
+                r.to(device))
 
         # ----------------------------------------------------------------
         # Bypass is we don't have enough in memory to learn
         if episode < batch_size:
             continue
 
-        # Learn by unrolling the last game...
+        # Learn, samping batches of transitions from memory
         player, player_loss = train_dqn(
             batch_size,
             player,
@@ -346,12 +348,15 @@ def wythoff_dqn1(epsilon=0.1,
             device,
             gamma=gamma)
 
+        # -
         if progress:
             print(f"---")
         if progress or debug:
             print(f">>> episode: {episode}")
             print(f">>> winner: {mover}")
         if debug or progress:
+            print(f">>> Qmax: {Qs.max()}")
+            print(f">>> Qmin: {Qs.min()}")
             print(
                 f">>> loss (player: {player_loss}, opponent: {opponent_loss})")
             print(f">>> player score: {score}")
