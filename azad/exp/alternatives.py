@@ -230,11 +230,13 @@ def wythoff_dqn1(epsilon=0.1,
     for episode in range(initial, initial + num_episodes):
         # Re-init
         #
+        # Scores
         steps = 1
         done = False
         mover = 'opponent'  # This will shift to player on the first move.
         transitions = []
 
+        # Worlds
         state = env.reset()
         x, y, board, available = state
         board = tuple(flatten_board(board))
@@ -246,7 +248,6 @@ def wythoff_dqn1(epsilon=0.1,
             print(f">>> Cold available {locate_cold_moves(x, y, available)}")
             print(f">>> All cold {locate_all_cold_moves(x, y)}")
 
-        # -------------------------------------------------------------------
         # Anneal epsilon?
         if anneal:
             epsilon_e = epsilon * (1.0 / np.log((episode + np.e)))
@@ -311,6 +312,8 @@ def wythoff_dqn1(epsilon=0.1,
                 print(f">>> new position: ({x_next}, {y_next})")
 
         # ----------------------------------------------------------------
+        # Learn from the game
+        #
         # Find the losers transition and update its reward w/ -reward
         if steps > 2:
             transitions[-2][4] = transitions[-2][4] * -1
@@ -327,7 +330,6 @@ def wythoff_dqn1(epsilon=0.1,
                 s.to(device), x.to(device), a.to(device), sn.to(device),
                 r.to(device))
 
-        # ----------------------------------------------------------------
         # Bypass is we don't have enough in memory to learn
         if episode < batch_size:
             continue
@@ -348,7 +350,8 @@ def wythoff_dqn1(epsilon=0.1,
             device,
             gamma=gamma)
 
-        # -
+        # ----------------------------------------------------------------
+        # Logs...
         if progress:
             print(f"---")
         if progress or debug:
@@ -364,7 +367,6 @@ def wythoff_dqn1(epsilon=0.1,
             print(f">>> player score: {score}")
             print(f">>> epsilon: {epsilon_e}")
 
-        # --------------------------------------------------------------------
         if tensorboard and (int(episode) % update_every) == 0:
             writer.add_scalar('reward', reward, episode)
             writer.add_scalar('Q_max', np.max(Qs), episode)
