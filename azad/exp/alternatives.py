@@ -355,14 +355,16 @@ def wythoff_dqn1(epsilon=0.1,
             print(f">>> episode: {episode}")
             print(f">>> winner: {mover}")
         if debug or progress:
-            print(f">>> Qmax: {Qs.max()}")
-            print(f">>> Qmin: {Qs.min()}")
+            print(f">>> Q: {Qs}")
+            print(f">>> max(Q): {Qs.max()}")
+            print(f">>> min(Q): {Qs.min()}")
+            print(f">>> stdev(Q): {Qs.std()}")
             print(
                 f">>> loss (player: {player_loss}, opponent: {opponent_loss})")
             print(f">>> player score: {score}")
             print(f">>> epsilon: {epsilon_e}")
 
-        # ----------------------------------------------------------------
+        # --------------------------------------------------------------------
         if tensorboard and (int(episode) % update_every) == 0:
             writer.add_scalar('reward', reward, episode)
             writer.add_scalar('Q_max', np.max(Qs), episode)
