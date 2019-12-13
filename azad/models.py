@@ -29,7 +29,7 @@ class ReplayMemory(object):
 
 
 class DQN(nn.Module):
-    def __init__(self, in_channels, num_actions):
+    def __init__(self, m, n, num_actions):
         """Layers for a Deep Q Network
 
         Based on:
@@ -42,9 +42,8 @@ class DQN(nn.Module):
         
         Params
         ------
-        in_channels: Tensor size 
-            Number of channel of input. i.e The number of most recent frames 
-            stacked together
+        m,n: int
+            Board size 
         num_actions: int 
             Number of action-value to output, one-to-one correspondence 
             to action in game.
@@ -53,7 +52,12 @@ class DQN(nn.Module):
         self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
-        self.fc4 = nn.Linear(1024, 512)
+
+        # With the above and fixed params each conv layer
+        # looses n - 2 in size,and there are three layers.
+        # So calc the final numel for the linear 'decode'
+        # at the end.
+        self.fc4 = nn.Linear(64 * (n - (2 * 3)) * (m - (2 * 3)), 512)
         self.fc5 = nn.Linear(512, num_actions)
 
     def forward(self, x):

@@ -218,8 +218,8 @@ def wythoff_dqn1(epsilon=0.1,
     # Agents, etc
     m, n, board, available = peek(env)
     all_possible_moves = create_all_possible_moves(m, n)
-    player = DQN(in_channels=n * m, num_actions=len(all_possible_moves))
-    opponent = DQN(in_channels=n * m, num_actions=len(all_possible_moves))
+    player = DQN(m, n, num_actions=len(all_possible_moves))
+    opponent = DQN(m, n, num_actions=len(all_possible_moves))
 
     player_memory = ReplayMemory(memory_capacity)
     opponent_memory = ReplayMemory(memory_capacity)
