@@ -316,12 +316,12 @@ def wythoff_dqn1(epsilon=0.1,
             transitions[-2][4] = transitions[-2][4] * -1
 
         # Update the memories using the transitions from this game
-        for i in range(0, len(transitions), 1):
+        for i in range(0, len(transitions), 2):
             s, x, a, sn, r = transitions[i]
             player_memory.push(
                 s.to(device), x.to(device), a.to(device), sn.to(device),
                 r.to(device))
-        for i in range(1, len(transitions), 1):
+        for i in range(1, len(transitions), 2):
             s, x, a, sn, r = transitions[i]
             opponent_memory.push(
                 s.to(device), x.to(device), a.to(device), sn.to(device),
