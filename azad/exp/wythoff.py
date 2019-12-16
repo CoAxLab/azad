@@ -1190,7 +1190,7 @@ def plot_wythoff_board(board,
     """Plot the board"""
 
     fig, ax = plt.subplots(figsize=(width, height))  # Sample figsize in inches
-    ax = sns.heatmap(board, linewidths=3, vmin=vmin, vmax=vmax, ax=ax)
+    ax = sns.heatmap(board, linewidths=3, center=0, vmin=vmin, vmax=vmax, ax=ax)
 
     # Save an image?
     if path is not None:

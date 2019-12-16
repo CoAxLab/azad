@@ -417,6 +417,8 @@ def wythoff_dqn1(epsilon=0.1,
 
             # Plot max
             plot_wythoff_board(max_values.numpy(),
+                               vmin=-2,
+                               vmax=2,
                                path=tensorboard,
                                name='player_max_values.png')
             writer.add_image('max player',
@@ -429,6 +431,8 @@ def wythoff_dqn1(epsilon=0.1,
 
             # Plot min
             plot_wythoff_board(min_values.numpy(),
+                               vmin=-2,
+                               vmax=2,
                                path=tensorboard,
                                name='player_min_values.png')
             writer.add_image('min player',
