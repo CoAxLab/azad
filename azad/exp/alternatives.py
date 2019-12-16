@@ -157,6 +157,17 @@ def build_index(available, m, n):
     return index[np.nonzero(index)]
 
 
+class MoveCount():
+    """Count moves on a (m,n) board"""
+    def __init__(self, m, n):
+        self.m = m
+        self.n = n
+        self.board = np.zeros((self.m, self.n))
+
+    def update(self, move):
+        self.board[move[0], move[1]] += 1
+
+
 def wythoff_dqn1(epsilon=0.1,
                  gamma=0.8,
                  learning_rate=0.1,
@@ -226,6 +237,8 @@ def wythoff_dqn1(epsilon=0.1,
     player_optimizer = optim.Adam(player.parameters(), learning_rate)
     opponent_optimizer = optim.Adam(opponent.parameters(), learning_rate)
 
+    moves = MoveCount(m, n)
+
     # ------------------------------------------------------------------------
     for episode in range(initial, initial + num_episodes):
         # Re-init
@@ -288,6 +301,8 @@ def wythoff_dqn1(epsilon=0.1,
             total_reward += reward
 
             # Save transitions, as tensors to be used at training time
+            moves.update(move)
+
             state_hat_next = torch.from_numpy(
                 np.array(board_next).reshape(m, n))
             state_hat_next = state_hat_next.unsqueeze(0).unsqueeze(1).float()
@@ -321,34 +336,30 @@ def wythoff_dqn1(epsilon=0.1,
         # Update the memories using the transitions from this game
         for i in range(0, len(transitions), 2):
             s, x, a, sn, r = transitions[i]
-            player_memory.push(
-                s.to(device), x.to(device), a.to(device), sn.to(device),
-                r.to(device))
+            player_memory.push(s.to(device), x.to(device), a.to(device),
+                               sn.to(device), r.to(device))
         for i in range(1, len(transitions), 2):
             s, x, a, sn, r = transitions[i]
-            opponent_memory.push(
-                s.to(device), x.to(device), a.to(device), sn.to(device),
-                r.to(device))
+            opponent_memory.push(s.to(device), x.to(device), a.to(device),
+                                 sn.to(device), r.to(device))
 
         # Bypass is we don't have enough in memory to learn
         if episode < batch_size:
             continue
 
         # Learn, samping batches of transitions from memory
-        player, player_loss = train_dqn(
-            batch_size,
-            player,
-            player_memory,
-            player_optimizer,
-            device,
-            gamma=gamma)
-        opponent, opponent_loss = train_dqn(
-            batch_size,
-            opponent,
-            opponent_memory,
-            opponent_optimizer,
-            device,
-            gamma=gamma)
+        player, player_loss = train_dqn(batch_size,
+                                        player,
+                                        player_memory,
+                                        player_optimizer,
+                                        device,
+                                        gamma=gamma)
+        opponent, opponent_loss = train_dqn(batch_size,
+                                            opponent,
+                                            opponent_memory,
+                                            opponent_optimizer,
+                                            device,
+                                            gamma=gamma)
 
         # ----------------------------------------------------------------
         # Logs...
@@ -371,34 +382,72 @@ def wythoff_dqn1(epsilon=0.1,
             writer.add_scalar('reward', reward, episode)
             writer.add_scalar('Q_max', np.max(Qs), episode)
             writer.add_scalar('epsilon_e', epsilon_e, episode)
-            writer.add_scalar('stumber_error', loss, episode)
-            writer.add_scalar('stumber_steps', steps, episode)
-            writer.add_scalar('stumbler_score', score, episode)
+            writer.add_scalar('player_loss', player_loss, episode)
+            writer.add_scalar('opponent_loss', opponent_loss, episode)
+            writer.add_scalar('steps', steps, episode)
+            writer.add_scalar('score', score, episode)
 
             # Cold ref:
             cold = create_cold_board(m, n)
-            plot_wythoff_board(
-                cold, vmin=0, vmax=1, path=tensorboard, name='cold_board.png')
-            writer.add_image(
-                'cold_positions',
-                skimage.io.imread(os.path.join(tensorboard, 'cold_board.png')))
+            plot_wythoff_board(cold,
+                               vmin=0,
+                               vmax=1,
+                               path=tensorboard,
+                               name='cold_board.png')
+            writer.add_image('cold_positions',
+                             torch.from_numpy(
+                                 skimage.io.imread(
+                                     os.path.join(tensorboard,
+                                                  'cold_board.png'))),
+                             0,
+                             dataformats='HWC')
 
-            # Agent max(Q) boards
-            values = expected_value(m, n, player)
-            plot_wythoff_board(
-                values, path=tensorboard, name='player_max_values.png')
-            writer.add_image(
-                'player',
-                skimage.io.imread(
-                    os.path.join(tensorboard, 'player_max_values.png')))
+            # Extract all value boards, and find extrema
+            values = torch.zeros((len(all_possible_moves), m, n))
+            for i, a in enumerate(all_possible_moves):
+                example = create_board(a[0], a[1], m, n)
+                values[i, :, :] = player(state_hat).detach().float().reshape(
+                    m, n)
+            max_values, _ = torch.max(values, 0)
+            min_values, _ = torch.min(values, 0)
 
-            values = expected_value(m, n, opponent)
-            plot_wythoff_board(
-                values, path=tensorboard, name='opponent_max_values.png')
-            writer.add_image(
-                'opponent',
-                skimage.io.imread(
-                    os.path.join(tensorboard, 'opponent_max_values.png')))
+            # Plot max
+            plot_wythoff_board(max_values.numpy(),
+                               path=tensorboard,
+                               name='player_max_values.png')
+            writer.add_image('max player',
+                             torch.from_numpy(
+                                 skimage.io.imread(
+                                     os.path.join(tensorboard,
+                                                  'player_max_values.png'))),
+                             0,
+                             dataformats='HWC')
+
+            # Plot min
+            plot_wythoff_board(min_values.numpy(),
+                               path=tensorboard,
+                               name='player_min_values.png')
+            writer.add_image('min player',
+                             torch.from_numpy(
+                                 skimage.io.imread(
+                                     os.path.join(tensorboard,
+                                                  'player_min_values.png'))),
+                             0,
+                             dataformats='HWC')
+
+            # Plot move count
+            print(moves.board)
+            plot_wythoff_board(moves.board,
+                               vmax=moves.board.max() / 4,
+                               vmin=0,
+                               path=tensorboard,
+                               name='moves.png')
+            writer.add_image('moves',
+                             torch.from_numpy(
+                                 skimage.io.imread(
+                                     os.path.join(tensorboard, 'moves.png'))),
+                             0,
+                             dataformats='HWC')
 
         if monitor and (int(episode) % update_every) == 0:
             all_variables = locals()
