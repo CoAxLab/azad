@@ -66,6 +66,6 @@ for environment in environments:
     register(
         id='{}-{}'.format(environment[0], environment[1]),
         entry_point='azad.local_gym:{}'.format(environment[0]),
-        timestep_limit=environment[2],
+        # timestep_limit=environment[2],
         nondeterministic=True,
     )
