@@ -412,8 +412,23 @@ def wythoff_dqn1(epsilon=0.1,
                 example = create_board(a[0], a[1], m, n)
                 values[i, :, :] = player(state_hat).detach().float().reshape(
                     m, n)
+            mean_values = torch.mean(values, 0)
             max_values, _ = torch.max(values, 0)
             min_values, _ = torch.min(values, 0)
+
+            # Plot mean
+            plot_wythoff_board(mean_values.numpy(),
+                               vmin=-2,
+                               vmax=2,
+                               path=tensorboard,
+                               name='player_mean_values.png')
+            writer.add_image('mean player',
+                             torch.from_numpy(
+                                 skimage.io.imread(
+                                     os.path.join(tensorboard,
+                                                  'player_mean_values.png'))),
+                             0,
+                             dataformats='HWC')
 
             # Plot max
             plot_wythoff_board(max_values.numpy(),
