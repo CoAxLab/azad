@@ -162,10 +162,10 @@ class MoveCount():
     def __init__(self, m, n):
         self.m = m
         self.n = n
-        self.board = np.zeros((self.m, self.n))
+        self.count = np.zeros((self.m, self.n))
 
     def update(self, move):
-        self.board[move[0], move[1]] += 1
+        self.count[move[0], move[1]] += 1
 
 
 def wythoff_dqn1(epsilon=0.1,
@@ -437,8 +437,8 @@ def wythoff_dqn1(epsilon=0.1,
                              dataformats='HWC')
 
             # Plot move count
-            plot_wythoff_board(moves.board,
-                               vmax=moves.board.max() / 10,
+            plot_wythoff_board(moves.count,
+                               vmax=moves.count.max() / 10,
                                vmin=0,
                                path=tensorboard,
                                name='moves.png')
