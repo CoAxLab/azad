@@ -5,3 +5,7 @@
 wythoff/*
 *.DS_Store
 *checkpoint.ipynb
+.vscode/*
+data/*
+test/*
+*egg*
