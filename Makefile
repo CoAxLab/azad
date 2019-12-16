@@ -1,7 +1,8 @@
 SHELL=/bin/bash -O expand_aliases
 # DATA_PATH=/Users/type/Code/azad/data/
 # DATA_PATH=/home/ejp/src/azad/data/
-DATA_PATH=/home/stitch/Code/azad/data/
+# DATA_PATH=/home/stitch/Code/azad/data/
+DATA_PATH=/Users/qualia/Code/azad
 
 # ----------------------------------------------------------------------------
 # 5-10-2018
@@ -620,3 +621,28 @@ wythoff_exp38:
 		--nice 19 --delay 2 \
 		"run_azad.py wythoff_stumbler --save=$(DATA_PATH)/wythoff/exp38/run_{1} --monitor='('episode', 'loss', 'score', 'total_reward')' --num_episodes=75000 --update_every=10 --learning_rate=1.0 --epsilon=0.4 --gamma=0.5 --game=Wythoff15x15 --debug=False --anneal=True --return_none=True --save_model=True --seed={1}" ::: \
 		{1..20}
+
+# ----------------------------------------------------------------------------
+# 12-13-2019
+# 8110924218ee9dbe0035613bb7ba992245678484
+#
+# DQN testing 
+wythoff_exp39:
+	-rm -rf $(DATA_PATH)/wythoff/exp39
+	-mkdir $(DATA_PATH)/wythoff/exp39
+	sleep 5  # Wait for tensorboard to notice the deletion
+	run_azad.py wythoff_dqn1 \
+		--num_episodes=5000 \
+		--batch_size=100 \
+		--memory_capacity=1000 \
+		--learning_rate=1e-3 \
+		--game=Wythoff15x15 \
+		--epsilon=0.4 \
+		--anneal=False \
+		--gamma=0.5 \
+		--debug=False \
+		--update_every=50 \
+		--save=$(DATA_PATH)/wythoff/exp39/run \
+		--save_model=True \
+		--debug=False \
+		--tensorboard=$(DATA_PATH)/wythoff/exp39
