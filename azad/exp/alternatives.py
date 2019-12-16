@@ -282,15 +282,18 @@ def wythoff_dqn1(epsilon=0.1,
 
             # Get and filter Qs
             Qs = model(state_hat).float().detach()  # torch
-            Qs = Qs.numpy()
+            Qs = Qs.numpy().squeeze()
 
             mask = build_mask(available, m, n).flatten()
             Qs *= mask
-            Qs = Qs[np.nonzero(Qs)]
 
             # Choose a move
-            move_i = e_greedy(Qs, epsilon=epsilon_e, mode='numpy')
-            move = available[move_i]
+            index = np.nonzero(mask)[0].tolist()
+            move_i = e_greedy(Qs, epsilon=epsilon_e, index=index, mode='numpy')
+
+            # Re-index move_i to match 'available' index
+            move_a = index.index(move_i)
+            move = available[move_a]
 
             # Analyze it...
             # if mover == 'player':
