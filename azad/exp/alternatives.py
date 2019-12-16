@@ -253,6 +253,7 @@ def wythoff_dqn1(epsilon=0.1,
         state = env.reset()
         x, y, board, available = state
         board = tuple(flatten_board(board))
+        moves.update((x, y))
         if debug:
             print(f"---------------------------------------")
             print(f">>> NEW GAME ({episode}).")
@@ -436,9 +437,8 @@ def wythoff_dqn1(epsilon=0.1,
                              dataformats='HWC')
 
             # Plot move count
-            print(moves.board)
             plot_wythoff_board(moves.board,
-                               vmax=moves.board.max() / 4,
+                               vmax=moves.board.max() / 10,
                                vmin=0,
                                path=tensorboard,
                                name='moves.png')
