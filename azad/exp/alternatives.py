@@ -150,13 +150,6 @@ def build_mask(available, m, n):
     return mask
 
 
-def build_index(available, m, n):
-    index = np.arange(m * n).reshape(m, n)
-    mask = build_mask(available, m, n)
-    index *= mask
-    return index[np.nonzero(index)]
-
-
 class MoveCount():
     """Count moves on a (m,n) board"""
     def __init__(self, m, n):
@@ -296,8 +289,10 @@ def wythoff_dqn1(epsilon=0.1,
             move = available[move_a]
 
             # Analyze it...
-            # if mover == 'player':
-            score = analyze_move(score, move, available, episode)
+            if move in locate_cold_moves(x, y, available):
+                score = 1
+            else:
+                score = 0
 
             # Play it
             state_next, reward, done, _ = env.step(move)
@@ -335,7 +330,7 @@ def wythoff_dqn1(epsilon=0.1,
         #
         # Find the losers transition and update its reward w/ -reward
         if steps > 2:
-            transitions[-2][4] = transitions[-2][4] * -1
+            transitions[-2][4] = transitions[-1][4] * -1
 
         # Update the memories using the transitions from this game
         for i in range(0, len(transitions), 2):
