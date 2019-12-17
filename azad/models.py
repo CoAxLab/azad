@@ -8,7 +8,6 @@ import torch.nn as nn
 
 class ReplayMemory(object):
     """A very generic memory system, with a finite capacity."""
-
     def __init__(self, capacity):
         self.capacity = capacity
         self.memory = []
@@ -68,9 +67,30 @@ class DQN(nn.Module):
         return self.fc5(x)
 
 
+class DQN_mlp(nn.Module):
+    """Layers for a Deep Q Network, based on a simple MLP."""
+    def __init__(self, m, n, num_actions, num_hidden1=1000, num_hidden2=2000):
+        super(DQN_mlp, self).__init__()
+        self.m = m
+        self.n = n
+        self.num_hidden1 = num_hidden1
+        self.num_hidden2 = num_hidden2
+
+        self.fc1 = nn.Linear(m * n, num_hidden1)
+        self.fc2 = nn.Linear(num_hidden1, num_hidden2)
+        self.fc3 = nn.Linear(num_hidden2, num_hidden2)
+        self.fc4 = nn.Linear(num_hidden2, num_actions)
+
+    def forward(self, x):
+        x = x.view(x.size(0), -1)  # Flatten view
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        x = F.relu(self.fc3(x))
+        return self.fc4(x)
+
+
 class ReLu2(nn.Module):
     """2-layer ReLu Network"""
-
     def __init__(self, in_channels, num_actions, num_hidden=200):
         super(ReLu2, self).__init__()
         self.fc1 = nn.Linear(in_channels, num_hidden)
@@ -83,7 +103,6 @@ class ReLu2(nn.Module):
 
 class ReLu3(nn.Module):
     """3-layer ReLu Network"""
-
     def __init__(self,
                  in_channels,
                  num_actions,
@@ -103,7 +122,6 @@ class ReLu3(nn.Module):
 class DeepTable3(nn.Module):
     """A deep differentialable 'Table' for learning one-hot input and output.
     """
-
     def __init__(self,
                  in_channels,
                  out_channels,
@@ -161,7 +179,6 @@ class HotCold2(nn.Module):
     strategies in simple environments with hierarchical q-networks. , pp.1–29. A
     vailable at: http://arxiv.org/abs/1801.06689.
     """
-
     def __init__(self, in_channels=2, num_hidden1=15):
         super(HotCold2, self).__init__()
         self.fc1 = nn.Linear(in_channels, num_hidden1)
@@ -181,7 +198,6 @@ class HotCold3(nn.Module):
     strategies in simple environments with hierarchical q-networks. , pp.1–29. A
     vailable at: http://arxiv.org/abs/1801.06689.
     """
-
     def __init__(self, in_channels=2, num_hidden1=100, num_hidden2=25):
         super(HotCold3, self).__init__()
         self.fc1 = nn.Linear(in_channels, num_hidden1)
