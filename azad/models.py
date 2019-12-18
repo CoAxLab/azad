@@ -27,68 +27,6 @@ class ReplayMemory(object):
         return len(self.memory)
 
 
-class DQN(nn.Module):
-    def __init__(self, m, n, num_actions):
-        """Layers for a Deep Q Network
-
-        Based on:
-        Minh, V. et al, 2015. Human-level control through deep reinforcement 
-        learning. Nature, 518, pp.529–533. Available at: 
-        http://dx.doi.org/10.1038/nature14236.
-        
-        Code modified from:
-        https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
-        
-        Params
-        ------
-        m,n: int
-            Board size 
-        num_actions: int 
-            Number of action-value to output, one-to-one correspondence 
-            to action in game.
-        """
-        super(DQN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
-
-        # With the above and fixed params each conv layer
-        # looses n - 2 in size,and there are three layers.
-        # So calc the final numel for the linear 'decode'
-        # at the end.
-        self.fc4 = nn.Linear(64 * (n - (2 * 3)) * (m - (2 * 3)), 512)
-        self.fc5 = nn.Linear(512, num_actions)
-
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
-        x = F.relu(self.fc4(x.view(x.size(0), -1)))
-        return self.fc5(x)
-
-
-class DQN_mlp(nn.Module):
-    """Layers for a Deep Q Network, based on a simple MLP."""
-    def __init__(self, m, n, num_actions, num_hidden1=1000, num_hidden2=2000):
-        super(DQN_mlp, self).__init__()
-        self.m = m
-        self.n = n
-        self.num_hidden1 = num_hidden1
-        self.num_hidden2 = num_hidden2
-
-        self.fc1 = nn.Linear(m * n, num_hidden1)
-        self.fc2 = nn.Linear(num_hidden1, num_hidden2)
-        self.fc3 = nn.Linear(num_hidden2, num_hidden2)
-        self.fc4 = nn.Linear(num_hidden2, num_actions)
-
-    def forward(self, x):
-        x = x.view(x.size(0), -1)  # Flatten view
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        return self.fc4(x)
-
-
 class ReLu2(nn.Module):
     """2-layer ReLu Network"""
     def __init__(self, in_channels, num_actions, num_hidden=200):
