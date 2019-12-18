@@ -10,6 +10,11 @@ from copy import deepcopy
 import torch
 import torch.optim as optim
 import torch.nn.functional as F
+import random
+import torch.nn as tnn
+import torch.optim as optim
+import torchvision.transforms as T
+import torch.nn as nn
 
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
@@ -53,56 +58,14 @@ Transition = namedtuple('Transition',
                         ('state', 'mask', 'action', 'next_state', 'reward'))
 
 
-class DQN(nn.Module):
-    def __init__(self, m, n, num_actions):
-        """Layers for a Deep Q Network
-
-        Based on:
-        Minh, V. et al, 2015. Human-level control through deep reinforcement 
-        learning. Nature, 518, pp.529–533. Available at: 
-        http://dx.doi.org/10.1038/nature14236.
-        
-        Code modified from:
-        https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
-        
-        Params
-        ------
-        m,n: int
-            Board size 
-        num_actions: int 
-            Number of action-value to output, one-to-one correspondence 
-            to action in game.
-        """
-        super(DQN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
-
-        # With the above and fixed params each conv layer
-        # looses n - 2 in size,and there are three layers.
-        # So calc the final numel for the linear 'decode'
-        # at the end.
-        self.fc4 = nn.Linear(64 * (n - (2 * 3)) * (m - (2 * 3)), 512)
-        self.fc5 = nn.Linear(512, num_actions)
-
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
-        x = F.relu(self.fc4(x.view(x.size(0), -1)))
-        return self.fc5(x)
-
-
 class DQN_mlp(nn.Module):
     """Layers for a Deep Q Network, based on a simple MLP."""
-    def __init__(self, m, n, num_actions, num_hidden1=1000, num_hidden2=2000):
+    def __init__(self, num_actions, num_hidden1=1000, num_hidden2=2000):
         super(DQN_mlp, self).__init__()
-        self.m = m
-        self.n = n
         self.num_hidden1 = num_hidden1
         self.num_hidden2 = num_hidden2
 
-        self.fc1 = nn.Linear(m * n, num_hidden1)
+        self.fc1 = nn.Linear(2, num_hidden1)
         self.fc2 = nn.Linear(num_hidden1, num_hidden2)
         self.fc3 = nn.Linear(num_hidden2, num_hidden2)
         self.fc4 = nn.Linear(num_hidden2, num_actions)
@@ -188,14 +151,14 @@ class MoveCount():
         self.count[move[0], move[1]] += 1
 
 
-def wythoff_dqn1(epsilon=0.1,
+def wythoff_dqn2(epsilon=0.1,
                  gamma=0.8,
                  learning_rate=0.1,
                  num_episodes=10,
                  batch_size=100,
                  memory_capacity=10000,
                  game='Wythoff10x10',
-                 network='DQN',
+                 network='DQN_mlp',
                  anneal=False,
                  tensorboard=None,
                  update_every=5,
@@ -247,14 +210,12 @@ def wythoff_dqn1(epsilon=0.1,
     # Agents, etc
     m, n, board, available = peek(env)
     all_possible_moves = create_all_possible_moves(m, n)
-    if network == 'DQN':
-        player = DQN(m, n, num_actions=len(all_possible_moves))
-        opponent = DQN(m, n, num_actions=len(all_possible_moves))
-    elif network == 'DQN_mlp':
-        player = DQN_mlp(m, n, num_actions=len(all_possible_moves))
-        opponent = DQN_mlp(m, n, num_actions=len(all_possible_moves))
+    if network == 'DQN_mlp':
+        player = DQN_mlp(num_actions=len(all_possible_moves))
+        opponent = DQN_mlp(num_actions=len(all_possible_moves))
     else:
-        raise ValueError("network must DQN or DQN_mlp")
+        raise ValueError("network must be DQN_mlp")
+
     if debug:
         print(f"---------------------------------------")
         print("Setting up....")
@@ -310,8 +271,7 @@ def wythoff_dqn1(epsilon=0.1,
             model = shift_model(mover, player, opponent)
 
             # Convert board to a model(state)
-            state_hat = torch.from_numpy(np.array(board).reshape(m, n))
-            state_hat = state_hat.unsqueeze(0).unsqueeze(1).float()
+            state_hat = torch.tensor([x,y]).unsqueeze(0).float()
 
             # Get and filter Qs
             Qs = model(state_hat).float().detach()  # torch
@@ -339,10 +299,8 @@ def wythoff_dqn1(epsilon=0.1,
 
             # Save transitions, as tensors to be used at training time
             moves.update(move)
-
-            state_hat_next = torch.from_numpy(
-                np.array(board_next).reshape(m, n))
-            state_hat_next = state_hat_next.unsqueeze(0).unsqueeze(1).float()
+            
+            state_hat_next = torch.tensor([x_next,y_next]).unsqueeze(0).float()
 
             transitions.append([
                 state_hat.float(),
