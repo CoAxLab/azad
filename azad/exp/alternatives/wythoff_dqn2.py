@@ -85,6 +85,7 @@ def train_dqn(batch_size,
               optimizer,
               device,
               gamma=1,
+              target=None,
               clip_grad=False):
     # Sample the data
     transitions = memory.sample(batch_size)
@@ -103,7 +104,11 @@ def train_dqn(batch_size,
     # on the "older" target_net; selecting their best reward with max(1)[0].
     # This is merged based on the mask, such that we'll have either the expected
     # state value or 0 in case the state was final.
-    Qs_next = model(state_next).max(1)[0].detach().unsqueeze(1)
+    if target is not None:
+        Qs_next = target(state_next).max(1)[0].detach().unsqueeze(1)
+    else:
+        Qs_next = model(state_next).max(1)[0].detach().unsqueeze(1)
+
     J = (Qs_next * gamma) + reward
 
     # Compute Huber loss
@@ -170,6 +175,8 @@ def wythoff_dqn2(epsilon=0.1,
                  anneal=False,
                  tensorboard=None,
                  update_every=5,
+                 double=False,
+                 double_update=10,
                  self_play=False,
                  save=False,
                  save_model=False,
@@ -222,8 +229,15 @@ def wythoff_dqn2(epsilon=0.1,
     if network == 'DQN_mlp':
         player = DQN_mlp(num_actions=len(all_possible_moves))
         opponent = DQN_mlp(num_actions=len(all_possible_moves))
+        target = DQN_mlp(num_actions=len(all_possible_moves))
     else:
         raise ValueError("network must be DQN_mlp")
+
+    if double:
+        target.load_state_dict(player.state_dict())
+        target.eval()
+    else:
+        target = None
 
     if debug:
         print(f"---------------------------------------")
@@ -367,13 +381,19 @@ def wythoff_dqn2(epsilon=0.1,
                                         player_memory,
                                         player_optimizer,
                                         device,
+                                        target=target,
                                         gamma=gamma)
         opponent, opponent_loss = train_dqn(batch_size,
                                             opponent,
                                             opponent_memory,
                                             opponent_optimizer,
                                             device,
+                                            target=target,
                                             gamma=gamma)
+
+        # Update target net if in double mode
+        if double and (episode % double_update == 0):
+            target.load_state_dict(player.state_dict())
 
         # ----------------------------------------------------------------
         # Logs...
