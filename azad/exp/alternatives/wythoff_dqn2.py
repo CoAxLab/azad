@@ -1,3 +1,4 @@
+"""Learn to play Wythoff's with a DQN, using a (x,y) board representation."""
 import os, csv
 import sys
 
@@ -299,7 +300,7 @@ def wythoff_dqn2(epsilon=0.1,
 
             # Save transitions, as tensors to be used at training time
             moves.update(move)
-            
+
             state_hat_next = torch.tensor([x_next,y_next]).unsqueeze(0).float()
 
             transitions.append([

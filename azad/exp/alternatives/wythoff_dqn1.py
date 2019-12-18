@@ -1,3 +1,4 @@
+"""Learn to play Wythoff's with a DQN, using a one hot board representation."""
 import os, csv
 import sys
 
