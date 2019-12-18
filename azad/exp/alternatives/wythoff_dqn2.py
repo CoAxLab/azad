@@ -225,13 +225,7 @@ def wythoff_dqn2(epsilon=0.1,
     # ------------------------------------------------------------------------
     for episode in range(1, num_episodes + 1):
         # Re-init
-        #
-        # Scores
-        steps = 1
-        done = False
         transitions = []
-
-        # Worlds
         state = env.reset()
         x, y, board, available = state
         board = tuple(flatten_board(board))
@@ -252,6 +246,8 @@ def wythoff_dqn2(epsilon=0.1,
 
         # -------------------------------------------------------------------
         # Play a game
+        steps = 1
+        done = False
         while not done:
             # Convert board to a model(state)
             state_hat = torch.tensor([x / m, y / n]).unsqueeze(0).float()
