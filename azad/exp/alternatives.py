@@ -208,6 +208,10 @@ def wythoff_dqn1(epsilon=0.1,
 
     moves = MoveCount(m, n)
 
+    # Override memory so there is one shared between them
+    if self_play:
+        player_memory = opponent_memory
+
     # ------------------------------------------------------------------------
     for episode in range(1, num_episodes + 1):
         # Re-init
