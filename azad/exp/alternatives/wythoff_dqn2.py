@@ -225,14 +225,14 @@ def wythoff_dqn2(epsilon=0.1,
 
     player_memory = ReplayMemory(memory_capacity)
     opponent_memory = ReplayMemory(memory_capacity)
+    if self_play:
+        player_memory = opponent_memory
+
     player_optimizer = optim.Adam(player.parameters(), learning_rate)
     opponent_optimizer = optim.Adam(opponent.parameters(), learning_rate)
 
     moves = MoveCount(m, n)
 
-    # Override memory so there is one shared between them
-    if self_play:
-        player_memory = opponent_memory
 
     # ------------------------------------------------------------------------
     for episode in range(1, num_episodes + 1):
