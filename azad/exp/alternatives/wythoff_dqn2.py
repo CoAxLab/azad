@@ -56,7 +56,7 @@ from azad.exp.wythoff import expected_value
 from collections import namedtuple
 
 Transition = namedtuple('Transition',
-                        ('state', 'mask', 'action', 'next_state', 'reward'))
+                        ('state', 'action', 'next_state', 'reward'))
 
 
 class DQN_mlp(nn.Module):
@@ -211,6 +211,7 @@ def wythoff_dqn2(epsilon=0.1,
     # Agents, etc
     m, n, board, available = peek(env)
     all_possible_moves = create_all_possible_moves(m, n)
+
     if network == 'DQN_mlp':
         player = DQN_mlp(num_actions=len(all_possible_moves))
         opponent = DQN_mlp(num_actions=len(all_possible_moves))
@@ -271,7 +272,7 @@ def wythoff_dqn2(epsilon=0.1,
             model = shift_model(mover, player, opponent)
 
             # Convert board to a model(state)
-            state_hat = torch.tensor([x, y]).unsqueeze(0).float()
+            state_hat = torch.tensor([x / m, y / n]).unsqueeze(0).float()
 
             # Get and filter Qs
             Qs = model(state_hat).float().detach()  # torch
@@ -300,16 +301,25 @@ def wythoff_dqn2(epsilon=0.1,
             # Save transitions, as tensors to be used at training time
             moves.update(move)
 
-            state_hat_next = torch.tensor([x_next,
-                                           y_next]).unsqueeze(0).float()
+            state_hat_next = torch.tensor([x_next / m,
+                                           y_next / n]).unsqueeze(0).float()
 
             transitions.append([
                 state_hat.float(),
-                torch.from_numpy(mask),
                 torch.tensor(move_i),
                 state_hat_next.float(),
                 torch.tensor([reward]).unsqueeze(0).float()
             ])
+
+            # -
+            if debug:
+                print(f">>> state_hat size: {state_hat.shape}")
+                print(f">>> state_hat: {state_hat}")
+                print(f">>> num available: {len(available)}")
+                print(f">>> available: {available}")
+                print(f">>> Qs (filtered): {Qs[index]}")
+                print(f">>> {mover}: {move}")
+                print(f">>> new position: ({x_next}, {y_next})")
 
             # Shift states
             state = deepcopy(state_next)
@@ -319,27 +329,26 @@ def wythoff_dqn2(epsilon=0.1,
             y = deepcopy(y_next)
             steps += 1
 
-            # -
-            if debug:
-                print(f">>> {mover}: {move}")
-                print(f">>> new position: ({x_next}, {y_next})")
-
         # ----------------------------------------------------------------
         # Learn from the game
         #
         # Find the losers transition and update its reward w/ -reward
         if steps > 2:
-            transitions[-2][4] = transitions[-1][4] * -1
+            transitions[-2][3] = transitions[-1][3] * -1
 
         # Update the memories using the transitions from this game
         for i in range(0, len(transitions), 2):
-            s, x, a, sn, r = transitions[i]
-            player_memory.push(s.to(device), x.to(device), a.to(device),
-                               sn.to(device), r.to(device))
+            s, a, sn, r = transitions[i]
+            player_memory.push(s.to(device), a.to(device), sn.to(device),
+                               r.to(device))
         for i in range(1, len(transitions), 2):
-            s, x, a, sn, r = transitions[i]
-            opponent_memory.push(s.to(device), x.to(device), a.to(device),
-                                 sn.to(device), r.to(device))
+            s, a, sn, r = transitions[i]
+            opponent_memory.push(s.to(device), a.to(device), sn.to(device),
+                                 r.to(device))
+
+        if debug:
+            print(f">>> winner: {mover}")
+            print(f">>> final transitions: {transitions[-2:]}")
 
         # Bypass is we don't have enough in memory to learn
         if episode < batch_size:
