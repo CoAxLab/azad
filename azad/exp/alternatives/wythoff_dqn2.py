@@ -233,7 +233,6 @@ def wythoff_dqn2(epsilon=0.1,
 
     moves = MoveCount(m, n)
 
-
     # ------------------------------------------------------------------------
     for episode in range(1, num_episodes + 1):
         # Re-init
@@ -272,7 +271,7 @@ def wythoff_dqn2(epsilon=0.1,
             model = shift_model(mover, player, opponent)
 
             # Convert board to a model(state)
-            state_hat = torch.tensor([x,y]).unsqueeze(0).float()
+            state_hat = torch.tensor([x, y]).unsqueeze(0).float()
 
             # Get and filter Qs
             Qs = model(state_hat).float().detach()  # torch
@@ -301,7 +300,8 @@ def wythoff_dqn2(epsilon=0.1,
             # Save transitions, as tensors to be used at training time
             moves.update(move)
 
-            state_hat_next = torch.tensor([x_next,y_next]).unsqueeze(0).float()
+            state_hat_next = torch.tensor([x_next,
+                                           y_next]).unsqueeze(0).float()
 
             transitions.append([
                 state_hat.float(),
@@ -402,15 +402,17 @@ def wythoff_dqn2(epsilon=0.1,
             # Extract all value boards, and find extrema
             values = torch.zeros((len(all_possible_moves), m, n))
             for i, a in enumerate(all_possible_moves):
-                example = create_board(a[0], a[1], m, n)
-                values[i, :, :] = player(state_hat).detach().float().reshape(
+                sample_hat = torch.tensor([a[0], a[1]]).unsqueeze(0).float()
+                values[i, :, :] = player(sample_hat).detach().float().reshape(
                     m, n)
             mean_values = torch.mean(values, 0)
-            # max_values, _ = torch.max(values, 0)
-            # min_values, _ = torch.min(values, 0)
+            max_values, _ = torch.max(values, 0)
+            min_values, _ = torch.min(values, 0)
 
             # Log
             writer.add_scalar('Q_mean', torch.mean(mean_values), episode)
+            writer.add_scalar('Q_min', torch.mean(min_values), episode)
+            writer.add_scalar('Q_max', torch.mean(max_values), episode)
 
             # Plot mean
             plot_wythoff_board(mean_values.numpy(),
@@ -423,6 +425,32 @@ def wythoff_dqn2(epsilon=0.1,
                                  skimage.io.imread(
                                      os.path.join(tensorboard,
                                                   'player_mean_values.png'))),
+                             0,
+                             dataformats='HWC')
+            # Plot max
+            plot_wythoff_board(max_values.numpy(),
+                               vmin=max_values.numpy().min(),
+                               vmax=max_values.numpy().max(),
+                               path=tensorboard,
+                               name='player_max_values.png')
+            writer.add_image('max player',
+                             torch.from_numpy(
+                                 skimage.io.imread(
+                                     os.path.join(tensorboard,
+                                                  'player_max_values.png'))),
+                             0,
+                             dataformats='HWC')
+            # Plot min
+            plot_wythoff_board(min_values.numpy(),
+                               vmin=min_values.numpy().min(),
+                               vmax=min_values.numpy().max(),
+                               path=tensorboard,
+                               name='player_min_values.png')
+            writer.add_image('min player',
+                             torch.from_numpy(
+                                 skimage.io.imread(
+                                     os.path.join(tensorboard,
+                                                  'player_min_values.png'))),
                              0,
                              dataformats='HWC')
 
