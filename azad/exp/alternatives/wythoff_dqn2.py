@@ -228,7 +228,6 @@ def wythoff_dqn2(epsilon=0.1,
         transitions = []
         state = env.reset()
         x, y, board, available = state
-        board = tuple(flatten_board(board))
         moves.update((x, y))
         if debug:
             print(f"---------------------------------------")
@@ -255,7 +254,6 @@ def wythoff_dqn2(epsilon=0.1,
             # Get and filter Qs
             Qs = player(state_hat).float().detach()  # torch
             Qs = Qs.numpy().squeeze()
-
             mask = build_mask(available, m, n).flatten()
             Qs *= mask
 
@@ -266,6 +264,7 @@ def wythoff_dqn2(epsilon=0.1,
             # Re-index move_i to match 'available' index
             move_a = index.index(move_i)
             move = available[move_a]
+            moves.update(move)
 
             # Analyze it...
             if move in locate_cold_moves(x, y, available):
@@ -274,10 +273,9 @@ def wythoff_dqn2(epsilon=0.1,
             # Play it
             state_next, reward, done, _ = env.step(move)
             (x_next, y_next, board_next, available_next) = state_next
-            total_reward += reward
-            moves.update(move)
 
             # Save transitions, as tensors to be used at training time
+            total_reward += reward
             state_hat_next = torch.tensor([x_next / m,
                                            y_next / n]).unsqueeze(0).float()
             transitions.append([
@@ -302,6 +300,7 @@ def wythoff_dqn2(epsilon=0.1,
             available = deepcopy(available_next)
             x = deepcopy(x_next)
             y = deepcopy(y_next)
+
             steps += 1
 
         # ----------------------------------------------------------------
@@ -320,11 +319,11 @@ def wythoff_dqn2(epsilon=0.1,
         if debug:
             print(f">>> final transitions: {transitions[-2:]}")
 
-        # Bypass is we don't have enough in memory to learn
+        # Bypass if we don't have enough in memory to learn
         if episode < batch_size:
             continue
 
-        # Learn, samping batches of transitions from memory
+        # Learn, samping a batch of transitions from memory
         player, loss = train_dqn(batch_size,
                                  player,
                                  memory,
@@ -333,7 +332,7 @@ def wythoff_dqn2(epsilon=0.1,
                                  target=target,
                                  gamma=gamma)
 
-        # Update target net if in double mode
+        # Update target net, if in double mode and time is right.
         if double and (episode % double_update == 0):
             target.load_state_dict(player.state_dict())
 
