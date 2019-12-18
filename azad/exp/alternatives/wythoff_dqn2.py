@@ -79,7 +79,13 @@ class DQN_mlp(nn.Module):
         return self.fc4(x)
 
 
-def train_dqn(batch_size, model, memory, optimizer, device, gamma=1):
+def train_dqn(batch_size,
+              model,
+              memory,
+              optimizer,
+              device,
+              gamma=1,
+              clip_grad=False):
     # Sample the data
     transitions = memory.sample(batch_size)
     batch = Transition(*zip(*transitions))
@@ -106,8 +112,9 @@ def train_dqn(batch_size, model, memory, optimizer, device, gamma=1):
     # Optimize the model
     optimizer.zero_grad()
     loss.backward()
-    for param in model.parameters():
-        param.grad.data.clamp_(-1, 1)
+    if clip_grad:
+        for param in model.parameters():
+            param.grad.data.clamp_(-1, 1)
     optimizer.step()
 
     return model, loss
@@ -153,11 +160,11 @@ class MoveCount():
 
 
 def wythoff_dqn2(epsilon=0.1,
-                 gamma=0.8,
-                 learning_rate=0.1,
-                 num_episodes=10,
-                 batch_size=100,
-                 memory_capacity=10000,
+                 gamma=0.5,
+                 learning_rate=1e-6,
+                 num_episodes=100,
+                 batch_size=20,
+                 memory_capacity=100,
                  game='Wythoff10x10',
                  network='DQN_mlp',
                  anneal=False,
