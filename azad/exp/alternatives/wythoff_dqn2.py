@@ -125,27 +125,6 @@ def train_dqn(batch_size,
     return model, loss
 
 
-def shift_mover(mover):
-    if mover == 'player':
-        return 'opponent'
-    else:
-        return 'player'
-
-
-def shift_memory(mover, player_memory, opponent_memory):
-    if mover == 'player':
-        return opponent_memory
-    else:
-        return player_memory
-
-
-def shift_model(mover, player, opponent):
-    if mover == 'player':
-        return opponent
-    else:
-        return player
-
-
 def build_mask(available, m, n):
     mask = np.zeros((m, n), dtype=np.int)
     for a in available:
@@ -177,7 +156,6 @@ def wythoff_dqn2(epsilon=0.1,
                  update_every=5,
                  double=False,
                  double_update=10,
-                 self_play=False,
                  save=False,
                  save_model=False,
                  monitor=None,
@@ -185,10 +163,7 @@ def wythoff_dqn2(epsilon=0.1,
                  debug=False,
                  progress=False,
                  seed=None):
-    """Learn to play Wythoff's w/ e-greedy random exploration.
-    
-    Note: Learning is based on a player-opponent joint action formalism 
-    and tabular Q-learning.
+    """Learn to play Wythoff's w/ a DQN and e-greedy random exploration.
     """
 
     # ------------------------------------------------------------------------
@@ -228,7 +203,6 @@ def wythoff_dqn2(epsilon=0.1,
 
     if network == 'DQN_mlp':
         player = DQN_mlp(num_actions=len(all_possible_moves))
-        opponent = DQN_mlp(num_actions=len(all_possible_moves))
         target = DQN_mlp(num_actions=len(all_possible_moves))
     else:
         raise ValueError("network must be DQN_mlp")
@@ -245,14 +219,8 @@ def wythoff_dqn2(epsilon=0.1,
         print(f">>> Network is {player}")
         print(f">>> Memory capacity {memory_capacity} ({batch_size})")
 
-    player_memory = ReplayMemory(memory_capacity)
-    opponent_memory = ReplayMemory(memory_capacity)
-    if self_play:
-        player_memory = opponent_memory
-
-    player_optimizer = optim.Adam(player.parameters(), learning_rate)
-    opponent_optimizer = optim.Adam(opponent.parameters(), learning_rate)
-
+    memory = ReplayMemory(memory_capacity)
+    optimizer = optim.Adam(player.parameters(), learning_rate)
     moves = MoveCount(m, n)
 
     # ------------------------------------------------------------------------
@@ -262,7 +230,6 @@ def wythoff_dqn2(epsilon=0.1,
         # Scores
         steps = 1
         done = False
-        mover = 'opponent'  # This will shift to player on the first move.
         transitions = []
 
         # Worlds
@@ -287,16 +254,11 @@ def wythoff_dqn2(epsilon=0.1,
         # -------------------------------------------------------------------
         # Play a game
         while not done:
-            # Choose a mover
-            mover = shift_mover(mover)
-            memory = shift_memory(mover, player_memory, opponent_memory)
-            model = shift_model(mover, player, opponent)
-
             # Convert board to a model(state)
             state_hat = torch.tensor([x / m, y / n]).unsqueeze(0).float()
 
             # Get and filter Qs
-            Qs = model(state_hat).float().detach()  # torch
+            Qs = player(state_hat).float().detach()  # torch
             Qs = Qs.numpy().squeeze()
 
             mask = build_mask(available, m, n).flatten()
@@ -339,7 +301,6 @@ def wythoff_dqn2(epsilon=0.1,
                 print(f">>> num available: {len(available)}")
                 print(f">>> available: {available}")
                 print(f">>> Qs (filtered): {Qs[index]}")
-                print(f">>> {mover}: {move}")
                 print(f">>> new position: ({x_next}, {y_next})")
 
             # Shift states
@@ -358,17 +319,12 @@ def wythoff_dqn2(epsilon=0.1,
             transitions[-2][3] = transitions[-1][3] * -1
 
         # Update the memories using the transitions from this game
-        for i in range(0, len(transitions), 2):
+        for i in range(0, len(transitions)):
             s, a, sn, r = transitions[i]
-            player_memory.push(s.to(device), a.to(device), sn.to(device),
-                               r.to(device))
-        for i in range(1, len(transitions), 2):
-            s, a, sn, r = transitions[i]
-            opponent_memory.push(s.to(device), a.to(device), sn.to(device),
-                                 r.to(device))
+            memory.push(s.to(device), a.to(device), sn.to(device),
+                        r.to(device))
 
         if debug:
-            print(f">>> winner: {mover}")
             print(f">>> final transitions: {transitions[-2:]}")
 
         # Bypass is we don't have enough in memory to learn
@@ -376,20 +332,13 @@ def wythoff_dqn2(epsilon=0.1,
             continue
 
         # Learn, samping batches of transitions from memory
-        player, player_loss = train_dqn(batch_size,
-                                        player,
-                                        player_memory,
-                                        player_optimizer,
-                                        device,
-                                        target=target,
-                                        gamma=gamma)
-        opponent, opponent_loss = train_dqn(batch_size,
-                                            opponent,
-                                            opponent_memory,
-                                            opponent_optimizer,
-                                            device,
-                                            target=target,
-                                            gamma=gamma)
+        player, loss = train_dqn(batch_size,
+                                 player,
+                                 memory,
+                                 optimizer,
+                                 device,
+                                 target=target,
+                                 gamma=gamma)
 
         # Update target net if in double mode
         if double and (episode % double_update == 0):
@@ -401,22 +350,15 @@ def wythoff_dqn2(epsilon=0.1,
             print(f"---")
         if progress or debug:
             print(f">>> episode: {episode}")
-            print(f">>> winner: {mover}")
         if debug or progress:
-            print(f">>> Q: {Qs}")
-            print(f">>> max(Q): {Qs.max()}")
-            print(f">>> min(Q): {Qs.min()}")
-            print(f">>> stdev(Q): {Qs.std()}")
-            print(
-                f">>> loss (player: {player_loss}, opponent: {opponent_loss})")
-            print(f">>> player score: {score}")
+            print(f">>> loss {loss}")
+            print(f">>> score: {score}")
             print(f">>> epsilon: {epsilon_e}")
 
         if tensorboard and (int(episode) % update_every) == 0:
             writer.add_scalar('reward', reward, episode)
             writer.add_scalar('epsilon_e', epsilon_e, episode)
-            writer.add_scalar('player_loss', player_loss, episode)
-            writer.add_scalar('opponent_loss', opponent_loss, episode)
+            writer.add_scalar('loss', loss, episode)
             writer.add_scalar('steps', steps, episode)
             writer.add_scalar('score', score, episode)
 
@@ -512,7 +454,6 @@ def wythoff_dqn2(epsilon=0.1,
     if save_model:
         state = {
             'stumbler_player_dict': player,
-            'stumbler_opponent_dict': opponent
         }
         torch.save(state, save + ".pytorch")
     if monitor:
@@ -520,7 +461,7 @@ def wythoff_dqn2(epsilon=0.1,
     if tensorboard:
         writer.close()
 
-    result = (player, opponent), (score / episode, total_reward)
+    result = (player), (score / episode, total_reward)
     if return_none:
         result = None
 
