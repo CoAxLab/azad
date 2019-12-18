@@ -206,7 +206,6 @@ def wythoff_dqn2(epsilon=0.1,
         target = DQN_mlp(num_actions=len(all_possible_moves))
     else:
         raise ValueError("network must be DQN_mlp")
-
     if double:
         target.load_state_dict(player.state_dict())
         target.eval()
@@ -280,13 +279,11 @@ def wythoff_dqn2(epsilon=0.1,
             state_next, reward, done, _ = env.step(move)
             (x_next, y_next, board_next, available_next) = state_next
             total_reward += reward
-
-            # Save transitions, as tensors to be used at training time
             moves.update(move)
 
+            # Save transitions, as tensors to be used at training time
             state_hat_next = torch.tensor([x_next / m,
                                            y_next / n]).unsqueeze(0).float()
-
             transitions.append([
                 state_hat.float(),
                 torch.tensor(move_i),
