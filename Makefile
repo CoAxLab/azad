@@ -653,3 +653,20 @@ wythoff_exp39:
 		--save_model=True \
 		--debug=False \
 		--tensorboard=$(DATA_PATH)/wythoff/exp39
+
+# ----------------------------------------------------------------------------
+# 12-19-2019
+# Tune dqn3 (board representation, self-play). 
+# Search learing rate and exploration
+wythoff_exp40:
+	-rm -rf $(DATA_PATH)/wythoff/exp40
+	-mkdir $(DATA_PATH)/wythoff/exp40
+	run_azad.py create_grid $(DATA_PATH)/wythoff/exp40/grid.csv --num_gpu=4 \
+		--learning_rate='(0.002, 0.0000001, 10)' \
+		--epsilon='(0.5, 0.05, 10)' 
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp40/exp40.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn1 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate={learning_rate} --game=Wythoff15x1 --epsilon={epsilon} --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp40/run --save_model=True --debug=False --monitor='('episode', 'loss', 'score', 'total_reward')'" :::: 
+		$(DATA_PATH)/wythoff/exp40/grid.csv
+	
