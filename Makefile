@@ -667,5 +667,5 @@ wythoff_exp40:
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp40/exp40.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn1 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate={learning_rate} --game=Wythoff15x15 --epsilon={epsilon} --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp40/run --save_model=True --debug=False --monitor='('episode', 'loss', 'score', 'total_reward')'" :::: $(DATA_PATH)/wythoff/exp40/grid.csv
+		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate={learning_rate} --game=Wythoff15x15 --epsilon={epsilon} --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp40/run --save_model=True --debug=False --monitor='('episode', 'loss', 'score', 'total_reward')'" :::: $(DATA_PATH)/wythoff/exp40/grid.csv
 	
