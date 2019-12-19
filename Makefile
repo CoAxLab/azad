@@ -656,6 +656,7 @@ wythoff_exp39:
 
 # ----------------------------------------------------------------------------
 # 12-19-2019
+# 38ad00ee33c9acd4ffe3e74eb64ef4af250fc15c
 # Tune dqn3 (board representation, self-play). 
 # Search learing rate and exploration
 wythoff_exp40:
