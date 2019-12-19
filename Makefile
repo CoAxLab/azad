@@ -5,6 +5,13 @@ SHELL=/bin/bash -O expand_aliases
 DATA_PATH=/Users/qualia/Code/azad
 
 # ----------------------------------------------------------------------------
+# Grid test
+grid_test:
+	run_azad.py create_grid $(DATA_PATH)/test_grid.csv --num_gpu=4 \
+		--learning_rate='(0.002, 0.0000001, 10)' \
+		--epsilon='(0.5, 0.05, 10)' 
+
+# ----------------------------------------------------------------------------
 # 5-10-2018
 # Pole cart: Params that follow are the best I've found following a day or so of
 # manual hyperparam opt. After about 100 episodes the pole balanced duration
