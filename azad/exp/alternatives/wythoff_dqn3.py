@@ -244,11 +244,11 @@ def wythoff_dqn3(epsilon=0.1,
     all_possible_moves = create_all_possible_moves(m, n)
 
     if network == 'DQN':
-        player = DQN(m, n, num_actions=len(all_possible_moves))
-        target = DQN(m, n, num_actions=len(all_possible_moves))
+        player = DQN(m, n, num_actions=len(all_possible_moves)).to(device)
+        target = DQN(m, n, num_actions=len(all_possible_moves)).to(device)
     elif network == 'DQN_mlp':
-        player = DQN_mlp(m, n, num_actions=len(all_possible_moves))
-        target = DQN_mlp(m, n, num_actions=len(all_possible_moves))
+        player = DQN_mlp(m, n, num_actions=len(all_possible_moves)).to(device)
+        target = DQN_mlp(m, n, num_actions=len(all_possible_moves)).to(device)
     else:
         raise ValueError("network must DQN or DQN_mlp")
     if double:
@@ -260,6 +260,7 @@ def wythoff_dqn3(epsilon=0.1,
     if debug:
         print(f"---------------------------------------")
         print("Setting up....")
+        print(f">>> Device: {device}")
         print(f">>> Network is {player}")
         print(f">>> Memory capacity {memory_capacity} ({batch_size})")
 
@@ -295,11 +296,10 @@ def wythoff_dqn3(epsilon=0.1,
         while not done:
             # Convert board to a model(state)
             state_hat = torch.from_numpy(np.array(board).reshape(m, n))
-            state_hat = state_hat.unsqueeze(0).unsqueeze(1).float()
+            state_hat = state_hat.unsqueeze(0).unsqueeze(1).float().to(device)
 
-            # Get and filter Qs
-            Qs = player(state_hat).float().detach()  # torch
-            Qs = Qs.numpy().squeeze()
+            # Get and filter Qs (off GPU)
+            Qs = player(state_hat).cpu().detach().numpy().squeeze()
             mask = build_mask(available, m, n).flatten()
             Qs *= mask
 
@@ -321,17 +321,18 @@ def wythoff_dqn3(epsilon=0.1,
             (x_next, y_next, board_next, available_next) = state_next
 
             # Save transitions, as tensors to be used at training time
+            # (onto GPU)
             total_reward += reward
-
-            state_hat_next = torch.from_numpy(
-                np.array(board_next).reshape(m, n))
-            state_hat_next = state_hat.unsqueeze(0).unsqueeze(1).float()
-
             transitions.append([
-                state_hat.float(),
-                torch.tensor(move_i),
-                state_hat_next.float(),
-                torch.tensor([reward]).unsqueeze(0).float()
+                # S
+                state_hat,
+                # A
+                torch.tensor(move_i).to(device),
+                # S'
+                torch.from_numpy(np.array(board_next)).reshape(
+                    m, n).unsqueeze(0).unsqueeze(1).float().to(device),
+                # R
+                torch.tensor([reward]).unsqueeze(0).float().to(device),
             ])
 
             # -
@@ -361,9 +362,7 @@ def wythoff_dqn3(epsilon=0.1,
 
         # Update the memories using the transitions from this game
         for i in range(0, len(transitions)):
-            s, a, sn, r = transitions[i]
-            memory.push(s.to(device), a.to(device), sn.to(device),
-                        r.to(device))
+            memory.push(*transitions[i])
 
         if debug:
             print(f">>> final transitions: {transitions[-2:]}")
