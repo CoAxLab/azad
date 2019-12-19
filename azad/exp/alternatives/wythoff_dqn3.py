@@ -202,6 +202,7 @@ def wythoff_dqn3(epsilon=0.1,
                  monitor=None,
                  return_none=False,
                  debug=False,
+                 device='cpu',
                  progress=False,
                  seed=None):
     """Learn to play Wythoff's w/ a DQN and e-greedy random exploration.
@@ -209,7 +210,7 @@ def wythoff_dqn3(epsilon=0.1,
 
     # ------------------------------------------------------------------------
     # Init
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Logs...
     if tensorboard is not None:
