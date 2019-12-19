@@ -134,9 +134,8 @@ def train_dqn(batch_size,
     batch = Transition(*zip(*transitions))
     state = torch.cat(batch.state)
     state_next = torch.cat(batch.next_state)
-    action = np.vstack(batch.action)
-    action = torch.from_numpy(action)
-    reward = torch.from_numpy(np.asarray(batch.reward)).unsqueeze(1)
+    action = torch.cat(batch.action)
+    reward = torch.cat(batch.reward)).unsqueeze(1)
 
     # Pass it through the model
     Qs = model(state).gather(1, action)
