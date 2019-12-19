@@ -326,7 +326,7 @@ def wythoff_dqn3(epsilon=0.1,
                 # S
                 state_hat,
                 # A
-                torch.tensor(move_i).to(device),
+                torch.tensor([move_i]).to(device),
                 # S'
                 torch.from_numpy(np.array(board_next)).reshape(
                     m, n).unsqueeze(0).unsqueeze(1).float().to(device),
