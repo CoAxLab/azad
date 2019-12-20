@@ -109,9 +109,12 @@ def wythoff_mcts(num_episodes=10,
             print(f">>> Initial moves {available}")
             print(f">>> Cold available {locate_cold_moves(x, y, available)}")
             print(f">>> All cold {locate_all_cold_moves(x, y)}")
-            print(f">>> MCTS root tree: {names}.")
-            print(f">>> MCTS root values: {values}.")
-            print(f">>> MCTS root counts: {counts}.")
+            if n > 1:
+                print(f">>> MCTS root tree: {names}.")
+                print(f">>> MCTS best value: {np.max(values)}.")
+                print(
+                    f">>> MCTS counts - max: {np.max(counts)}, min: {np.min(counts)}, median: {np.median(counts)}."
+                )
 
         # --------------------------------------------------------------------
         # Run!
@@ -135,9 +138,9 @@ def wythoff_mcts(num_episodes=10,
 
             # Analyze it...
             if move in locate_cold_moves(x, y, available):
-                opts.update(1)
+                opts.increase()
             else:
-                opts.update(0)
+                opts.decrease()
             score = opts.score()
 
             if debug:

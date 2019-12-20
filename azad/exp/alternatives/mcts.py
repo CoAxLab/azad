@@ -47,9 +47,12 @@ class OptimalCount():
         self.num_optimal = intial
         self.counts = 1
 
-    def update(self, opt):
+    def increase(self):
         self.counts += 1
-        self.num_optimal += opt
+        self.num_optimal += 1
+
+    def decrease(self):
+        self.counts += 1
 
     def score(self):
         return self.num_optimal / self.counts
