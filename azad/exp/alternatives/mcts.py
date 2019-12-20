@@ -10,7 +10,16 @@ def random_policy(available):
     return choice(available)
 
 
-def rollout(state, player, env, default_policy):
+def shift_player(player):
+    if player == 0:
+        return 1
+    elif player == 1:
+        return 0
+    else:
+        raise ValueError("player must be 1 or 0")
+
+
+def rollout(player, state, mcts, env, default_policy):
     """Rollout until the game is done."""
 
     n_step = 0
@@ -20,13 +29,15 @@ def rollout(state, player, env, default_policy):
         action = default_policy(available)
         state_next, reward, done, info = env.step(action)
 
-        transitions.append((state, action, state_next, reward))
+        transitions.append((player, state, action, state_next, reward))
         state = deepcopy(state_next)
 
         if done:
             info['n_step'] = n_step
+            info['player'] = player
             return transitions, reward, done, info
 
+        player = shift_player(player)
         n_step += 1
 
 
@@ -125,6 +136,12 @@ class MCTS(object):
             raise ValueError("c must be postive.")
         self.c = c
 
+    def add(self, node, action):
+        new = Node(name=action, initial_count=1, initial_value=0)
+        node.add(new)  # inplace update
+        self.path.append(new)
+        return new
+
     def upper_conf_bound(self, node):
         """Upper confidence bound"""
 
@@ -146,13 +163,20 @@ class MCTS(object):
         """
 
         # Check for expand
-        for a in available:
-            if a not in node.child_names:
-                return None
-            else:
-                best = max(node.children, key=self.upper_conf_bound)
-                self.path.append(best)
-                return best
+        index = []
+        for i, a in enumerate(available):
+            if a in node.child_names:
+                index.append(node.child_names.index(a))
+
+        # There are no selection options available. Return None.
+        if len(index) == 0:
+            return None
+
+        # Select the best, by UCB (filtered)
+        best = max([node.children[i] for i in index],
+                   key=self.upper_conf_bound)
+        self.path.append(best)
+        return best
 
     def expand(self, node, available):
         """Expand the tree with a random new action, which should be valued
@@ -174,12 +198,16 @@ class MCTS(object):
 
         return new
 
-    def backpropagate(self, reward):
+    def backpropagate(self, winner, reward):
         """Backpropagate a reward along the path."""
-        # Upate values
+
+        # Update winners value
+        for i in range(winner, len(self.path), 2):
+            self.path[i].value += reward
+
+        # Update all counts
         for p in self.path:
             p.count += 1
-            p.value += reward
 
     def reset(self):
         """Reset the path, and return the root node."""

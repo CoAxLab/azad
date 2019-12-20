@@ -17,6 +17,7 @@ from azad.exp.alternatives.mcts import MoveCount
 from azad.exp.alternatives.mcts import OptimalCount
 from azad.exp.alternatives.mcts import random_policy
 from azad.exp.alternatives.mcts import rollout
+from azad.exp.alternatives.mcts import shift_player
 from azad.exp.wythoff import save_monitored
 from azad.exp.wythoff import create_env
 from azad.exp.wythoff import peek
@@ -67,46 +68,52 @@ def wythoff_mcts(num_episodes=10,
     # ------------------------------------------------------------------------
     # Init
     score = 0
-    total_reward = 0
     m, n, board, available = peek(env)
     all_possible_moves = create_all_possible_moves(m, n)
 
-    # Players, etc
-    player = MCTS(c=c)
+    # Player model, etc
+    mcts = MCTS(c=c)
     moves = MoveCount(m, n)
     opts = OptimalCount(0)
-
+    player = 0
     if debug:
         print(f"---------------------------------------")
         print("Setting up....")
         print(f">>> Device: {device}")
-        print(f">>> Network is {player}")
+        print(f">>> Network is {mcts}")
 
     # ------------------------------------------------------------------------
     # Train!
-    n_steps = []
-    paths = []
-    n_steps = []
     for n in range(num_episodes):
-
-        # Restart
-        transitions = []
-        n_step = 0
-
+        # Restart the world
         state = env.reset()
         x, y, board, available = state
         moves.update((x, y))
 
-        node = player.reset()
+        # Reset always returns the root node
+        node = mcts.reset()
 
+        # Restart vars
+        player = 0
+        winner = None
+        n_step = 0
+        transitions = []
+        done = False
+        do_rollout = False
+
+        # The root should eventuall be linked to all possible starting
+        # configurations.
+        # node = mcts.add(node, (x, y))
+        # print(x, y)
         if debug:
-            values = [c.value for c in player.root.children]
-            counts = [c.count for c in player.root.children]
-            names = [c.name for c in player.root.children]
+            values = [c.value for c in mcts.root.children]
+            counts = [c.count for c in mcts.root.children]
+            names = [c.name for c in mcts.root.children]
             print("--------------------")
             print(f">>> NEW GAME: {n}.")
             print(f">>> Initial position ({x}, {y})")
             print(f">>> Initial moves {available}")
+            print(f">>> Initial player {player}")
             print(f">>> Cold available {locate_cold_moves(x, y, available)}")
             print(f">>> All cold {locate_all_cold_moves(x, y)}")
             if n > 1:
@@ -117,38 +124,46 @@ def wythoff_mcts(num_episodes=10,
                 )
 
         # --------------------------------------------------------------------
-        # Run!
-        done = False
-        do_rollout = False
+        # Play a game.
         while not done:
             # Select?
-            next_node = player.select(node, available)
+            next_node = mcts.select(node, available)
 
             # Or expand?
             if next_node is None:
-                next_node = player.expand(node, available)
+                next_node = mcts.expand(node, available)
                 do_rollout = True
 
-            # Choose the move
+            # Choose the move,
             move = next_node.name
 
-            # Act
+            # and move.
             state_next, reward, done, info = env.step(move)
             (x_next, y_next, board_next, available_next) = state_next
 
-            # Analyze it...
-            if move in locate_cold_moves(x, y, available):
-                opts.increase()
-            else:
-                opts.decrease()
-            score = opts.score()
+            # Analyze it.
+            colds = locate_cold_moves(x, y, available)
+            if len(colds) > 0:
+                if move in colds:
+                    opts.increase()
+                else:
+                    opts.decrease()
+                score = opts.score()
 
             if debug:
+                print(f"---")
                 print(f">>> position: ({x}, {y})")
+                print(f">>> player: {player}")
                 print(f">>> num available: {len(available)}")
+                print(f">>> cold moves: {colds}")
                 print(f">>> move: ({move})")
                 print(f">>> new position: ({x_next}, {y_next})")
+                print(f">>> score: {score}")
                 print(f">>> rollout: {do_rollout}")
+
+            if done:
+                winner = player
+                break
 
             # Either rollout to the end of this game,
             # or continue to play strategically.
@@ -157,28 +172,39 @@ def wythoff_mcts(num_episodes=10,
             # and are terminal.
             if do_rollout:
                 rollout_transitions, reward, done, info = rollout(
-                    state, player, env, random_policy)
+                    player, state, mcts, env, random_policy)
 
                 n_step += info['n_step']
-                transitions.extend(rollout_transitions)
-            else:
-                transitions.append((state, move, state_next, reward))
-                node = next_node
+                player = info["player"]
+                winner = player
 
+                transitions.extend(rollout_transitions)
+                if debug:
+                    print(f">>> rollout...")
+            else:
+                transitions.append((player, state, move, state_next, reward))
+
+                # Shift states
+                node = next_node
+                player = shift_player(player)
+                state = deepcopy(state_next)
+                board = deepcopy(board_next)
+                available = deepcopy(available_next)
+                x = deepcopy(x_next)
+                y = deepcopy(y_next)
                 n_step += 1
 
         # --------------------------------------------------------------------
         # Learn from the game
-        player.backpropagate(reward)
+        mcts.backpropagate(player, reward)
 
         if debug or progress:
             print(f">>> last score: {score}")
+        if debug:
+            print(f">>> learning...")
 
         # --------------------------------------------------------------------
         # Log results
-        paths.append(player.path)
-        n_steps.append(n_step)
-
         if monitor and (int(n) % update_every) == 0:
             all_variables = locals()
             for k in monitor:
@@ -188,7 +214,7 @@ def wythoff_mcts(num_episodes=10,
     if monitor:
         save_monitored(save, monitored)
 
-    result = dict(player=player, score=score)
+    result = dict(mcts=mcts, score=score)
     if save is not None:
         save_checkpoint(result, filename=save)
     else:
