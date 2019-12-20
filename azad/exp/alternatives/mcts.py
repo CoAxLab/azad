@@ -3,7 +3,6 @@ from math import log
 from random import choice
 from copy import deepcopy
 
-from makeforit.utils import switch
 import numpy as np
 
 
@@ -21,12 +20,12 @@ def rollout(state, player, env, default_policy):
         action = default_policy(available)
         state_next, reward, done, info = env.step(action)
 
-        transitions.append(state, action, state_next, reward)
+        transitions.append((state, action, state_next, reward))
         state = deepcopy(state_next)
 
         if done:
             info['n_step'] = n_step
-            return transitions, done, info
+            return transitions, reward, done, info
 
         n_step += 1
 
@@ -40,6 +39,20 @@ class MoveCount():
 
     def update(self, move):
         self.count[move[0], move[1]] += 1
+
+
+class OptimalCount():
+    """Count optimal moves."""
+    def __init__(self, intial=0):
+        self.num_optimal = intial
+        self.counts = 1
+
+    def update(self, opt):
+        self.counts += 1
+        self.num_optimal += opt
+
+    def score(self):
+        return self.num_optimal / self.counts
 
 
 class Node(object):

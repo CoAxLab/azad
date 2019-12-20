@@ -14,13 +14,15 @@ from azad.utils import save_checkpoint
 from azad.exp.alternatives.mcts import MCTS
 from azad.exp.alternatives.mcts import Node
 from azad.exp.alternatives.mcts import MoveCount
+from azad.exp.alternatives.mcts import OptimalCount
 from azad.exp.alternatives.mcts import random_policy
 from azad.exp.alternatives.mcts import rollout
 from azad.exp.wythoff import save_monitored
 from azad.exp.wythoff import create_env
 from azad.exp.wythoff import peek
 from azad.exp.wythoff import create_all_possible_moves
-from azad.exp.wythoff import locate_cold_moves
+from azad.local_gym.wythoff import locate_cold_moves
+from azad.local_gym.wythoff import locate_all_cold_moves
 from azad.exp.wythoff import create_monitored
 
 
@@ -61,7 +63,6 @@ def wythoff_mcts(num_episodes=10,
 
     env.seed(seed)
     np.random.seed(seed)
-    torch.cuda.seed(seed)
 
     # ------------------------------------------------------------------------
     # Init
@@ -73,6 +74,7 @@ def wythoff_mcts(num_episodes=10,
     # Players, etc
     player = MCTS(c=c)
     moves = MoveCount(m, n)
+    opts = OptimalCount(0)
 
     if debug:
         print(f"---------------------------------------")
@@ -86,6 +88,17 @@ def wythoff_mcts(num_episodes=10,
     paths = []
     n_steps = []
     for n in range(num_episodes):
+
+        # Restart
+        transitions = []
+        n_step = 0
+
+        state = env.reset()
+        x, y, board, available = state
+        moves.update((x, y))
+
+        node = player.reset()
+
         if debug:
             values = [c.value for c in player.root.children]
             counts = [c.count for c in player.root.children]
@@ -100,16 +113,6 @@ def wythoff_mcts(num_episodes=10,
             print(f">>> MCTS root values: {values}.")
             print(f">>> MCTS root counts: {counts}.")
 
-        # Restart
-        transitions = []
-        n_step = 0
-
-        state = env.reset()
-        x, y, board, available = state
-        moves.update((x, y))
-
-        node = player.reset()
-
         # --------------------------------------------------------------------
         # Run!
         done = False
@@ -117,20 +120,25 @@ def wythoff_mcts(num_episodes=10,
         while not done:
             # Select?
             next_node = player.select(node, available)
-            move = next_node.name
 
             # Or expand?
             if next_node is None:
                 next_node = player.expand(node, available)
                 do_rollout = True
 
-            # Act!
+            # Choose the move
+            move = next_node.name
+
+            # Act
             state_next, reward, done, info = env.step(move)
             (x_next, y_next, board_next, available_next) = state_next
 
             # Analyze it...
             if move in locate_cold_moves(x, y, available):
-                score += (1 - score) / n
+                opts.update(1)
+            else:
+                opts.update(0)
+            score = opts.score()
 
             if debug:
                 print(f">>> position: ({x}, {y})")
@@ -145,13 +153,13 @@ def wythoff_mcts(num_episodes=10,
             # NOTE: Rollouts do not use the MCTS tree,
             # and are terminal.
             if do_rollout:
-                rollout_transitions, done, info = rollout(
+                rollout_transitions, reward, done, info = rollout(
                     state, player, env, random_policy)
 
                 n_step += info['n_step']
                 transitions.extend(rollout_transitions)
             else:
-                transitions.append(state, move, state_next, reward)
+                transitions.append((state, move, state_next, reward))
                 node = next_node
 
                 n_step += 1
@@ -177,11 +185,7 @@ def wythoff_mcts(num_episodes=10,
     if monitor:
         save_monitored(save, monitored)
 
-    result = dict(player=player,
-                  paths=paths,
-                  n_steps=n_steps,
-                  total_reward=total_reward)
-
+    result = dict(player=player, score=score)
     if save is not None:
         save_checkpoint(result, filename=save)
     else:
