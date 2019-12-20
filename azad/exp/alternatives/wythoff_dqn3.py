@@ -506,7 +506,7 @@ def wythoff_dqn3(epsilon=0.1,
     if tensorboard:
         writer.close()
 
-    result = (player), (score / episode, total_reward)
+    result = (player, score)
     if return_none:
         result = None
 
