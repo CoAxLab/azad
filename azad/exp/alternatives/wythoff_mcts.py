@@ -36,7 +36,6 @@ def wythoff_mcts(num_episodes=10,
                  monitor=None,
                  save=None,
                  debug=False,
-                 progress=False,
                  seed=None):
     """Learn to play Wythoff's, using MCTS."""
 
@@ -102,13 +101,11 @@ def wythoff_mcts(num_episodes=10,
         # The root should eventuall be linked to all possible starting
         # configurations.
         if debug:
-            print("--------------------")
-            print(f">>> NEW GAME: {n}.")
-            print(f">>> Cold available {locate_cold_moves(x, y, available)}")
-            print(f">>> All cold {locate_all_cold_moves(x, y)}")
-
+            print("---")
+            print(f">>> New game {n}")
         # --------------------------------------------------------------------
         # Play a game.
+        step = 0
         while not done:
             # Use MCTS to choose a move
             mcts = history.get((x, y))
@@ -122,7 +119,6 @@ def wythoff_mcts(num_episodes=10,
 
             # Play it.
             state, reward, done, info = env.step(move)
-            x, y, board, available = state
 
             # Analyze it.
             colds = locate_cold_moves(move[0], move[1], available)
@@ -133,21 +129,18 @@ def wythoff_mcts(num_episodes=10,
                     opts.decrease()
                 score = opts.score()
 
+            # -
             if debug:
-                print(f"---")
-                print(f">>> player: {player}")
-                print(f">>> num available: {len(available)}")
-                print(f">>> mcts moves: {mcts.root.child_names}")
-                print(f">>> mcts cnt: {[c.count for c in mcts.root.children]}")
-                print(f">>> mcts val: {[c.value for c in mcts.root.children]}")
-                print(f">>> cold moves: {colds}")
-                print(f">>> move: ({move})")
-                print(f">>> score: {score}")
+                print(f">>> {step}. player: {player}")
+                print(f">>> {step}. moves: {available}")
+                print(f">>> {step}. cold moves: {colds}")
+                print(f">>> {step}. move: ({move})")
+                print(f">>> {step}. score: {score}")
 
+            # Shift
+            x, y, board, available = state
             player = shift_player(player)
-
-        if debug or progress:
-            print(f">>> last score: {score}")
+            step += 1
 
         # --------------------------------------------------------------------
         # Log results
