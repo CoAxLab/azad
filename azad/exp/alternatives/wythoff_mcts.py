@@ -102,7 +102,7 @@ def wythoff_mcts(num_episodes=10,
         # configurations.
         if debug:
             print("---")
-            print(f">>> New game {n}")
+            print(f">>> New game {n} - ({x},{y})")
         # --------------------------------------------------------------------
         # Play a game.
         step = 0
@@ -115,13 +115,14 @@ def wythoff_mcts(num_episodes=10,
                                   c=c,
                                   default_policy=random_policy,
                                   mcts=mcts)
+
             history.add((x, y), mcts)
 
             # Play it.
             state, reward, done, info = env.step(move)
 
             # Analyze it.
-            colds = locate_cold_moves(move[0], move[1], available)
+            colds = locate_cold_moves(x, y, available)
             if len(colds) > 0:
                 if move in colds:
                     opts.increase()
