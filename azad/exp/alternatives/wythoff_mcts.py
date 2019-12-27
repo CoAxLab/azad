@@ -11,12 +11,11 @@ import torch.optim as optim
 import gym
 
 from azad.utils import save_checkpoint
-from azad.exp.alternatives.mcts import MCTS
-from azad.exp.alternatives.mcts import Node
+from azad.exp.alternatives.mcts import run_mcts
 from azad.exp.alternatives.mcts import MoveCount
+from azad.exp.alternatives.mcts import HistoryMCTS
 from azad.exp.alternatives.mcts import OptimalCount
 from azad.exp.alternatives.mcts import random_policy
-from azad.exp.alternatives.mcts import rollout
 from azad.exp.alternatives.mcts import shift_player
 from azad.exp.wythoff import save_monitored
 from azad.exp.wythoff import create_env
@@ -28,6 +27,7 @@ from azad.exp.wythoff import create_monitored
 
 
 def wythoff_mcts(num_episodes=10,
+                 num_simulations=10,
                  c=1.41,
                  game='Wythoff10x10',
                  device="cpu",
@@ -67,82 +67,65 @@ def wythoff_mcts(num_episodes=10,
 
     # ------------------------------------------------------------------------
     # Init
-    score = 0
-    m, n, board, available = peek(env)
-    all_possible_moves = create_all_possible_moves(m, n)
+    num_episodes = int(num_episodes)
+    num_simulations = int(num_simulations)
 
-    # Player model, etc
-    mcts = MCTS(c=c)
+    score = 0
+    m, n = env.m, env.n
+
     moves = MoveCount(m, n)
     opts = OptimalCount(0)
-    player = 0
+    history = HistoryMCTS()
+    mcts = None
+
     if debug:
         print(f"---------------------------------------")
         print("Setting up....")
         print(f">>> Device: {device}")
-        print(f">>> Network is {mcts}")
 
     # ------------------------------------------------------------------------
     # Train!
     for n in range(num_episodes):
+        # Choose player 0 or 1 to start
+        player = int(np.random.binomial(1, 0.5))
+
         # Restart the world
         state = env.reset()
         x, y, board, available = state
         moves.update((x, y))
 
-        # Reset always returns the root node
-        node = mcts.reset()
-
         # Restart vars
-        player = 0
+        # player = 0
         winner = None
-        n_step = 0
-        transitions = []
         done = False
-        do_rollout = False
 
         # The root should eventuall be linked to all possible starting
         # configurations.
-        # node = mcts.add(node, (x, y))
-        # print(x, y)
         if debug:
-            values = [c.value for c in mcts.root.children]
-            counts = [c.count for c in mcts.root.children]
-            names = [c.name for c in mcts.root.children]
             print("--------------------")
             print(f">>> NEW GAME: {n}.")
-            print(f">>> Initial position ({x}, {y})")
-            print(f">>> Initial moves {available}")
-            print(f">>> Initial player {player}")
             print(f">>> Cold available {locate_cold_moves(x, y, available)}")
             print(f">>> All cold {locate_all_cold_moves(x, y)}")
-            if n > 1:
-                print(f">>> MCTS root tree: {names}.")
-                print(f">>> MCTS best value: {np.max(values)}.")
-                print(
-                    f">>> MCTS counts - max: {np.max(counts)}, min: {np.min(counts)}, median: {np.median(counts)}."
-                )
 
         # --------------------------------------------------------------------
         # Play a game.
         while not done:
-            # Select?
-            next_node = mcts.select(node, available)
+            # Use MCTS to choose a move
+            mcts = history.get((x, y))
+            move, mcts = run_mcts(player,
+                                  env,
+                                  num_simulations=num_simulations,
+                                  c=c,
+                                  default_policy=random_policy,
+                                  mcts=mcts)
+            history.add((x, y), mcts)
 
-            # Or expand?
-            if next_node is None:
-                next_node = mcts.expand(node, available)
-                do_rollout = True
-
-            # Choose the move,
-            move = next_node.name
-
-            # and move.
-            state_next, reward, done, info = env.step(move)
-            (x_next, y_next, board_next, available_next) = state_next
+            # Play it.
+            state, reward, done, info = env.step(move)
+            x, y, board, available = state
 
             # Analyze it.
-            colds = locate_cold_moves(x, y, available)
+            colds = locate_cold_moves(move[0], move[1], available)
             if len(colds) > 0:
                 if move in colds:
                     opts.increase()
@@ -152,56 +135,19 @@ def wythoff_mcts(num_episodes=10,
 
             if debug:
                 print(f"---")
-                print(f">>> position: ({x}, {y})")
                 print(f">>> player: {player}")
                 print(f">>> num available: {len(available)}")
+                print(f">>> mcts moves: {mcts.root.child_names}")
+                print(f">>> mcts cnt: {[c.count for c in mcts.root.children]}")
+                print(f">>> mcts val: {[c.value for c in mcts.root.children]}")
                 print(f">>> cold moves: {colds}")
                 print(f">>> move: ({move})")
-                print(f">>> new position: ({x_next}, {y_next})")
                 print(f">>> score: {score}")
-                print(f">>> rollout: {do_rollout}")
 
-            if done:
-                winner = player
-                break
-
-            # Either rollout to the end of this game,
-            # or continue to play strategically.
-            #
-            # NOTE: Rollouts do not use the MCTS tree,
-            # and are terminal.
-            if do_rollout:
-                rollout_transitions, reward, done, info = rollout(
-                    player, state, mcts, env, random_policy)
-
-                n_step += info['n_step']
-                player = info["player"]
-                winner = player
-
-                transitions.extend(rollout_transitions)
-                if debug:
-                    print(f">>> rollout...")
-            else:
-                transitions.append((player, state, move, state_next, reward))
-
-                # Shift states
-                node = next_node
-                player = shift_player(player)
-                state = deepcopy(state_next)
-                board = deepcopy(board_next)
-                available = deepcopy(available_next)
-                x = deepcopy(x_next)
-                y = deepcopy(y_next)
-                n_step += 1
-
-        # --------------------------------------------------------------------
-        # Learn from the game
-        mcts.backpropagate(player, reward)
+            player = shift_player(player)
 
         if debug or progress:
             print(f">>> last score: {score}")
-        if debug:
-            print(f">>> learning...")
 
         # --------------------------------------------------------------------
         # Log results

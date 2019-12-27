@@ -6,8 +6,8 @@ from copy import deepcopy
 import numpy as np
 
 
-def random_policy(available):
-    return choice(available)
+def random_policy(moves):
+    return choice(moves)
 
 
 def shift_player(player):
@@ -17,28 +17,6 @@ def shift_player(player):
         return 0
     else:
         raise ValueError("player must be 1 or 0")
-
-
-def rollout(player, state, mcts, env, default_policy):
-    """Rollout until the game is done."""
-
-    n_step = 0
-    transitions = []
-    while True:
-        _, _, _, available = state
-        action = default_policy(available)
-        state_next, reward, done, info = env.step(action)
-
-        transitions.append((player, state, action, state_next, reward))
-        state = deepcopy(state_next)
-
-        if done:
-            info['n_step'] = n_step
-            info['player'] = player
-            return transitions, reward, done, info
-
-        player = shift_player(player)
-        n_step += 1
 
 
 class MoveCount():
@@ -67,6 +45,20 @@ class OptimalCount():
 
     def score(self):
         return self.num_optimal / self.counts
+
+
+class HistoryMCTS():
+    def __init__(self):
+        self.history = {}
+
+    def add(self, name, mcts):
+        self.history[name] = mcts
+
+    def get(self, name):
+        if name in self.history:
+            return self.history[name]
+        else:
+            return None
 
 
 class Node(object):
@@ -108,9 +100,9 @@ class Default(object):
         """
         self.default_policy = default_policy
 
-    def select(self, available):
+    def select(self, moves):
         """Pick a move."""
-        return self.default_policy(available)
+        return self.default_policy(moves)
 
 
 class MCTS(object):
@@ -146,57 +138,62 @@ class MCTS(object):
         """Upper confidence bound"""
 
         # Count future traversals
-        n = 1
-        for c in node.children:
-            n += c.count
+        N = 1
+        for child in node.children:
+            N += child.count
 
         # Est. weights
-        w_exploit = node.value / n
-        w_explore = sqrt(log(node.count) / n)
+        w_exploit = node.value / N
+        w_explore = sqrt(log(node.count) / N)
         w_total = w_exploit + self.c * w_explore
 
         return w_total
 
-    def select(self, node, available):
+    def select(self, node):
         """Select the best node (UCB). If there are untested nodes, 
         returns None; use expand() instead?
         """
 
-        # Check for expand
-        index = []
-        for i, a in enumerate(available):
-            if a in node.child_names:
-                index.append(node.child_names.index(a))
-
-        # There are no selection options available. Return None.
-        if len(index) == 0:
-            return None
-
-        # Select the best, by UCB (filtered)
-        best = max([node.children[i] for i in index],
-                   key=self.upper_conf_bound)
+        best = max(node.children, key=self.upper_conf_bound)
         self.path.append(best)
+
         return best
 
     def expand(self, node, available):
         """Expand the tree with a random new action, which should be valued
         by a rollout.
         """
-        # Find new candidate actions
-        new_actions = []
+        if len(node.children) > 0:
+            raise ValueError("expand called wrongly")
+
+        # Find new candidate actions, and create Nodes for each.
+        # This will leave them available for select later.
         for a in available:
-            if a not in node.child_names:
-                new_actions.append(a)
+            new = Node(name=a, initial_count=1, initial_value=0)
+            node.add(new)  # inplace update
 
-        # Pick one
-        action = self.default_policy(new_actions)
+        # Pick a move to rollout, and add it to the path.
+        move = self.default_policy(available)
+        loc = available.index(move)
+        self.path.append(node.children[loc])
 
-        # Add the action as a node to the growing tree....
-        new = Node(name=action, initial_count=1, initial_value=0)
-        node.add(new)  # inplace update
-        self.path.append(new)
+        return move, node
 
-        return new
+    def rollout(self, player, env):
+        """Rollout until the game is done."""
+        scratch = deepcopy(env)
+
+        done = False
+        while not done:
+            available = scratch.moves
+            action = self.default_policy(available)
+            state, reward, done, info = scratch.step(action)
+            if not done:
+                player = shift_player(player)
+
+        info['player'] = player
+
+        return state, reward, done, info
 
     def backpropagate(self, winner, reward):
         """Backpropagate a reward along the path."""
@@ -204,6 +201,8 @@ class MCTS(object):
         # Update winners value
         for i in range(winner, len(self.path), 2):
             self.path[i].value += reward
+            if self.path[i].value < 0:
+                self.path[i].value = 0
 
         # Update all counts
         for p in self.path:
@@ -214,17 +213,47 @@ class MCTS(object):
         self.path = []
         return self.root
 
+    def expanded(self, node):
+        return len(node.children) > 0
 
-# ----------------------------
-# For PerceptronMCTS:
-# Choose and init 3-layer Perceptron
+    def best(self):
+        """Find the best move."""
+        i = np.argmax([c.count for c in self.root.children])
+        return self.root.children[i].name
 
-# Do policy improvement:
-#   Alternate: create rollouts by pi(Perceptron), and ANN training from last rollouts.
 
-# ----------------------------
-# For ResNetMCTS, that is 'AlphaZero':
-# Choose and init a ResNet
+def run_mcts(player,
+             env,
+             num_simulations=10,
+             c=1.41,
+             default_policy=random_policy,
+             mcts=None):
 
-# Do policy improvement:
-#   Alternate: create rollouts by pi(ResNet), and ANN training from last rollouts.
+    if mcts is None:
+        mcts = MCTS(c=c, default_policy=default_policy)
+
+    for _ in range(num_simulations):
+        # Reinit
+        node = mcts.reset()
+        scratch_player = deepcopy(player)
+        scratch_env = deepcopy(env)
+        done = False
+
+        # Select
+        while mcts.expanded(node) and not done:
+            node = mcts.select(node)
+            _, reward, done, _ = scratch_env.step(node.name)
+            scratch_player = shift_player(scratch_player)
+
+        # Expand, if we are not terminal.
+        if not done:
+            move, node = mcts.expand(node, scratch_env.moves)
+            _, reward, done, _ = scratch_env.step(move)
+        if not done:
+            _, reward, done, info = mcts.rollout(scratch_player, scratch_env)
+            scratch_player = info["player"]
+
+        # Learn
+        mcts.backpropagate(scratch_player, reward)
+
+    return mcts.best(), mcts
