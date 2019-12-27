@@ -140,24 +140,33 @@ class MCTS(object):
         Note: works on single nodes and expects to be used as a
         key function in max([node, node, ....], key=upper_conf_bound)"""
 
-        # Count future traversals
+        # Gather counts and values, to ease later calculations.
         N = 1
+        counts = []
+        values = []
         for child in node.children:
             N += child.count
+            counts.append(child.count)
+            values.append(child.value)
+        counts = np.asarray(counts)
+        values = np.asarray(values)
 
-        # Est. weights
-        w_exploit = node.value / node.count
-        w_explore = sqrt(log(N) / node.count)
-        w_total = w_exploit + self.c * w_explore
+        # Est. UCB weights
+        w_exploits = values / counts
+        w_explores = np.sqrt(np.log(N) / counts)
+        w_totals = w_exploits + self.c * w_explores
 
-        return w_total
+        # Methods of MCTS aren't returning np objects
+        # so convert to list to keep up consistency.
+        return w_totals.tolist()
 
     def select(self, node):
         """Select the best node (UCB). If there are untested nodes, 
         returns None; use expand() instead?
         """
-
-        best = max(node.children, key=self.upper_conf_bound)
+        ucbs = self.upper_conf_bound(node)
+        loc = np.argmax(ucbs)
+        best = node.children[loc]
         self.path.append(best)
 
         return best
