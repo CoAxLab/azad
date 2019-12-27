@@ -128,7 +128,6 @@ class WythoffEnv(gym.Env):
     """Wythoff's game template. 
     
     Note: subclass to use."""
-
     def __init__(self, m, n):
         # Board/pile size
         self.m = int(m)
@@ -202,97 +201,83 @@ class WythoffEnv(gym.Env):
 
 class Wythoff3x3(WythoffEnv):
     """A 3 by 3 Wythoff game"""
-
     def __init__(self):
         WythoffEnv.__init__(self, m=3, n=3)
 
 
 class Wythoff5x5(WythoffEnv):
     """A 5 by 5 Wythoff game"""
-
     def __init__(self):
         WythoffEnv.__init__(self, m=5, n=5)
 
 
 class Wythoff10x10(WythoffEnv):
     """A 10 by 10 Wythoff game"""
-
     def __init__(self):
         WythoffEnv.__init__(self, m=10, n=10)
 
 
 class Wythoff15x15(WythoffEnv):
     """A 15 by 15 Wythoff game"""
-
     def __init__(self):
         WythoffEnv.__init__(self, m=15, n=15)
 
 
 class Wythoff50x50(WythoffEnv):
     """A 50 by 50 Wythoff game"""
-
     def __init__(self):
         WythoffEnv.__init__(self, m=50, n=50)
 
 
 class Wythoff100x100(WythoffEnv):
     """A 100 by 100 Wythoff game"""
-
     def __init__(self):
         WythoffEnv.__init__(self, m=100, n=100)
 
 
 class Wythoff150x150(WythoffEnv):
     """A 150 by 150 Wythoff game"""
-
     def __init__(self):
         WythoffEnv.__init__(self, m=150, n=150)
 
 
 class Wythoff200x200(WythoffEnv):
     """A 200 by 200 Wythoff game"""
-
     def __init__(self):
         WythoffEnv.__init__(self, m=200, n=200)
 
 
 class Wythoff250x250(WythoffEnv):
     """A 250 by 250 Wythoff game"""
-
     def __init__(self):
         WythoffEnv.__init__(self, m=250, n=250)
 
 
 class Wythoff300x300(WythoffEnv):
     """A 300 by 300 Wythoff game"""
-
     def __init__(self):
         WythoffEnv.__init__(self, m=300, n=300)
 
 
 class Wythoff350x350(WythoffEnv):
     """A 350 by 350 Wythoff game"""
-
     def __init__(self):
         WythoffEnv.__init__(self, m=350, n=350)
 
 
 class Wythoff400x400(WythoffEnv):
     """A 400 by 400 Wythoff game"""
-
     def __init__(self):
         WythoffEnv.__init__(self, m=400, n=400)
 
 
 class Wythoff450x450(WythoffEnv):
     """A 450 by 450 Wythoff game"""
-
     def __init__(self):
         WythoffEnv.__init__(self, m=450, n=450)
 
 
 class Wythoff500x500(WythoffEnv):
     """A 500 by 500 Wythoff game"""
-
     def __init__(self):
         WythoffEnv.__init__(self, m=500, n=500)
