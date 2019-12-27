@@ -78,8 +78,7 @@ def wythoff_mcts(num_episodes=10,
     mcts = None
 
     if debug:
-        print(f"---------------------------------------")
-        print("Setting up....")
+        print(f">>> Setting up....")
         print(f">>> Device: {device}")
 
     # ------------------------------------------------------------------------
