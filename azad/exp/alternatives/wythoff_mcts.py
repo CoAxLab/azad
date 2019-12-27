@@ -107,8 +107,11 @@ def wythoff_mcts(num_episodes=10,
         # Play a game.
         step = 0
         while not done:
+
             # Use MCTS to choose a move
-            mcts = history.get((x, y))
+            mcts = None
+            # mcts = history.get((x, y))
+
             move, mcts = run_mcts(player,
                                   env,
                                   num_simulations=num_simulations,
