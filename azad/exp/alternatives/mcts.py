@@ -135,7 +135,10 @@ class MCTS(object):
         return new
 
     def upper_conf_bound(self, node):
-        """Upper confidence bound"""
+        """Upper confidence bound.
+        
+        Note: works on single nodes and expects to be used as a
+        key function in max([node, node, ....], key=upper_conf_bound)"""
 
         # Count future traversals
         N = 1
@@ -143,8 +146,8 @@ class MCTS(object):
             N += child.count
 
         # Est. weights
-        w_exploit = node.value / N
-        w_explore = sqrt(log(node.count) / N)
+        w_exploit = node.value / node.count
+        w_explore = sqrt(log(N) / node.count)
         w_total = w_exploit + self.c * w_explore
 
         return w_total
