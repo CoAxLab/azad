@@ -51,6 +51,12 @@ class HistoryMCTS():
     def __init__(self):
         self.history = {}
 
+    def __contains__(self, name):
+        if name in self.history:
+            return True
+        else:
+            return False
+
     def add(self, name, mcts):
         self.history[name] = mcts
 
