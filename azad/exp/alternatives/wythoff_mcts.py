@@ -34,6 +34,7 @@ def wythoff_mcts(num_episodes=10,
                  tensorboard=None,
                  update_every=5,
                  monitor=None,
+                 use_history=False,
                  save=None,
                  debug=False,
                  seed=None):
@@ -101,24 +102,24 @@ def wythoff_mcts(num_episodes=10,
         # configurations.
         if debug:
             print("---")
-            print(f">>> New game {n} - ({x},{y})")
+            print(f">>> New game {n} - ({env.x},{env.y})")
         # --------------------------------------------------------------------
         # Play a game.
         step = 0
         while not done:
-
             # Use MCTS to choose a move
             mcts = None
-            # mcts = history.get((x, y))
+            if use_history and ((x, y) in history):
+                mcts = history.get((x, y))
+                if debug: print(f">>> {step}. using mcts history")
 
+            # mcts = history.get((x, y))
             move, mcts = run_mcts(player,
                                   env,
                                   num_simulations=num_simulations,
                                   c=c,
                                   default_policy=random_policy,
                                   mcts=mcts)
-
-            history.add((x, y), mcts)
 
             # Play it.
             state, reward, done, info = env.step(move)
@@ -140,10 +141,14 @@ def wythoff_mcts(num_episodes=10,
                 print(f">>> {step}. move: ({move})")
                 print(f">>> {step}. score: {score}")
 
-            # Shift
+            # Log history
+            history.add((x, y), mcts)
+            moves.update((x, y))
+            step += 1
+
+            # Shift state for next iterations
             x, y, board, available = state
             player = shift_player(player)
-            step += 1
 
         # --------------------------------------------------------------------
         # Log results
@@ -156,7 +161,7 @@ def wythoff_mcts(num_episodes=10,
     if monitor:
         save_monitored(save, monitored)
 
-    result = dict(mcts=mcts, score=score)
+    result = dict(mcts=history, score=score)
     if save is not None:
         save_checkpoint(result, filename=save)
     else:
