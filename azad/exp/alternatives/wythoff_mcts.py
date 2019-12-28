@@ -84,7 +84,7 @@ def wythoff_mcts(num_episodes=10,
 
     # ------------------------------------------------------------------------
     # Train!
-    for n in range(num_episodes):
+    for episode in range(num_episodes):
         # Choose player 0 or 1 to start
         player = int(np.random.binomial(1, 0.5))
 
@@ -163,6 +163,6 @@ def wythoff_mcts(num_episodes=10,
 
     result = dict(mcts=history, score=score)
     if save is not None:
-        save_checkpoint(result, filename=save)
+        save_checkpoint(result, filename=save + ".pkl")
     else:
         return result
