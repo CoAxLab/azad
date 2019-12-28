@@ -670,3 +670,16 @@ wythoff_exp40:
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate={learning_rate} --game=Wythoff15x15 --epsilon={epsilon} --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp40/run_{row_code} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}' --double=True" :::: $(DATA_PATH)/wythoff/exp40/grid.csv
 	
+# ----------------------------------------------------------------------------
+# 12-28-2019
+# First MCTS tuning experiment. Test sim length and exploration constant (c)
+wythoff_exp41:
+	-rm -rf $(DATA_PATH)/wythoff/exp41
+	-mkdir $(DATA_PATH)/wythoff/exp41
+	run_azad.py create_grid $(DATA_PATH)/wythoff/exp41/grid.csv \
+		--c='(0.041, 2.41, 20)' \
+		--num_simulations='(100, 10000, 10)' 
+	parallel -j 1 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp41/exp41.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_mcts --num_episodes=100 --c={c} --num_simulations={num_simulations} --game=Wythoff15x15 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp41/run_{row_code} --save_model=True --debug=False --monitor='('episode', 'score')'" :::: $(DATA_PATH)/wythoff/exp41/grid.csv
