@@ -48,21 +48,29 @@ class OptimalCount():
 
 
 class HistoryMCTS():
+    """Save the best models."""
     def __init__(self):
-        self.history = {}
+        self.models = {}
+        self.scores = {}
 
     def __contains__(self, name):
-        if name in self.history:
+        if name in self.models:
             return True
         else:
             return False
 
-    def add(self, name, mcts):
-        self.history[name] = mcts
+    def add(self, name, score, mcts):
+        if name in self.scores:
+            if score > self.scores[name]:
+                self.models[name] = mcts
+                self.scores[name] = score
+        else:
+            self.scores[name] = score
+            self.models[name] = mcts
 
     def get(self, name):
-        if name in self.history:
-            return self.history[name]
+        if name in self.models:
+            return self.models[name]
         else:
             return None
 

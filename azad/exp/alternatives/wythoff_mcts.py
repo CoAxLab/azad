@@ -141,8 +141,8 @@ def wythoff_mcts(num_episodes=10,
                 print(f">>> {step}. move: ({move})")
                 print(f">>> {step}. score: {score}")
 
-            # Log history
-            history.add((x, y), mcts)
+            # Log history (only imporved models get stored in the history)
+            history.add((x, y), score, mcts)
             moves.update((x, y))
             step += 1
 
@@ -152,7 +152,7 @@ def wythoff_mcts(num_episodes=10,
 
         # --------------------------------------------------------------------
         # Log results
-        if monitor and (int(n) % update_every) == 0:
+        if monitor and (int(episode) % update_every) == 0:
             all_variables = locals()
             for k in monitor:
                 monitored[k].append(float(all_variables[k]))
