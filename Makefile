@@ -683,3 +683,18 @@ wythoff_exp41:
 		--joblog '$(DATA_PATH)/wythoff/exp41/exp41.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_mcts --num_episodes=100 --c={c} --num_simulations={num_simulations} --game=Wythoff15x15 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp41/run_{row_code} --debug=False --monitor='('episode', 'score')'" :::: $(DATA_PATH)/wythoff/exp41/grid.csv
+
+# 12-30-2019
+# da4ba0d257fb3894fc4d2c561042aaa43c1de090
+#
+# use_history=True. history now only saves if the score gets better.
+wythoff_exp42:
+	-rm -rf $(DATA_PATH)/wythoff/exp42
+	-mkdir $(DATA_PATH)/wythoff/exp42
+	run_azad.py create_grid $(DATA_PATH)/wythoff/exp42/grid.csv \
+		--c='(0.041, 2.41, 20)' \
+		--num_simulations='(100, 10000, 10)' 
+	parallel -j 40 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp42/exp42.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_mcts --num_episodes=100 --c={c} --num_simulations={num_simulations} --game=Wythoff15x15 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp42/run_{row_code} --debug=False --monitor='('episode', 'score')'" :::: $(DATA_PATH)/wythoff/exp42/grid.csv
