@@ -697,4 +697,4 @@ wythoff_exp42:
 	parallel -j 40 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp42/exp42.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_mcts --num_episodes=100 --c={c} --num_simulations={num_simulations} --game=Wythoff15x15 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp42/run_{row_code} --debug=False --monitor='('episode', 'score')'" :::: $(DATA_PATH)/wythoff/exp42/grid.csv
+		"run_azad.py wythoff_mcts --num_episodes=100 --c={c} --num_simulations={num_simulations} --game=Wythoff15x15 --debug=False --use_history=True --update_every=1 --save=$(DATA_PATH)/wythoff/exp42/run_{row_code} --debug=False --monitor='('episode', 'score')'" :::: $(DATA_PATH)/wythoff/exp42/grid.csv
