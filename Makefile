@@ -701,7 +701,10 @@ wythoff_exp42:
 
 
 # ----------------------------------------------------------------------------
+# 1/2/2020
 # HP robustness testing.
+# ff391749fbe28ed89f22087e4eae7051b1736de3
+#
 # In exp40 I did grid search for dqn3 performance. Here we test the robustness
 # of the top three models.
 
