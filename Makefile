@@ -711,7 +711,7 @@ wythoff_exp43:
 	-rm -rf $(DATA_PATH)/wythoff/exp43
 	-mkdir $(DATA_PATH)/wythoff/exp43
 	run_azad.py create_grid $(DATA_PATH)/wythoff/exp43/grid.csv --num_gpu=4 \
-		--num_run='(1, 21, 20)' \
+		--num_run='(1, 21, 20)' 
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp43/exp43.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
