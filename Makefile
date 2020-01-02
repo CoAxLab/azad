@@ -698,3 +698,40 @@ wythoff_exp42:
 		--joblog '$(DATA_PATH)/wythoff/exp42/exp42.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_mcts --num_episodes=100 --c={c} --num_simulations={num_simulations} --game=Wythoff15x15 --debug=False --use_history=True --update_every=1 --save=$(DATA_PATH)/wythoff/exp42/run_{row_code} --debug=False --monitor='('episode', 'score')'" :::: $(DATA_PATH)/wythoff/exp42/grid.csv
+
+
+# ----------------------------------------------------------------------------
+# HP robustness testing.
+# In exp40 I did grid search for dqn3 performance. Here we test the robustness
+# of the top three models.
+
+# ('score', 'learning_rate', 'epsilon')
+# (0.9393386211726319, 0.000889, 0.1)
+wythoff_exp43:
+	-rm -rf $(DATA_PATH)/wythoff/exp43
+	-mkdir $(DATA_PATH)/wythoff/exp43
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp43/exp43.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.000889 --game=Wythoff15x15 --epsilon=0.1 --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp43/run_{row_code} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}' --double=True" ::: {1..20}
+	
+# ('score', 'learning_rate', 'epsilon')
+# (0.878515854265969, 0.000222, 0.3)
+wythoff_exp44:
+	-rm -rf $(DATA_PATH)/wythoff/exp44
+	-mkdir $(DATA_PATH)/wythoff/exp44
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp44/exp44.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.000222 --game=Wythoff15x15 --epsilon=0.3 --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp44/run_{row_code} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}' --double=True" ::: {1..20}
+	
+# ('score', 'learning_rate', 'epsilon')
+# (0.8610649179784786, 0.001111, 0.05)
+wythoff_exp45:
+	-rm -rf $(DATA_PATH)/wythoff/exp45
+	-mkdir $(DATA_PATH)/wythoff/exp45
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp45/exp45.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.001111 --game=Wythoff15x15 --epsilon=0.05 --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp45/run_{row_code} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}' --double=True" ::: {1..20}
+	
