@@ -737,4 +737,13 @@ wythoff_exp45:
 		--joblog '$(DATA_PATH)/wythoff/exp45/exp45.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.001111 --game=Wythoff15x15 --epsilon=0.05 --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp45/run_{1} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:2' --double=True" ::: {1..20}
-	
+
+# 1-2-2020	
+# exp44 but with anneal on.
+wythoff_exp46:
+	-rm -rf $(DATA_PATH)/wythoff/exp46
+	-mkdir $(DATA_PATH)/wythoff/exp46
+	parallel -j 2 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp46/exp46.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.000222 --game=Wythoff15x15 --epsilon=0.3 --anneal=True --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp46/run_{1} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:1' --double=True" ::: {1..20}
