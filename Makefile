@@ -710,30 +710,28 @@ wythoff_exp42:
 wythoff_exp43:
 	-rm -rf $(DATA_PATH)/wythoff/exp43
 	-mkdir $(DATA_PATH)/wythoff/exp43
-	run_azad.py create_grid $(DATA_PATH)/wythoff/exp43/grid.csv --num_gpu=4 \
-		--num_run='(1, 21, 20)' 
-	parallel -j 8 -v \
+	parallel -j 2 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp43/exp43.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.000889 --game=Wythoff15x15 --epsilon=0.1 --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp43/run_{num_run} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}' --double=True" :::: $(DATA_PATH)/wythoff/exp43/grid.csv
+		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.000889 --game=Wythoff15x15 --epsilon=0.1 --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp43/run_{1} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device=cuda:0' --double=True" ::: {1..20}
 	
 # ('score', 'learning_rate', 'epsilon')
 # (0.878515854265969, 0.000222, 0.3)
 wythoff_exp44:
 	-rm -rf $(DATA_PATH)/wythoff/exp44
 	-mkdir $(DATA_PATH)/wythoff/exp44
-	parallel -j 8 -v \
+	parallel -j 2 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp44/exp44.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.000222 --game=Wythoff15x15 --epsilon=0.3 --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp44/run_{1} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}' --double=True" ::: {1..20}
+		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.000222 --game=Wythoff15x15 --epsilon=0.3 --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp44/run_{1} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:1' --double=True" ::: {1..20}
 	
 # ('score', 'learning_rate', 'epsilon')
 # (0.8610649179784786, 0.001111, 0.05)
 wythoff_exp45:
 	-rm -rf $(DATA_PATH)/wythoff/exp45
 	-mkdir $(DATA_PATH)/wythoff/exp45
-	parallel -j 8 -v \
+	parallel -j 2 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp45/exp45.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.001111 --game=Wythoff15x15 --epsilon=0.05 --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp45/run_{1} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}' --double=True" ::: {1..20}
+		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.001111 --game=Wythoff15x15 --epsilon=0.05 --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp45/run_{1} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:2' --double=True" ::: {1..20}
 	
