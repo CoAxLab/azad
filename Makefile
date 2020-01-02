@@ -715,7 +715,7 @@ wythoff_exp43:
 	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp43/exp43.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.000889 --game=Wythoff15x15 --epsilon=0.1 --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp43/run_{num_run} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}' --double=True" ::: :::: $(DATA_PATH)/wythoff/exp43/grid.csv
+		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.000889 --game=Wythoff15x15 --epsilon=0.1 --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp43/run_{num_run} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}' --double=True" :::: $(DATA_PATH)/wythoff/exp43/grid.csv
 	
 # ('score', 'learning_rate', 'epsilon')
 # (0.878515854265969, 0.000222, 0.3)
