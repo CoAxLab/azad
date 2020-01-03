@@ -730,6 +730,9 @@ wythoff_exp44:
 	
 # ('score', 'learning_rate', 'epsilon')
 # (0.8610649179784786, 0.001111, 0.05)
+#
+# RESULT: exp45 had the most robust replication. Lower exploration noise?
+#         try a run w/ anneal=True?
 wythoff_exp45:
 	-rm -rf $(DATA_PATH)/wythoff/exp45
 	-mkdir $(DATA_PATH)/wythoff/exp45
@@ -747,3 +750,4 @@ wythoff_exp46:
 		--joblog '$(DATA_PATH)/wythoff/exp46/exp46.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.000222 --game=Wythoff15x15 --epsilon=0.3 --anneal=True --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp46/run_{1} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:1' --double=True" ::: {1..20}
+		
