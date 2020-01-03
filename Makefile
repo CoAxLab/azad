@@ -754,6 +754,9 @@ wythoff_exp46:
 		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.000222 --game=Wythoff15x15 --epsilon=0.3 --anneal=True --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp46/run_{1} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:1' --double=True" ::: {1..20}
 
 # exp45 but with anneal=True
+# RESULT: better average performance than 45. Stabilized performance/curves.
+#         With anneal on the final/mean/max results are clearly determined
+#         by the initial performance.
 wythoff_exp47:
 	-rm -rf $(DATA_PATH)/wythoff/exp47
 	-mkdir $(DATA_PATH)/wythoff/exp47
