@@ -107,7 +107,7 @@ def wythoff_alphazero(num_episodes=10,
         moves.update((x, y))
         if debug:
             print("---")
-            print(f">>> New game {n} - ({env.x},{env.y})")
+            print(f">>> Game {episode} - ({env.x},{env.y})")
 
         # --------------------------------------------------------------------
         # Play a game.
