@@ -766,7 +766,7 @@ wythoff_exp47:
 		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.001111 --game=Wythoff15x15 --epsilon=0.05 --anneal=True --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp47/run_{1} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:2' --double=True" ::: {1..20}
 
 # Run exp47 but with a higher intial epsilon=0.5. I'm curious. No hunch. 
-# RESULT: Worse the exp47
+# RESULT: Worse than exp47
 wythoff_exp48:
 	-rm -rf $(DATA_PATH)/wythoff/exp48
 	-mkdir $(DATA_PATH)/wythoff/exp48
@@ -774,4 +774,3 @@ wythoff_exp48:
 		--joblog '$(DATA_PATH)/wythoff/exp48/exp48.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.001111 --game=Wythoff15x15 --epsilon=0.5 --anneal=True --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp48/run_{1} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:0' --double=True" ::: {1..20}
-	
