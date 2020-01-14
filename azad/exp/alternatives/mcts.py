@@ -77,10 +77,16 @@ class HistoryMCTS():
 
 class Node(object):
     """I'm a node, for an MCTS tree."""
-    def __init__(self, name, initial_value=0, initial_count=1, children=None):
+    def __init__(self,
+                 name,
+                 initial_value=0,
+                 initial_count=1,
+                 prior=0,
+                 children=None):
         self.name = name
         self.value = initial_value
         self.count = initial_count
+        self.prior = prior
 
         self.children = []
         self.child_names = []
@@ -168,6 +174,12 @@ class MCTS(object):
         # Est. UCB weights
         w_exploits = values / counts
         w_explores = np.sqrt(np.log(N) / counts)
+
+        # Scale by prior (only comes into play when using fn approx,
+        # ie alphazero favored MCTS)
+        if node.prior > 0:
+            w_explores *= node.prior
+
         w_totals = w_exploits + self.c * w_explores
 
         # Methods of MCTS aren't returning np objects

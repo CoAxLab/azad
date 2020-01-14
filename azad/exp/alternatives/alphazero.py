@@ -8,15 +8,15 @@ import torch.nn as nn
 
 import numpy as np
 
+from copy import deepcopy
+
+from azad.exp.alternatives.mcts import Node
 from azad.exp.alternatives.mcts import MCTS
+from azad.exp.alternatives.mcts import HistoryMCTS
 from azad.exp.alternatives.mcts import MoveCount
+from azad.exp.alternatives.mcts import OptimalCount
 from azad.exp.alternatives.mcts import shift_player
 from azad.exp.alternatives.mcts import random_policy
-from azad.exp.alternatives.mcts import OptimalCount
-
-from azad.exp.alternatives.mcts import MoveCount
-from azad.exp.alternatives.mcts import HistoryMCTS
-from azad.exp.alternatives.mcts import OptimalCount
 from azad.exp.alternatives.mcts import random_policy
 from azad.exp.alternatives.mcts import shift_player
 from azad.exp.wythoff import save_monitored
@@ -25,40 +25,51 @@ from azad.exp.wythoff import peek
 from azad.exp.wythoff import create_all_possible_moves
 from azad.local_gym.wythoff import locate_cold_moves
 from azad.local_gym.wythoff import locate_all_cold_moves
+from azad.local_gym.wythoff import create_board
 
 
-class ReplayBuffer(object):
-    """A Replay buffer, adapted from ..."""
-    def __init__(self, window_size=1e6, batch_size=4096):
-        self.window_size = int(window_size)
-        self.batch_size = batch_size
-        self.buffer = []
+class AlphaZero(MCTS):
+    """MCTS, with state generalization."""
+    def expand(self, node, available, network, env, device="cpu"):
+        """Expand the tree with a random new action, which should be valued
+        by a rollout.
+        """
+        if len(node.children) > 0:
+            raise ValueError("expand called wrongly")
 
-    def update(self, game):
-        if len(self.buffer) > self.window_size:
-            self.buffer.pop(0)
-        self.buffer.append(game)
+        # Create input
+        all_moves = network.all_moves
+        board = create_board(env.x, env.y, env.m, env.n)
 
-    def sample(self):
-        # Sample uniformly across positions.
-        move_sum = float(sum(len(g) for g in self.buffer))
-        games = np.random.choice(self.buffer,
-                                 size=self.batch_size,
-                                 p=[len(g) / move_sum for g in self.buffer])
-        game_pos = [(g, np.random.randint(len(g))) for g in games]
-        return [g[i] for (g, i) in game_pos]
+        priors, value = network(
+            torch.tensor(board, device=device).unsqueeze(0).float())
+
+        # Find new candidate actions, and create Nodes for each.
+        # This will leave them available for select later.
+        for a in available:
+            new = Node(name=a,
+                       initial_count=1,
+                       initial_value=0,
+                       prior=float(priors[0, all_moves.index(a)].item()))
+            node.add(new)  # inplace update
+
+        # Pick a move to rollout, and add it to the path.
+        move = self.default_policy(available)
+        self.path.append(node.children[available.index(move)])
+
+        return move, node, value
 
 
 class ConvBlock(nn.Module):
     def __init__(self, board_size):
         super(ConvBlock, self).__init__()
         self.action_size = board_size
-        self.conv1 = nn.Conv2d(3, 128, 3, stride=1, padding=1)
+        self.conv1 = nn.Conv2d(1, 128, 3, stride=1, padding=1)
         self.bn1 = nn.BatchNorm2d(128)
 
     def forward(self, x):
         # batch_size x channels x board_x x board_y
-        x = s.view(-1, 1, self.board_size, self.board_size)
+        x = x.view(-1, 1, self.action_size, self.action_size)
         x = F.relu(self.bn1(self.conv1(x)))
         return x
 
@@ -102,7 +113,7 @@ class Head(nn.Module):
         self.conv1 = nn.Conv2d(128, 32, kernel_size=1)  # policy head
         self.bn1 = nn.BatchNorm2d(32)
         self.logsoftmax = nn.LogSoftmax(dim=1)
-        self.fc = nn.Linear(self.board_size**2 * 32, 7)
+        self.fc = nn.Linear(self.board_size**2 * 32, self.board_size**2)
 
     def forward(self, s):
         v = F.relu(self.bn(self.conv(s)))  # value head
@@ -124,7 +135,12 @@ class ResNet(nn.Module):
     """
     def __init__(self, board_size=500):
         super(ResNet, self).__init__()
+
         self.board_size = board_size
+        self.all_moves = create_all_possible_moves(board_size, board_size)
+        if len(self.all_moves) != self.board_size**2:
+            raise ValueError("moves and board don't match")
+
         self.conv1 = ConvBlock(board_size=self.board_size)
         for block in range(19):
             setattr(self, "res%i" % block, ResBlock())
@@ -138,5 +154,78 @@ class ResNet(nn.Module):
         return p, v
 
 
-def train(network, memory, optimizer):
-    pass
+def train_resnet(network, memory, optimizer, batch_size, clip_grad=False):
+    """Train the value approx network, a resnet"""
+
+    # Sample and vectorize the samples
+    samples = memory.sample(batch_size)
+    actions_i, boards, ps, values = zip(*samples)
+
+    actions_i = torch.stack(actions_i).squeeze().unsqueeze(1)
+    boards = torch.stack(boards)
+    ps = torch.stack(ps).squeeze().unsqueeze(1)
+    values = torch.stack(values).squeeze().unsqueeze(1)
+
+    # Get values and p from the resnet
+    ps_hat, values_hat = network(boards)
+    ps_hat = ps_hat.gather(1, actions_i.long())
+
+    # Calc loss, in two parts. Value and policy.
+    value_error = (values - values_hat)**2
+    policy_error = torch.sum((-ps * (1e-8 + ps_hat.float()).float().log()), 1)
+
+    # Join 'em
+    loss = (value_error.view(-1).float() + policy_error).mean()
+
+    # Learn
+    optimizer.zero_grad()
+    loss.backward()
+    if clip_grad:
+        for param in network.parameters():
+            param.grad.data.clamp_(-1, 1)
+    optimizer.step()
+
+    return network, loss
+
+
+def run_alphazero(player,
+                  env,
+                  network,
+                  num_simulations=10,
+                  c=1.41,
+                  max_size=500,
+                  default_policy=random_policy,
+                  mcts=None,
+                  device='cpu'):
+
+    if mcts is None:
+        mcts = AlphaZero(c=c, default_policy=default_policy)
+
+    for _ in range(num_simulations):
+        # Reinit
+        node = mcts.reset()
+        scratch_player = deepcopy(player)
+        scratch_env = deepcopy(env)
+        done = False
+
+        # Select
+        while mcts.expanded(node) and not done:
+            node = mcts.select(node)
+            _, reward, done, _ = scratch_env.step(node.name)
+            scratch_player = shift_player(scratch_player)
+
+        # Expand, if we are not terminal.
+        if not done:
+            move, node, value = mcts.expand(node, scratch_env.moves, network,
+                                            scratch_env)
+            _, reward, done, _ = scratch_env.step(move)
+        if not done:
+            reward = value
+
+        # Learn
+        if scratch_player == player:
+            mcts.backpropagate(scratch_player, reward)
+        else:
+            mcts.backpropagate(scratch_player, -1 * reward)
+
+    return mcts.best(), mcts
