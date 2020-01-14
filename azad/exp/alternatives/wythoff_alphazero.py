@@ -184,7 +184,7 @@ def wythoff_alphazero(num_episodes=10,
     if monitor:
         save_monitored(save, monitored)
 
-    result = dict(mcts=history, network=network, score=score)
+    result = dict(mcts=history, network=network, loss=loss, score=score)
     if save is not None:
         save_checkpoint(result, filename=save + ".pkl")
     else:
