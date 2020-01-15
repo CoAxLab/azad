@@ -779,4 +779,17 @@ wythoff_exp48:
 # 1-15-20
 # Test of alphazero. Run it long to see what happens.
 wythoff_exp49:
-	run_azad.py wythoff_alphazero --num_episodes=1e5 --batch_size=100 --c=0.5 --debug=True --save=$(DATA_PATH)/wythoff_exp49  --game='Wythoff15x15' --max_size=15 --device='cuda:0' > $(DATA_PATH)/wythoff_exp49.log
+	run_azad.py wythoff_alphazero --num_episodes=1e4 --batch_size=100 --c=0.5 --debug=True --save=$(DATA_PATH)/wythoff_exp49  --game='Wythoff15x15' --max_size=15 --device='cuda:0' > $(DATA_PATH)/wythoff_exp49.log
+
+# First tune sweep. Short trian time. Advantage hunting.
+# use_history=True. history now only saves if the score gets better.
+wythoff_exp50:
+	-rm -rf $(DATA_PATH)/wythoff/exp50
+	-mkdir $(DATA_PATH)/wythoff/exp50
+	run_azad.py create_grid $(DATA_PATH)/wythoff/exp50/grid.csv \
+		--c='(0.041, 2.41, 20)' \
+		--learning_rate='(0.01, 0.00001, 20)' 
+	parallel -j 40 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp50/exp50.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_mcts --num_episodes=1000 --c={c} --learning_rate={learning_rate} --game=Wythoff15x15 --debug=False --save=$(DATA_PATH)/wythoff/exp50/run_{row_code} --debug=False --monitor='('episode', 'score', 'loss')'" :::: $(DATA_PATH)/wythoff/exp50/grid.csv
