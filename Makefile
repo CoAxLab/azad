@@ -2,7 +2,7 @@ SHELL=/bin/bash -O expand_aliases
 # DATA_PATH=/Users/type/Code/azad/data/
 # DATA_PATH=/home/ejp/src/azad/data/
 DATA_PATH=/home/stitch/Code/azad/data/
-# DATA_PATH=/Users/qualia/Code/azad/data
+DATA_PATH=/Users/qualia/Code/azad/data
 
 # ----------------------------------------------------------------------------
 # Grid test
@@ -774,3 +774,9 @@ wythoff_exp48:
 		--joblog '$(DATA_PATH)/wythoff/exp48/exp48.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.001111 --game=Wythoff15x15 --epsilon=0.5 --anneal=True --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp48/run_{1} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:0' --double=True" ::: {1..20}
+
+# ----------------------------------------------------------------------------
+# 1-15-20
+# Test of alphazero
+wythoff_exp49:
+	run_azad.py wythoff_alphazero --num_episodes=1e4 --batch_size=100 --c=1.26 --debug=True --save=$(DATA_PATH)/wythoff_exp49  --game='Wythoff15x15' --max_size=15 --device='cuda:0'
