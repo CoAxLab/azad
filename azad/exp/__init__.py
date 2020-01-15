@@ -10,5 +10,6 @@ from azad.exp.alternatives import wythoff_dqn1
 from azad.exp.alternatives import wythoff_dqn2
 from azad.exp.alternatives import wythoff_dqn3
 from azad.exp.alternatives import wythoff_mcts
+from azad.exp.alternatives import wythoff_alphazero
 from azad.exp.search import create_grid
 from azad.exp.search import create_random
