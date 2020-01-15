@@ -216,8 +216,11 @@ def run_alphazero(player,
 
         # Expand, if we are not terminal.
         if not done:
-            move, node, value = mcts.expand(node, scratch_env.moves, network,
-                                            scratch_env)
+            move, node, value = mcts.expand(node,
+                                            scratch_env.moves,
+                                            network,
+                                            scratch_env,
+                                            device=device)
             _, reward, done, _ = scratch_env.step(move)
         if not done:
             reward = value
