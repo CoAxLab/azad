@@ -788,10 +788,10 @@ wythoff_exp49:
 wythoff_exp50:
 	-rm -rf $(DATA_PATH)/wythoff/exp50
 	-mkdir $(DATA_PATH)/wythoff/exp50
-	run_azad.py create_grid $(DATA_PATH)/wythoff/exp50/grid.csv \
+	run_azad.py create_grid $(DATA_PATH)/wythoff/exp50/grid.csv --num_gpu=4 \
 		--c='(0.041, 2.41, 20)' \
 		--learning_rate='(0.01, 0.00001, 20)' 
-	parallel -j 40 -v \
+	parallel -j 8 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp50/exp50.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_mcts --num_episodes=1000 --c={c} --learning_rate={learning_rate} --game=Wythoff15x15 --debug=False --save=$(DATA_PATH)/wythoff/exp50/run_{row_code} --debug=False --monitor='('episode', 'score', 'loss')'" :::: $(DATA_PATH)/wythoff/exp50/grid.csv
+		"run_azad.py wythoff_mcts --num_episodes=1000 --c={c} --learning_rate={learning_rate} --game=Wythoff15x15 --debug=False --save=$(DATA_PATH)/wythoff/exp50/run_{row_code} --debug=False --monitor='('episode', 'score', 'loss')' --device={device_code}" :::: $(DATA_PATH)/wythoff/exp50/grid.csv
