@@ -779,4 +779,4 @@ wythoff_exp48:
 # 1-15-20
 # Test of alphazero. Run it long to see what happens.
 wythoff_exp49:
-	run_azad.py wythoff_alphazero --num_episodes=1e5 --batch_size=100 --c=0.5 --debug=True --save=$(DATA_PATH)/wythoff_exp49  --game='Wythoff15x15' --max_size=15 --device='cuda:0' | $(DATA_PATH)/wythoff_exp49.log
+	run_azad.py wythoff_alphazero --num_episodes=1e5 --batch_size=100 --c=0.5 --debug=True --save=$(DATA_PATH)/wythoff_exp49  --game='Wythoff15x15' --max_size=15 --device='cuda:0' > $(DATA_PATH)/wythoff_exp49.log
