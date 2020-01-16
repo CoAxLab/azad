@@ -1069,7 +1069,6 @@ def expected_value(m, n, model, default_value=0.0):
     """Estimate the max value of each board position"""
 
     values = np.zeros((m, n))
-    all_possible_moves = create_all_possible_moves(m, n)
     for i in range(m):
         for j in range(n):
             board = tuple(flatten_board(create_board(i, j, m, n)))
