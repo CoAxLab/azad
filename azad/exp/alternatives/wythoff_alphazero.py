@@ -88,6 +88,8 @@ def wythoff_alphazero(num_episodes=10,
 
     # Network learning
     memory = ReplayMemory(1e3)
+    import ipdb
+    ipdb.set_trace()
     network = ResNet(board_size=max_size).to(device)
     optimizer = optim.Adam(network.parameters(), lr=learning_rate)
 
