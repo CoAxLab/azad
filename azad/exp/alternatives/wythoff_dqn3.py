@@ -400,6 +400,7 @@ def wythoff_dqn3(epsilon=0.1,
     memory = ReplayMemory(memory_capacity)
     optimizer = optim.Adam(player.parameters(), learning_rate)
     moves = MoveCount(m, n)
+    opts = OptimalCount(0)
 
     # ------------------------------------------------------------------------
     for episode in range(1, num_episodes + 1):
@@ -445,9 +446,14 @@ def wythoff_dqn3(epsilon=0.1,
             move = available[move_a]
             moves.update(move)
 
-            # Analyze it...
-            if move in locate_cold_moves(x, y, available):
-                score += (1 - score) / episode
+            # Analyze it.
+            colds = locate_cold_moves(x, y, available)
+            if (len(colds) > 0):
+                if move in colds:
+                    opts.increase()
+                else:
+                    opts.decrease()
+                score = opts.score()
 
             # Play it
             state_next, reward, done, _ = env.step(move)
