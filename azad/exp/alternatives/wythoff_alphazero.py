@@ -54,7 +54,7 @@ def wythoff_alphazero(num_episodes=10,
     # Logs...
     if tensorboard is not None:
         raise NotImplementedError()
-
+    print(device)
     # if tensorboard is not None:
     #     try:
     #         os.makedirs(tensorboard)
