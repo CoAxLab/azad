@@ -794,4 +794,4 @@ wythoff_exp50:
 	parallel -j 1 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp50/exp50.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_alphazero --num_episodes=1000 --c={c} --learning_rate={learning_rate} --game=Wythoff15x15 --debug=False --save=$(DATA_PATH)/wythoff/exp50/run_{row_code} --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" :::: $(DATA_PATH)/wythoff/exp50/grid.csv
+		"run_azad.py wythoff_alphazero --num_episodes=1000 --c={c} --learning_rate={learning_rate} --game=Wythoff15x15 --debug=True --save=$(DATA_PATH)/wythoff/exp50/run_{row_code} --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" :::: $(DATA_PATH)/wythoff/exp50/grid.csv
