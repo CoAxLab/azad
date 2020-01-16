@@ -52,11 +52,21 @@ from azad.exp.wythoff import create_monitored
 from azad.exp.wythoff import flatten_board
 from azad.exp.wythoff import plot_wythoff_board
 from azad.exp.wythoff import save_monitored
+from azad.exp.wythoff import load_
 from azad.exp.wythoff import expected_value
 from collections import namedtuple
 
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
+
+
+def shift_player(player):
+    if player == 0:
+        return 1
+    elif player == 1:
+        return 0
+    else:
+        raise ValueError("player must be 1 or 0")
 
 
 class DQN(nn.Module):
@@ -182,6 +192,117 @@ class MoveCount():
 
     def update(self, move):
         self.count[move[0], move[1]] += 1
+
+
+def evaluate_dqn3(model,
+                  game='Wythoff10x10',
+                  num_episodes=100,
+                  random_opponent=False,
+                  monitor=None,
+                  save=None,
+                  debug=False):
+    """Evaulate transfer on frozen DQN model."""
+
+    # Logs...
+    if monitor is not None:
+        monitored = create_monitored(monitor)
+
+    # Env...
+    env = create_env(game, monitor=False)
+    env.seed(seed)
+    np.random.seed(seed)
+
+    # Scores
+    score = 0
+    total_reward = 0
+
+    # Agents, etc
+    result = torch.load(model)
+    player = result['stumbler_player_dict']
+    m, n, board, available = peek(env)
+    all_possible_moves = create_all_possible_moves(m, n)
+
+    # ------------------------------------------------------------------------
+    for episode in range(1, num_episodes + 1):
+        # Random player moves first
+        player = int(np.random.binomial(1, 0.5))
+
+        # Init this game
+        state = env.reset()
+        x, y, board, available = state
+        if debug:
+            print(f"---------------------------------------")
+            print(f">>> NEW GAME ({episode}).")
+            print(f">>> Initial position ({x}, {y})")
+            print(f">>> Initial moves {available}")
+            print(f">>> Cold available {locate_cold_moves(x, y, available)}")
+            print(f">>> All cold {locate_all_cold_moves(x, y)}")
+
+        # -------------------------------------------------------------------
+        # Play a game
+        done = False
+        steps = 0
+        while not done:
+            # Convert board to a model(state)
+            state_hat = torch.from_numpy(np.array(board).reshape(m, n))
+            state_hat = state_hat.unsqueeze(0).unsqueeze(1).float()
+
+            # Get and filter Qs
+            Qs = player(state_hat).detach().numpy().squeeze()
+            mask = build_mask(available, m, n).flatten()
+            Qs *= mask
+
+            # Choose a move
+            if player == 1 and random_opponent:
+                epsilon = 1  # pure random
+            else:
+                epsilon = 0  # pure greed
+            index = np.nonzero(mask)[0].tolist()
+            move_i = e_greedy(Qs, epsilon=epsilon, index=index, mode='numpy')
+
+            # Re-index move_i to match 'available' index
+            move_a = index.index(move_i)
+            move = available[move_a]
+
+            # Play it
+            state_next, reward, done, _ = env.step(move)
+            (x_next, y_next, board_next, available_next) = state_next
+
+            # Analyze it...
+            if move in locate_cold_moves(x, y, available):
+                score += (1 - score) / episode
+
+            # -
+            if debug:
+                print(f">>> state_hat size: {state_hat.shape}")
+                print(f">>> state_hat: {state_hat}")
+                print(f">>> num available: {len(available)}")
+                print(f">>> available: {available}")
+                print(f">>> epsilon: {epsilon}")
+                print(f">>> Qs (filtered): {Qs[index]}")
+                print(f">>> new position: ({x_next}, {y_next})")
+
+            # Shift states
+            state = deepcopy(state_next)
+            board = deepcopy(board_next)
+            available = deepcopy(available_next)
+            # x = deepcopy(x_next)
+            # y = deepcopy(y_next)
+            player = shift_player(player)
+            steps += 1
+
+        if player == 0:
+            total_reward += reward
+
+        if monitor:
+            all_variables = locals()
+            for k in monitor:
+                monitored[k].append(float(all_variables[k]))
+
+    if monitor:
+        save_monitored(save, monitored)
+
+    return monitored
 
 
 def wythoff_dqn3(epsilon=0.1,
