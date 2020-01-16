@@ -53,6 +53,8 @@ from azad.exp.wythoff import flatten_board
 from azad.exp.wythoff import plot_wythoff_board
 from azad.exp.wythoff import save_monitored
 from azad.exp.wythoff import expected_value
+
+from azad.exp.alternatives.mcts import OptimalCount
 from collections import namedtuple
 
 Transition = namedtuple('Transition',
@@ -194,12 +196,13 @@ class MoveCount():
 
 
 def evaluate_dqn3(model,
-                  game='Wythoff10x10',
+                  game='Wythoff15x15',
                   num_episodes=100,
                   random_opponent=False,
                   monitor=None,
                   save=None,
-                  debug=False):
+                  debug=False,
+                  seed=None):
     """Evaulate transfer on frozen DQN model."""
 
     # Logs...
@@ -213,18 +216,20 @@ def evaluate_dqn3(model,
 
     # Scores
     score = 0
+    score_count = 1
     total_reward = 0
 
     # Agents, etc
-    result = torch.load(model)
-    player = result['stumbler_player_dict']
+    result = torch.load(model, map_location=torch.device('cpu'))
+    model = result['stumbler_player_dict']
+    opts = OptimalCount(0)
     m, n, board, available = peek(env)
     all_possible_moves = create_all_possible_moves(m, n)
 
     # ------------------------------------------------------------------------
     for episode in range(1, num_episodes + 1):
         # Random player moves first
-        player = int(np.random.binomial(1, 0.5))
+        player = 0
 
         # Init this game
         state = env.reset()
@@ -247,7 +252,7 @@ def evaluate_dqn3(model,
             state_hat = state_hat.unsqueeze(0).unsqueeze(1).float()
 
             # Get and filter Qs
-            Qs = player(state_hat).detach().numpy().squeeze()
+            Qs = model(state_hat).detach().numpy().squeeze()
             mask = build_mask(available, m, n).flatten()
             Qs *= mask
 
@@ -267,9 +272,14 @@ def evaluate_dqn3(model,
             state_next, reward, done, _ = env.step(move)
             (x_next, y_next, board_next, available_next) = state_next
 
-            # Analyze it...
-            if move in locate_cold_moves(x, y, available):
-                score += (1 - score) / episode
+            # Analyze it.
+            colds = locate_cold_moves(x, y, available)
+            if (len(colds) > 0) and (player == 0):
+                if move in colds:
+                    opts.increase()
+                else:
+                    opts.decrease()
+                score = opts.score()
 
             # -
             if debug:
@@ -281,24 +291,27 @@ def evaluate_dqn3(model,
                 print(f">>> Qs (filtered): {Qs[index]}")
                 print(f">>> new position: ({x_next}, {y_next})")
 
-            # Shift states
-            state = deepcopy(state_next)
-            board = deepcopy(board_next)
-            available = deepcopy(available_next)
-            # x = deepcopy(x_next)
-            # y = deepcopy(y_next)
-            player = shift_player(player)
-            steps += 1
+            # Shift for next play?
+            if not done:
+                # Shift states
+                state = deepcopy(state_next)
+                board = deepcopy(board_next)
+                available = deepcopy(available_next)
+                x = deepcopy(x_next)
+                y = deepcopy(y_next)
+                player = shift_player(player)
+                steps += 1
 
-        if player == 0:
-            total_reward += reward
+            # Tabulate player 0 wins
+            if player == 0 and done:
+                total_reward += reward
 
         if monitor:
             all_variables = locals()
             for k in monitor:
                 monitored[k].append(float(all_variables[k]))
 
-    if monitor:
+    if monitor and save is not None:
         save_monitored(save, monitored)
 
     return monitored
