@@ -52,7 +52,6 @@ from azad.exp.wythoff import create_monitored
 from azad.exp.wythoff import flatten_board
 from azad.exp.wythoff import plot_wythoff_board
 from azad.exp.wythoff import save_monitored
-from azad.exp.wythoff import load_
 from azad.exp.wythoff import expected_value
 from collections import namedtuple
 
