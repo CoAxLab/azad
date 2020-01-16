@@ -2,7 +2,7 @@ SHELL=/bin/bash -O expand_aliases
 # DATA_PATH=/Users/type/Code/azad/data/
 # DATA_PATH=/home/ejp/src/azad/data/
 DATA_PATH=/home/stitch/Code/azad/data/
-# DATA_PATH=/Users/qualia/Code/azad/data
+DATA_PATH=/Users/qualia/Code/azad/data
 
 # ----------------------------------------------------------------------------
 # Grid test
@@ -794,4 +794,4 @@ wythoff_exp50:
 	parallel -j 4 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp50/exp50.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_mcts --num_episodes=1000 --c={c} --learning_rate={learning_rate} --game=Wythoff15x15 --debug=False --save=$(DATA_PATH)/wythoff/exp50/run_{row_code} --debug=False --monitor='('episode', 'score', 'loss')' --device={device_code}" :::: $(DATA_PATH)/wythoff/exp50/grid.csv
+		"run_azad.py wythoff_alphazero --num_episodes=1000 --c={c} --learning_rate={learning_rate} --game=Wythoff15x15 --debug=False --save=$(DATA_PATH)/wythoff/exp50/run_{row_code} --debug=False --monitor='('episode', 'loss', 'score')' --device={device_code}" :::: $(DATA_PATH)/wythoff/exp50/grid.csv
