@@ -778,13 +778,20 @@ wythoff_exp48:
 # ----------------------------------------------------------------------------
 # 1-15-20
 # Test of alphazero. Run it long to see what happens.
+#
+# RESULT: Peak optimal play was about 0.4 and that happened after about 
+#         500 episodes.
+#         After that there was decline. The final score was 0.3352664008698804 
+#         with a loss of 0.08834809809923172.
+# 
+# 		  Going to need to quite a few runs before I get sense of the 
+#         possibilites. Long training is not needed. Which is good.
 wythoff_exp49:
 	-rm -rf $(DATA_PATH)/wythoff/exp49
 	-mkdir $(DATA_PATH)/wythoff/exp49
 	run_azad.py wythoff_alphazero --num_episodes=1e4 --batch_size=100 --c=0.5 --debug=True --save=$(DATA_PATH)/wythoff/exp49  --game='Wythoff15x15' --max_size=15 --device='cuda:0' > $(DATA_PATH)/wythoff/exp49/debug.log
 
-# First tune sweep. Short trian time. Advantage hunting.
-# use_history=True. history now only saves if the score gets better.
+# First tune sweep for alphazero. Short trian time. Advantage hunting.
 wythoff_exp50:
 	-rm -rf $(DATA_PATH)/wythoff/exp50
 	-mkdir $(DATA_PATH)/wythoff/exp50
