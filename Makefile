@@ -792,6 +792,9 @@ wythoff_exp49:
 	run_azad.py wythoff_alphazero --num_episodes=1e4 --batch_size=100 --c=0.5 --debug=True --save=$(DATA_PATH)/wythoff/exp49  --game='Wythoff15x15' --max_size=15 --device='cuda:0' > $(DATA_PATH)/wythoff/exp49/debug.log
 
 # First tune sweep for alphazero. Short trian time. Advantage hunting.
+# 
+# RESULT: a 'c' of ~1.5 gave consistently better score though noting 
+#         cracked 0.4 as the median. Poor. learning_rate doesn't show much.
 wythoff_exp50:
 	-rm -rf $(DATA_PATH)/wythoff/exp50
 	-mkdir $(DATA_PATH)/wythoff/exp50
