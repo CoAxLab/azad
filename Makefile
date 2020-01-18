@@ -805,3 +805,16 @@ wythoff_exp50:
 		--joblog '$(DATA_PATH)/wythoff/exp50/exp50.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_alphazero --num_episodes=1000 --c={c} --learning_rate={learning_rate} --game=Wythoff15x15 --max_size=15 --debug=True --save=$(DATA_PATH)/wythoff/exp50/run_{row_code} --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" :::: $(DATA_PATH)/wythoff/exp50/grid.csv
+
+# ----------------------------------------------------------------------------
+# Run DQN3 tune with a conv net. Used a MLP previously.
+wythoff_exp51:
+	-rm -rf $(DATA_PATH)/wythoff/exp51
+	-mkdir $(DATA_PATH)/wythoff/exp51
+	run_azad.py create_grid $(DATA_PATH)/wythoff/exp51/grid.csv --num_gpu=4 \
+		--learning_rate='(0.002, 0.0000001, 10)' \
+		--epsilon='(0.5, 0.05, 10)' 
+	parallel -j 8 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp51/exp51.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate={learning_rate} --game=Wythoff15x15 --network=DQN --epsilon={epsilon} --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp51/run_{row_code} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}' --double=True" :::: $(DATA_PATH)/wythoff/exp51/grid.csv
