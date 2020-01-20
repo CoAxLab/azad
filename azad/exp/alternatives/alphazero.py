@@ -133,7 +133,7 @@ class ResNet(nn.Module):
     """An AlphaZero-esque ResNet, configured for Wythoffs game and its
     analogs.
     """
-    def __init__(self, board_size=500):
+    def __init__(self, board_size=15):
         super(ResNet, self).__init__()
 
         self.board_size = board_size
@@ -151,6 +151,35 @@ class ResNet(nn.Module):
         for block in range(19):
             x = getattr(self, "res%i" % block)(x)
         p, v = self.head1(x)
+        return p, v
+
+
+class MLP(nn.Module):
+    """3-layer MLP for AlphaZero"""
+    def __init__(self, board_size=15, num_hidden1=2000, num_hidden2=1000):
+        super(MLP, self).__init__()
+
+        self.board_size = board_size
+        self.num_hidden1 = num_hidden1
+        self.num_hidden2 = num_hidden2
+        self.all_moves = create_all_possible_moves(board_size, board_size)
+
+        # Sanity between board and action space
+        if len(self.all_moves) != self.board_size**2:
+            raise ValueError("moves and board don't match")
+
+        self.fc1 = nn.Linear(self.board_size**2, self.num_hidden1)
+        self.fc2 = nn.Linear(self.num_hidden1, self.num_hidden2)
+        self.fc3 = nn.Linear(self.num_hidden2, self.board_size**2)
+
+    def forward(self, x):
+        x = F.relu(self.fc1(x))
+        x = F.relu(self.fc2(x))
+        v = torch.tanh(self.fc3(x))  # value head
+
+        p = F.relu(self.fc3(x))  # policy head
+        p = self.logsoftmax(p).exp()
+
         return p, v
 
 
