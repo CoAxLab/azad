@@ -808,6 +808,10 @@ wythoff_exp50:
 
 # ----------------------------------------------------------------------------
 # Run DQN3 tune with a conv net. Used a MLP previously.
+#
+# RESULTS: Best final score was ~0.28. Conv is looks terrible so far.
+#          This does make sense. Optimal play needs holistic view of the
+#          board in Wythoffs.
 wythoff_exp51:
 	-rm -rf $(DATA_PATH)/wythoff/exp51
 	-mkdir $(DATA_PATH)/wythoff/exp51
