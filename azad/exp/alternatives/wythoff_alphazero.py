@@ -14,6 +14,7 @@ from azad.models import ReplayMemory
 from azad.utils import save_checkpoint
 from azad.exp.alternatives.alphazero import run_alphazero
 from azad.exp.alternatives.alphazero import ResNet
+from azad.exp.alternatives.alphazero import MLP
 from azad.exp.alternatives.alphazero import AlphaZero
 from azad.exp.alternatives.alphazero import train_resnet
 
@@ -40,6 +41,7 @@ def wythoff_alphazero(num_episodes=10,
                       game='Wythoff15x15',
                       learning_rate=1e-3,
                       device="cpu",
+                      network_type='ResNet',
                       max_size=15,
                       tensorboard=None,
                       update_every=5,
@@ -89,7 +91,14 @@ def wythoff_alphazero(num_episodes=10,
     # Network learning
     memory = ReplayMemory(1e3)
     print(device)
-    network = ResNet(board_size=max_size).to(device)
+
+    if network_type == 'ResNet':
+        network = ResNet(board_size=max_size).to(device)
+    elif network_type == 'MLP':
+        network = MLP(board_size=max_size).to(device)
+    else:
+        raise ValueError("Argument network_type must be ResNet or MLP")
+
     optimizer = optim.Adam(network.parameters(), lr=learning_rate)
 
     if debug:
