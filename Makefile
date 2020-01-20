@@ -811,7 +811,9 @@ wythoff_exp50:
 #
 # RESULTS: Best final score was ~0.28. Conv looks terrible.
 #          This does make sense. Optimal play needs holistic view of the
-#          board in Wythoffs.
+#          board in Wythoffs. 
+#          Presently the ANN in alphazero uses a ConvNet. Is this performance
+#          limiting there? Try MLP.
 wythoff_exp51:
 	-rm -rf $(DATA_PATH)/wythoff/exp51
 	-mkdir $(DATA_PATH)/wythoff/exp51
