@@ -858,7 +858,13 @@ wythoff_exp52:
 #	the problem w/ MCTS. Or?
 
 # ----------------------------------------------------------------------------
+# b8432cb9abcf21a3139b018a4410dc2bca4ca976
+# 1/21/2019
 # Repeat of exp45 but using modified opt score estimation. Is it consistent?
+#
+# RESULT: All prev scores for dqn3 were wrong. The opt score code was in error.
+#         The analysis of exp51 is especially wrong. The ConvNet did no worse
+#         than the MLP in ths experiment. 
 wythoff_exp53:
 	-rm -rf $(DATA_PATH)/wythoff/exp53
 	-mkdir $(DATA_PATH)/wythoff/exp53
