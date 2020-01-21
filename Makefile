@@ -872,3 +872,15 @@ wythoff_exp53:
 		--joblog '$(DATA_PATH)/wythoff/exp53/exp53.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate=0.001111 --game=Wythoff15x15 --epsilon=0.05 --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp53/run_{1} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:2' --double=True" ::: {1..20}
+
+# Run a 'good' tuned MCTS game in replicate. Confirm this again with the 
+# current code
+# c = 1.26
+wythoff_exp54:
+	-rm -rf $(DATA_PATH)/wythoff/exp54
+	-mkdir $(DATA_PATH)/wythoff/exp54
+	parallel -j 20 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp54/exp54.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_mcts --num_episodes=100 --c=1.26 --num_simulations=2000 --game=Wythoff15x15 --debug=False --use_history=True --update_every=1 --save=$(DATA_PATH)/wythoff/exp54/run_{} --monitor='('episode', 'score')'" ::: {1..20}
+		
