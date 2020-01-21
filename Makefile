@@ -854,5 +854,5 @@ wythoff_exp52:
 #   It should learn to be consistently perfect on Wythoff's RIGHT? 
 # - Is there something off w/ my MCTS implementation? Try another persons? 
 #   Or try some simple games and prove it out on that? 
-# - AZ is stuck at 0.3-4. Less than MCTS. This could be an artificat of
-#	the possible problem w/ MCTS. Or?
+# - AZ is stuck at 0.3-4. Less than MCTS. This could be an artifact of
+#	the problem w/ MCTS. Or?
