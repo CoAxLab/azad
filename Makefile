@@ -830,6 +830,10 @@ wythoff_exp51:
 # 1/20/2020
 # Try a version of AZ using a simple MLP network instead of the ResNet.
 # For motivation see exp51
+# 
+# RESULT: no improvment compared to ResNet. Final error was still 0.3-5.
+#         That seems too high. This error is driven by estimating p (seen
+#         by manual testing outside the Makefile). Are my calcs here right?
 wythoff_exp52:
 	-rm -rf $(DATA_PATH)/wythoff/exp52
 	-mkdir $(DATA_PATH)/wythoff/exp52
