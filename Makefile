@@ -807,6 +807,7 @@ wythoff_exp50:
 		"run_azad.py wythoff_alphazero --num_episodes=1000 --c={c} --learning_rate={learning_rate} --game=Wythoff15x15 --max_size=15 --debug=True --save=$(DATA_PATH)/wythoff/exp50/run_{row_code} --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" :::: $(DATA_PATH)/wythoff/exp50/grid.csv
 
 # ----------------------------------------------------------------------------
+# 1/16/2020
 # Run DQN3 tune with a conv net. Used a MLP previously.
 #
 # RESULTS: Best final score was ~0.28. Conv looks terrible.
@@ -826,8 +827,9 @@ wythoff_exp51:
 		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate={learning_rate} --game=Wythoff15x15 --network=DQN --epsilon={epsilon} --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp51/run_{row_code} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}' --double=True" :::: $(DATA_PATH)/wythoff/exp51/grid.csv
 
 # ----------------------------------------------------------------------------
+# 1/20/2020
 # Try a version of AZ using a simple MLP network instead of the ResNet.
-# For motivation seen exp51
+# For motivation see exp51
 wythoff_exp52:
 	-rm -rf $(DATA_PATH)/wythoff/exp52
 	-mkdir $(DATA_PATH)/wythoff/exp52
