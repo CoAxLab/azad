@@ -838,3 +838,21 @@ wythoff_exp52:
 	-rm -rf $(DATA_PATH)/wythoff/exp52
 	-mkdir $(DATA_PATH)/wythoff/exp52
 	run_azad.py wythoff_alphazero --num_episodes=1e4 --batch_size=100 --c=0.5 --debug=True --save=$(DATA_PATH)/wythoff/exp52  --game='Wythoff15x15' --max_size=15 --device='cuda:0' --network_type='MLP' > $(DATA_PATH)/wythoff/exp52/debug.log
+
+
+# ----------------------------------------------------------------------------
+# 1/20/2019
+#
+# DQN and AZ - some thoughts.
+#
+# Running out time to finish reviews. I want to add both DQN and MCTS/AZ to 
+# the paper. 
+#
+# - DQN is noisy* but does seem to learn well on occasion. * Noisy: dependent 
+#   on a good initial random seed.
+# - MCTS (rollout, no ANN) is stuck at 0.4-5 optimality. This is toooooo looow.
+#   It should learn to be consistently perfect on Wythoff's RIGHT? 
+# - Is there something off w/ my MCTS implementation? Try another persons? 
+#   Or try some simple games and prove it out on that? 
+# - AZ is stuck at 0.3-4. Less than MCTS. This could be an artificat of
+#	the possible problem w/ MCTS. Or?
