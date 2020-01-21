@@ -824,3 +824,11 @@ wythoff_exp51:
 		--joblog '$(DATA_PATH)/wythoff/exp51/exp51.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn3 --num_episodes=2000 --batch_size=100 --memory_capacity=10000 --learning_rate={learning_rate} --game=Wythoff15x15 --network=DQN --epsilon={epsilon} --anneal=False --gamma=0.5 --debug=False --update_every=10 --save=$(DATA_PATH)/wythoff/exp51/run_{row_code} --save_model=True --debug=False --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}' --double=True" :::: $(DATA_PATH)/wythoff/exp51/grid.csv
+
+# ----------------------------------------------------------------------------
+# Try a version of AZ using a simple MLP network instead of the ResNet.
+# For motivation seen exp51
+wythoff_exp52:
+	-rm -rf $(DATA_PATH)/wythoff/exp52
+	-mkdir $(DATA_PATH)/wythoff/exp52
+	run_azad.py wythoff_alphazero --num_episodes=1e4 --batch_size=100 --c=0.5 --debug=True --save=$(DATA_PATH)/wythoff/exp52  --game='Wythoff15x15' --max_size=15 --device='cuda:0' --network_type='MLP' > $(DATA_PATH)/wythoff/exp52/debug.log
