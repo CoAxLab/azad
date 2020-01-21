@@ -34,7 +34,7 @@ class OptimalCount():
     """Count optimal moves."""
     def __init__(self, intial=0):
         self.num_optimal = intial
-        self.counts = 1
+        self.counts = 0
 
     def increase(self):
         self.counts += 1
@@ -44,7 +44,11 @@ class OptimalCount():
         self.counts += 1
 
     def score(self):
-        return self.num_optimal / self.counts
+        if self.counts > 0:
+            score = self.num_optimal / self.counts
+        else:
+            score = 0
+        return score
 
 
 class HistoryMCTS():
