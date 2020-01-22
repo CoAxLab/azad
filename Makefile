@@ -877,7 +877,7 @@ wythoff_exp53:
 # current code
 # c = 1.26, num_simulations=2000
 #
-# RESULT: consistent w/ previous runs. 
+# RESULT: consistent w/ previous runs. Expected final score was 0.48.
 wythoff_exp54:
 	-rm -rf $(DATA_PATH)/wythoff/exp54
 	-mkdir $(DATA_PATH)/wythoff/exp54
