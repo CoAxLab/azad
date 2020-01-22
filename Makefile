@@ -875,7 +875,9 @@ wythoff_exp53:
 
 # Run a 'good' tuned MCTS game in replicate. Confirm this again with the 
 # current code
-# c = 1.26
+# c = 1.26, num_simulations=2000
+#
+# RESULT: consistent w/ previous runs. 
 wythoff_exp54:
 	-rm -rf $(DATA_PATH)/wythoff/exp54
 	-mkdir $(DATA_PATH)/wythoff/exp54
@@ -883,4 +885,3 @@ wythoff_exp54:
 		--joblog '$(DATA_PATH)/wythoff/exp54/exp54.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_mcts --num_episodes=100 --c=1.26 --num_simulations=2000 --game=Wythoff15x15 --debug=False --use_history=True --update_every=1 --save=$(DATA_PATH)/wythoff/exp54/run_{} --monitor='('episode', 'score')'" ::: {1..20}
-		
