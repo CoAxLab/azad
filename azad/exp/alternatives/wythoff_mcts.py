@@ -102,7 +102,7 @@ def wythoff_mcts(num_episodes=10,
         # configurations.
         if debug:
             print("---")
-            print(f">>> New game {n} - ({env.x},{env.y})")
+            print(f">>> New game {episode} - ({env.x},{env.y})")
         # --------------------------------------------------------------------
         # Play a game.
         step = 0
