@@ -185,8 +185,8 @@ class WythoffEnv(gym.Env):
         self.board[self.x, self.y] = 1
 
     def reset(self):
-        self.x = self.prng.randint(1, self.m)
-        self.y = self.prng.randint(1, self.n)
+        self.x = self.prng.randint(self.m // 2, self.m)
+        self.y = self.prng.randint(self.n // 2, self.n)
 
         self._create_board()
         self._create_moves()
