@@ -1,5 +1,4 @@
 import random
-import torch.nn as tnn
 import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
