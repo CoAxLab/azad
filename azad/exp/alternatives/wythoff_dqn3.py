@@ -650,7 +650,11 @@ def wythoff_dqn3(epsilon=0.1,
     if tensorboard:
         writer.close()
 
-    result = {"player": player, "target": target, "score": score}
+    result = {
+        "player": player.state_dict(),
+        "target": target.state_dict(),
+        "score": score
+    }
     if save:
         torch.save(result, save + ".pytorch")
 
