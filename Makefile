@@ -901,7 +901,7 @@ wythoff_exp55:
 	parallel -j 2 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp55/exp55.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=100 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.1 --anneal=False --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp55/run_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:0' --double=True --network=DQN" ::: {1..22}
+		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.1 --anneal=False --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp55/run_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:0' --double=True --network=DQN --return_none=True" ::: {1..22}
 
 # ep=0.5, anneal=True, lr=0.0008, DQN
 wythoff_exp56:
@@ -910,7 +910,7 @@ wythoff_exp56:
 	parallel -j 2 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp56/exp56.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=100 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.5 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp56/run_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:1' --double=True --network=DQN" ::: {1..22}
+		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.5 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp56/run_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:1' --double=True --network=DQN --return_none=True" ::: {1..22}
 
 # ep=0.1, anneal=False, lr=0.0008, DQN_mlp
 wythoff_exp57:
@@ -919,7 +919,7 @@ wythoff_exp57:
 	parallel -j 2 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp57/exp57.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=100 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.1 --anneal=False --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp57/run_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:2' --double=True --network=DQN_mlp" ::: {1..22}
+		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.1 --anneal=False --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp57/run_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:2' --double=True --network=DQN_mlp --return_none=True" ::: {1..22}
 
 # ep=0.5, anneal=True, lr=0.0008, DQN_mlp
 wythoff_exp58:
@@ -928,4 +928,4 @@ wythoff_exp58:
 	parallel -j 2 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp58/exp58.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=100 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.5 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp58/run_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:3' --double=True --network=DQN_mlp" ::: {1..22}
+		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.5 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp58/run_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:3' --double=True --network=DQN_mlp --return_none=True" ::: {1..22}
