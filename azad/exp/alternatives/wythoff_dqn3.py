@@ -199,6 +199,7 @@ def evaluate_dqn3(model,
                   game='Wythoff15x15',
                   num_episodes=100,
                   random_opponent=False,
+                  model_name="player",
                   monitor=None,
                   save=None,
                   debug=False,
@@ -221,7 +222,7 @@ def evaluate_dqn3(model,
 
     # Agents, etc
     result = torch.load(model, map_location=torch.device('cpu'))
-    model = result['stumbler_player_dict']
+    model = result[model_name]
     opts = OptimalCount(0)
     m, n, board, available = peek(env)
     all_possible_moves = create_all_possible_moves(m, n)
@@ -344,6 +345,10 @@ def wythoff_dqn3(epsilon=0.1,
     # ------------------------------------------------------------------------
     # Init
     # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    num_episodes = int(num_episodes)
+    batch_size = int(batch_size)
+    memory_capacity = int(memory_capacity)
+    update_every = int(update_every)
 
     # Logs...
     if tensorboard is not None:
@@ -459,9 +464,14 @@ def wythoff_dqn3(epsilon=0.1,
             state_next, reward, done, _ = env.step(move)
             (x_next, y_next, board_next, available_next) = state_next
 
+            # Track value statistics
+            total_reward += reward
+            Q = Qs[move_i]
+            prediction_error = Qs.max() - Q
+            advantage = Q - Qs[np.nonzero(Qs)].mean()
+
             # Save transitions, as tensors to be used at training time
             # (onto GPU)
-            total_reward += reward
             transitions.append([
                 # S
                 state_hat,
@@ -635,18 +645,13 @@ def wythoff_dqn3(epsilon=0.1,
                 monitored[k].append(float(all_variables[k]))
 
     # --------------------------------------------------------------------
-    if save_model:
-        state = {
-            'stumbler_player_dict': player,
-        }
-        torch.save(state, save + ".pytorch")
     if monitor:
         save_monitored(save, monitored)
     if tensorboard:
         writer.close()
 
-    result = (player, score)
-    if return_none:
-        result = None
+    result = {"player": player, "target": target, "score": score}
+    if save:
+        torch.save(result, save + ".pytorch")
 
     return result
