@@ -885,3 +885,47 @@ wythoff_exp54:
 		--joblog '$(DATA_PATH)/wythoff/exp54/exp54.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_mcts --num_episodes=100 --c=1.26 --num_simulations=2000 --game=Wythoff15x15 --debug=False --use_history=True --update_every=1 --save=$(DATA_PATH)/wythoff/exp54/run_{} --monitor='('episode', 'score')'" ::: {1..20}
+
+# --------------------------------------------------------------------------
+# Final DQN runs for NBDT rev 1.
+# 
+# We say: DQN does not learn optimal play but it does learn stable Q values that
+# can defeat a random player consistently.
+#
+# NOTE: exp55-58 are setup to run in parallel on seperate gpus (4)
+#
+# ep=0.1, anneal=False, lr=0.0008, DQN
+wythoff_exp55:
+	-rm -rf $(DATA_PATH)/wythoff/exp55
+	-mkdir $(DATA_PATH)/wythoff/exp55
+	parallel -j 2 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp55/exp55.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=100 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.1 --anneal=False --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp55/run_{} --debug=False --monitor='('episode', 'loss', 'score','Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:0' --double=True --network=DQN" ::: {1..20}
+
+# ep=0.5, anneal=True, lr=0.0008, DQN
+wythoff_exp56:
+	-rm -rf $(DATA_PATH)/wythoff/exp56
+	-mkdir $(DATA_PATH)/wythoff/exp56
+	parallel -j 2 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp56/exp56.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=100 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.5 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp56/run_{} --debug=False --monitor='('episode', 'loss', 'score','Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:1' --double=True --network=DQN" ::: {1..20}
+
+# ep=0.1, anneal=False, lr=0.0008, DQN_mlp
+wythoff_exp57:
+	-rm -rf $(DATA_PATH)/wythoff/exp57
+	-mkdir $(DATA_PATH)/wythoff/exp57
+	parallel -j 2 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp57/exp57.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=100 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.1 --anneal=False --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp57/run_{} --debug=False --monitor='('episode', 'loss', 'score','Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:2' --double=True --network=DQN_mlp" ::: {1..20}
+
+# ep=0.5, anneal=True, lr=0.0008, DQN_mlp
+wythoff_exp58:
+	-rm -rf $(DATA_PATH)/wythoff/exp58
+	-mkdir $(DATA_PATH)/wythoff/exp58
+	parallel -j 2 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp58/exp58.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=100 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.5 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp58/run_{} --debug=False --monitor='('episode', 'loss', 'score','Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:3' --double=True --network=DQN_mlp" ::: {1..20}
