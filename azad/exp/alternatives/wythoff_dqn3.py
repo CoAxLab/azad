@@ -658,4 +658,7 @@ def wythoff_dqn3(epsilon=0.1,
     if save:
         torch.save(result, save + ".pytorch")
 
+    if return_none:
+        result = None
+
     return result
