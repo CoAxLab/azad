@@ -887,6 +887,9 @@ wythoff_exp54:
 		"run_azad.py wythoff_mcts --num_episodes=100 --c=1.26 --num_simulations=2000 --game=Wythoff15x15 --debug=False --use_history=True --update_every=1 --save=$(DATA_PATH)/wythoff/exp54/run_{} --monitor='('episode', 'score')'" ::: {1..20}
 
 # --------------------------------------------------------------------------
+# 1-23-2019
+# 18e9f451b14450c33db5df79a05c6e32d94221ce
+#
 # Final DQN runs for NBDT rev 1.
 # 
 # We say: DQN does not learn optimal play but it does learn stable Q values that
@@ -930,9 +933,11 @@ wythoff_exp58:
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.5 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp58/run_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:3' --double=True --network=DQN_mlp --return_none=True" ::: {1..22}
 
-# TODO: eval all these runs
-# Notebook to analyze all them side-by-side
-# Make figures in same; transfer to Fig notebook at the end
+# ---------------------------------------------------------------------------
+# 1-23-2019
+# 6000a9b9ebdf3d67c37146c4784aa00c1a0eaf23
+#
+# Eval the final models from exp55-58 versus self and random play
 wythoff_eval55:
 	parallel -j 40 -v \
 		--nice 19 --delay 2 \
