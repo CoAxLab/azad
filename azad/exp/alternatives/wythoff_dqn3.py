@@ -204,6 +204,7 @@ def evaluate_dqn3(path,
                   monitor=None,
                   save=None,
                   debug=False,
+                  return_none=False,
                   seed=None):
     """Evaulate transfer on frozen DQN model."""
 
@@ -341,7 +342,10 @@ def evaluate_dqn3(path,
     if monitor and save is not None:
         save_monitored(save, monitored)
 
-    return monitored
+    if return_none:
+        return None
+    else:
+        return monitored
 
 
 def wythoff_dqn3(epsilon=0.1,
