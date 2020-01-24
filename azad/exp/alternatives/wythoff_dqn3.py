@@ -195,37 +195,55 @@ class MoveCount():
         self.count[move[0], move[1]] += 1
 
 
-def evaluate_dqn3(model,
+def evaluate_dqn3(path,
                   game='Wythoff15x15',
                   num_episodes=100,
-                  random_opponent=False,
+                  opponent='self',
                   model_name="player",
+                  network='DQN',
                   monitor=None,
                   save=None,
                   debug=False,
                   seed=None):
     """Evaulate transfer on frozen DQN model."""
 
-    # Logs...
+    # ------------------------------------------------------------------------
+    # Arg sanity
+    num_episodes = int(num_episodes)
+    opponents = ('self', 'random', 'optimal', 'efficient')
+    if opponent not in opponents:
+        raise ValueError(f"opponent must be {opponents}")
+
+    # Logs
     if monitor is not None:
         monitored = create_monitored(monitor)
 
-    # Env...
+    # Init
+    score = 0
+    score_count = 1
+    total_reward = 0
+    opts = OptimalCount(0)
+
+    # Env
     env = create_env(game, monitor=False)
     env.seed(seed)
     np.random.seed(seed)
 
-    # Scores
-    score = 0
-    score_count = 1
-    total_reward = 0
-
-    # Agents, etc
-    result = torch.load(model, map_location=torch.device('cpu'))
-    model = result[model_name]
-    opts = OptimalCount(0)
     m, n, board, available = peek(env)
     all_possible_moves = create_all_possible_moves(m, n)
+
+    # Load the final model to evaluate
+    result = torch.load(path, map_location=torch.device('cpu'))
+    state_dict = result[model_name]
+
+    if network == 'DQN':
+        model = DQN(m, n, num_actions=len(all_possible_moves)).to("cpu")
+    elif network == 'DQN_mlp':
+        model = DQN_mlp(m, n, num_actions=len(all_possible_moves)).to("cpu")
+    else:
+        raise ValueError("network must DQN or DQN_mlp")
+
+    model.load_state_dict(state_dict)
 
     # ------------------------------------------------------------------------
     for episode in range(1, num_episodes + 1):
@@ -248,6 +266,9 @@ def evaluate_dqn3(model,
         done = False
         steps = 0
         while not done:
+            # Optimal moves
+            colds = locate_cold_moves(x, y, available)
+
             # Convert board to a model(state)
             state_hat = torch.from_numpy(np.array(board).reshape(m, n))
             state_hat = state_hat.unsqueeze(0).unsqueeze(1).float()
@@ -257,30 +278,36 @@ def evaluate_dqn3(model,
             mask = build_mask(available, m, n).flatten()
             Qs *= mask
 
-            # Choose a move
-            if player == 1 and random_opponent:
-                epsilon = 1  # pure random
-            else:
-                epsilon = 0  # pure greed
-            index = np.nonzero(mask)[0].tolist()
-            move_i = e_greedy(Qs, epsilon=epsilon, index=index, mode='numpy')
-
-            # Re-index move_i to match 'available' index
-            move_a = index.index(move_i)
-            move = available[move_a]
+            # Choose a move, based on the player code and the opponent type.
+            # Player 0 is always the final model we are evaluating.
+            if player == 0:
+                index = np.nonzero(mask)[0].tolist()
+                move_i = e_greedy(Qs, epsilon=0, index=index, mode='numpy')
+                move_a = index.index(move_i)
+                move = available[move_a]
+            elif (player == 1) and (opponent == 'self'):
+                index = np.nonzero(mask)[0].tolist()
+                move_i = e_greedy(Qs, epsilon=0, index=index, mode='numpy')
+                move_a = index.index(move_i)
+                move = available[move_a]
+            elif (player == 1) and (opponent == 'random'):
+                move = random.choice(available)
+            elif (player == 1) and (opponent == 'optimal'):
+                if len(colds) > 0:
+                    move = random.choice(colds)
+                else:
+                    move = random.choice(available)
+            elif (player == 1) and (opponent == 'efficient'):
+                if len(colds) > 0:
+                    distances = [sum(c) for c in colds]
+                    move_i = np.argmin(distances)
+                    move = colds[move_i]
+                else:
+                    move = random.choice(available)
 
             # Play it
             state_next, reward, done, _ = env.step(move)
             (x_next, y_next, board_next, available_next) = state_next
-
-            # Analyze it.
-            colds = locate_cold_moves(x, y, available)
-            if (len(colds) > 0) and (player == 0):
-                if move in colds:
-                    opts.increase()
-                else:
-                    opts.decrease()
-                score = opts.score()
 
             # -
             if debug:
@@ -288,7 +315,6 @@ def evaluate_dqn3(model,
                 print(f">>> state_hat: {state_hat}")
                 print(f">>> num available: {len(available)}")
                 print(f">>> available: {available}")
-                print(f">>> epsilon: {epsilon}")
                 print(f">>> Qs (filtered): {Qs[index]}")
                 print(f">>> new position: ({x_next}, {y_next})")
 
@@ -650,11 +676,9 @@ def wythoff_dqn3(epsilon=0.1,
     if tensorboard:
         writer.close()
 
-    result = {
-        "player": player.state_dict(),
-        "target": target.state_dict(),
-        "score": score
-    }
+    result = {"player": player.state_dict(), "score": score}
+    if target is not None:
+        result['target'] = target.state_dict()
     if save:
         torch.save(result, save + ".pytorch")
 
