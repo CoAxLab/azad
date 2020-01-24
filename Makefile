@@ -929,3 +929,15 @@ wythoff_exp58:
 		--joblog '$(DATA_PATH)/wythoff/exp58/exp58.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.5 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp58/run_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:3' --double=True --network=DQN_mlp --return_none=True" ::: {1..22}
+
+# TODO: eval all these runs
+# Notebook to analyze all them side-by-side
+# Make figures in same; transfer to Fig notebook at the end
+wythoff_eval55:
+	parallel -j 40 -v \
+		--nice 19 --delay 2 \
+		"run_azad.py evaulate_dqn3 $(DATA_PATH)/wythoff/exp55/run_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent='self' --debug=False --save=$(DATA_PATH)/wythoff/exp55/self_{} --monitor='('episode', 'total_reward')' --network=DQN --return_none=True" ::: {1..22}
+	parallel -j 40 -v \
+		--nice 19 --delay 2 \
+		"run_azad.py evaulate_dqn3 $(DATA_PATH)/wythoff/exp55/run_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent='random' --debug=False --save=$(DATA_PATH)/wythoff/exp55/random_{} --monitor='('episode', 'total_reward')' --network=DQN --return_none=True" ::: {1..22}
+
