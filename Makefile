@@ -957,15 +957,15 @@ wythoff_eval56:
 wythoff_eval57:
 	parallel -j 40 -v \
 		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn3 $(DATA_PATH)/wythoff/exp57/run_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=self --debug=False --save=$(DATA_PATH)/wythoff/exp57/eval_self_{} --monitor='('episode', 'total_reward')' --network=DQN --return_none=True" ::: {2..22}
+		"run_azad.py evaluate_dqn3 $(DATA_PATH)/wythoff/exp57/run_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=self --debug=False --save=$(DATA_PATH)/wythoff/exp57/eval_self_{} --monitor='('episode', 'total_reward')' --network=DQN_mlp --return_none=True" ::: {2..22}
 	parallel -j 40 -v \
 		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn3 $(DATA_PATH)/wythoff/exp57/run_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp57/eval_random_{} --monitor='('episode', 'total_reward')' --network=DQN --return_none=True" ::: {2..22}
+		"run_azad.py evaluate_dqn3 $(DATA_PATH)/wythoff/exp57/run_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp57/eval_random_{} --monitor='('episode', 'total_reward')' --network=DQN_mlp --return_none=True" ::: {2..22}
 
 wythoff_eval58:
 	parallel -j 40 -v \
 		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn3 $(DATA_PATH)/wythoff/exp58/run_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=self --debug=False --save=$(DATA_PATH)/wythoff/exp58/eval_self_{} --monitor='('episode', 'total_reward')' --network=DQN --return_none=True" ::: {2..22}
+		"run_azad.py evaluate_dqn3 $(DATA_PATH)/wythoff/exp58/run_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=self --debug=False --save=$(DATA_PATH)/wythoff/exp58/eval_self_{} --monitor='('episode', 'total_reward')' --network=DQN_mlp --return_none=True" ::: {2..22}
 	parallel -j 40 -v \
 		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn3 $(DATA_PATH)/wythoff/exp58/run_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp58/eval_random_{} --monitor='('episode', 'total_reward')' --network=DQN --return_none=True" ::: {2..22}
+		"run_azad.py evaluate_dqn3 $(DATA_PATH)/wythoff/exp58/run_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp58/eval_random_{} --monitor='('episode', 'total_reward')' --network=DQN_mlp --return_none=True" ::: {2..22}
