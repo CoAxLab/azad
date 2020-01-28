@@ -969,3 +969,23 @@ wythoff_eval58:
 	parallel -j 40 -v \
 		--nice 19 --delay 2 \
 		"run_azad.py evaluate_dqn3 $(DATA_PATH)/wythoff/exp58/run_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp58/eval_random_{} --monitor='('episode', 'total_reward')' --network=DQN_mlp --return_none=True" ::: {2..22}
+
+
+# --------------------------------------------------------------------------
+# I realized that SS models were run out to 750000 eps. Repeat exp56 and 8
+# to that many. (It is not going to matter).
+wythoff_exp59:
+	-rm -rf $(DATA_PATH)/wythoff/exp59
+	-mkdir $(DATA_PATH)/wythoff/exp59
+	parallel -j 4 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp59/exp59.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn3 --num_episodes=75000 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.5 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp59/run_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:1' --double=True --network=DQN --return_none=True" ::: {1..22}
+
+wythoff_exp60:
+	-rm -rf $(DATA_PATH)/wythoff/exp60
+	-mkdir $(DATA_PATH)/wythoff/exp60
+	parallel -j 4 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp60/exp60.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn3 --num_episodes=75000 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.5 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp60/run_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:3' --double=True --network=DQN_mlp --return_none=True" ::: {1..22}
