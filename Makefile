@@ -1012,13 +1012,9 @@ wythoff_exp61:
 	-mkdir $(DATA_PATH)/wythoff/exp61
 	run_azad.py create_grid $(DATA_PATH)/wythoff/exp61/grid.csv --num_gpu=4 \
 		--learning_rate='(0.0001, 1.0, 100)' \
-		--epsilon='(1.0, 0.1, 10)'
-
-wythoff_exp62:
-	-rm -rf $(DATA_PATH)/wythoff/exp62
-	-mkdir $(DATA_PATH)/wythoff/exp62
+		--epsilon='(0.5, 0.1, 5)'
 	parallel -j 1 -v \
-		--joblog '$(DATA_PATH)/wythoff/exp62/exp62.parallel.log' \
+		--joblog '$(DATA_PATH)/wythoff/exp61/exp61.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn3 --save=$(DATA_PATH)/wythoff/exp62/run_{1}_{row_code} --num_episodes=5000 --learning_rate={learning_rate} --epsilon={epsilon} --anneal=True --gamma=0.5 --game=Wythoff15x15 --debug=False --network={1} --update_every=10 --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" ::: DQN_hot1 DQN_hot2 DQN_hot3 DQN_hot4 DQN_hot5 DQN_conv1 DQN_conv2 DQN_conv3 :::: \
+		"run_azad.py wythoff_dqn3 --save=$(DATA_PATH)/wythoff/exp61/run_{1}_{row_code} --num_episodes=5000 --learning_rate={learning_rate} --epsilon={epsilon} --anneal=True --gamma=0.5 --game=Wythoff15x15 --debug=False --network={1} --update_every=10 --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" ::: DQN_hot1 DQN_hot2 DQN_hot3 DQN_hot4 DQN_hot5 DQN_conv1 DQN_conv2 DQN_conv3 :::: \
 		$(DATA_PATH)/wythoff/exp61/grid.csv
