@@ -107,6 +107,7 @@ class DQN_hot4(nn.Module):
     """
     def __init__(self, m, n, num_actions):
         super(DQN_hot4, self).__init__()
+        self.num_actions = num_actions
         self.num_hidden1 = 100
         self.num_hidden2 = 200
         self.m = m
@@ -140,6 +141,7 @@ class DQN_hot5(nn.Module):
     """
     def __init__(self, m, n, num_actions):
         super(DQN_hot5, self).__init__()
+        self.num_actions = num_actions
         self.num_hidden1 = 1000
         self.num_hidden2 = 2000
         self.m = m
