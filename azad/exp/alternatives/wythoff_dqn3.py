@@ -1,12 +1,11 @@
 """Learn to play Wythoff's with a DQN, using a (x,y) board representation."""
-import os, csv
+import os
+import csv
 import sys
-
 import errno
-import pudb
-
-from collections import defaultdict
 from copy import deepcopy
+from collections import namedtuple
+from collections import defaultdict
 
 import torch
 import torch.optim as optim
@@ -16,22 +15,36 @@ import torch.nn as tnn
 import torch.optim as optim
 import torchvision.transforms as T
 import torch.nn as nn
-
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
 from torchviz import make_dot
 
 import numpy as np
 from scipy.constants import golden
-
 import matplotlib.pyplot as plt
 import seaborn as sns
-
 import skimage
 from skimage import data, io
 
 import gym
 from gym import wrappers
+
+from azad.policy import epsilon_greedy as e_greedy
+from azad.models import ReplayMemory
+from azad.models import DQN_hot1
+from azad.models import DQN_hot2
+from azad.models import DQN_hot3
+from azad.models import DQN_hot4
+from azad.models import DQN_hot5
+from azad.models import DQN_xy1
+from azad.models import DQN_xy2
+from azad.models import DQN_xy3
+from azad.models import DQN_xy4
+from azad.models import DQN_xy5
+from azad.models import DQN_conv1
+from azad.models import DQN_conv2
+from azad.models import DQN_conv3
+
 import azad.local_gym
 from azad.local_gym.wythoff import create_moves
 from azad.local_gym.wythoff import create_all_possible_moves
@@ -43,9 +56,6 @@ from azad.local_gym.wythoff import locate_closest_cold_move
 from azad.local_gym.wythoff import locate_cold_moves
 from azad.local_gym.wythoff import locate_all_cold_moves
 
-from azad.models import ReplayMemory
-from azad.policy import epsilon_greedy as e_greedy
-
 from azad.exp.wythoff import peek
 from azad.exp.wythoff import create_env
 from azad.exp.wythoff import create_monitored
@@ -53,9 +63,7 @@ from azad.exp.wythoff import flatten_board
 from azad.exp.wythoff import plot_wythoff_board
 from azad.exp.wythoff import save_monitored
 from azad.exp.wythoff import expected_value
-
 from azad.exp.alternatives.mcts import OptimalCount
-from collections import namedtuple
 
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
@@ -68,68 +76,6 @@ def shift_player(player):
         return 0
     else:
         raise ValueError("player must be 1 or 0")
-
-
-class DQN(nn.Module):
-    def __init__(self, m, n, num_actions):
-        """Layers for a Deep Q Network
-
-        Based on:
-        Minh, V. et al, 2015. Human-level control through deep reinforcement 
-        learning. Nature, 518, pp.529–533. Available at: 
-        http://dx.doi.org/10.1038/nature14236.
-        
-        Code modified from:
-        https://pytorch.org/tutorials/intermediate/reinforcement_q_learning.html
-        
-        Params
-        ------
-        m,n: int
-            Board size 
-        num_actions: int 
-            Number of action-value to output, one-to-one correspondence 
-            to action in game.
-        """
-        super(DQN, self).__init__()
-        self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1)
-        self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1)
-        self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
-
-        # With the above and fixed params each conv layer
-        # looses n - 2 in size,and there are three layers.
-        # So calc the final numel for the linear 'decode'
-        # at the end.
-        self.fc4 = nn.Linear(64 * (n - (2 * 3)) * (m - (2 * 3)), 512)
-        self.fc5 = nn.Linear(512, num_actions)
-
-    def forward(self, x):
-        x = F.relu(self.conv1(x))
-        x = F.relu(self.conv2(x))
-        x = F.relu(self.conv3(x))
-        x = F.relu(self.fc4(x.view(x.size(0), -1)))
-        return self.fc5(x)
-
-
-class DQN_mlp(nn.Module):
-    """Layers for a Deep Q Network, based on a simple MLP."""
-    def __init__(self, m, n, num_actions, num_hidden1=1000, num_hidden2=2000):
-        super(DQN_mlp, self).__init__()
-        self.m = m
-        self.n = n
-        self.num_hidden1 = num_hidden1
-        self.num_hidden2 = num_hidden2
-
-        self.fc1 = nn.Linear(m * n, num_hidden1)
-        self.fc2 = nn.Linear(num_hidden1, num_hidden2)
-        self.fc3 = nn.Linear(num_hidden2, num_hidden2)
-        self.fc4 = nn.Linear(num_hidden2, num_actions)
-
-    def forward(self, x):
-        x = x.view(x.size(0), -1)  # Flatten view
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        return self.fc4(x)
 
 
 def train_dqn(batch_size,
@@ -200,7 +146,7 @@ def evaluate_dqn3(path,
                   num_episodes=100,
                   opponent='self',
                   model_name="player",
-                  network='DQN',
+                  network='DQN_conv3',
                   monitor=None,
                   save=None,
                   debug=False,
@@ -237,13 +183,8 @@ def evaluate_dqn3(path,
     result = torch.load(path, map_location=torch.device('cpu'))
     state_dict = result[model_name]
 
-    if network == 'DQN':
-        model = DQN(m, n, num_actions=len(all_possible_moves)).to("cpu")
-    elif network == 'DQN_mlp':
-        model = DQN_mlp(m, n, num_actions=len(all_possible_moves)).to("cpu")
-    else:
-        raise ValueError("network must DQN or DQN_mlp")
-
+    Model = getattr(azad.models, network)
+    model = Model(m, n, num_actions=len(all_possible_moves)).to("cpu")
     model.load_state_dict(state_dict)
 
     # ------------------------------------------------------------------------
@@ -355,7 +296,7 @@ def wythoff_dqn3(epsilon=0.1,
                  batch_size=20,
                  memory_capacity=100,
                  game='Wythoff10x10',
-                 network='DQN_mlp',
+                 network='DQN_conv3',
                  anneal=False,
                  tensorboard=None,
                  update_every=5,
@@ -369,12 +310,10 @@ def wythoff_dqn3(epsilon=0.1,
                  device='cpu',
                  progress=False,
                  seed=None):
-    """Learn to play Wythoff's w/ a DQN and e-greedy random exploration.
-    """
+    """Learning Wythoff's, with a DQN."""
 
     # ------------------------------------------------------------------------
     # Init
-    # device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     num_episodes = int(num_episodes)
     batch_size = int(batch_size)
     memory_capacity = int(memory_capacity)
@@ -411,14 +350,10 @@ def wythoff_dqn3(epsilon=0.1,
     m, n, board, available = peek(env)
     all_possible_moves = create_all_possible_moves(m, n)
 
-    if network == 'DQN':
-        player = DQN(m, n, num_actions=len(all_possible_moves)).to(device)
-        target = DQN(m, n, num_actions=len(all_possible_moves)).to(device)
-    elif network == 'DQN_mlp':
-        player = DQN_mlp(m, n, num_actions=len(all_possible_moves)).to(device)
-        target = DQN_mlp(m, n, num_actions=len(all_possible_moves)).to(device)
-    else:
-        raise ValueError("network must DQN or DQN_mlp")
+    Model = getattr(azad.models, network)
+    player = Model(m, n, num_actions=len(all_possible_moves)).to(device)
+    target = Model(m, n, num_actions=len(all_possible_moves)).to(device)
+
     if double:
         target.load_state_dict(player.state_dict())
         target.eval()

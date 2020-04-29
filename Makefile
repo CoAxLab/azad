@@ -1,8 +1,8 @@
 SHELL=/bin/bash -O expand_aliases
 # DATA_PATH=/Users/type/Code/azad/data/
 # DATA_PATH=/home/ejp/src/azad/data/
-DATA_PATH=/home/stitch/Code/azad/data/
-# DATA_PATH=/Users/qualia/Code/azad/data
+# DATA_PATH=/home/stitch/Code/azad/data/
+DATA_PATH=/Users/qualia/Code/azad/data
 
 # ----------------------------------------------------------------------------
 # Grid test
@@ -989,3 +989,36 @@ wythoff_exp60:
 		--joblog '$(DATA_PATH)/wythoff/exp60/exp60.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn3 --num_episodes=75000 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0008 --game=Wythoff15x15 --epsilon=0.5 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp60/run_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:3' --double=True --network=DQN_mlp --return_none=True" ::: {1..22}
+
+
+# --------------------------------------------------------------------------
+# Reviewer response 2
+# Many DQN experiments have been done by both Alp and I. Let's refine and 
+# collect them into a new figure, for R2.
+#
+# I first made a bunch of new networks. I've tried these before, or similiar
+# but let's put them all toghether and give 'em names.
+#
+# DQN_hot1, ...
+# DQN_xy1, ...
+# DQN_conv1, ...
+# 
+# THere are total of 12 candidates. Let's tune their lrs using a grid search.
+#
+# Generate the grid to HP search. 
+# We'll share it for all these networks.
+wythoff_exp61:
+	-rm -rf $(DATA_PATH)/wythoff/exp61
+	-mkdir $(DATA_PATH)/wythoff/exp61
+	run_azad.py create_grid $(DATA_PATH)/wythoff/exp61/grid.csv --num_gpu=4 \
+		--learning_rate='(0.0001, 1.0, 100)' \
+		--epsilon='(1.0, 0.1, 10)'
+
+wythoff_exp62:
+	-rm -rf $(DATA_PATH)/wythoff/exp62
+	-mkdir $(DATA_PATH)/wythoff/exp62
+	parallel -j 1 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp6/exp62.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn3 --save=$(DATA_PATH)/wythoff/exp62/run_{1}_{row_code} --num_episodes=5000 --learning_rate={learning_rate} --epsilon={epsilon} --gamma=0.5 --game=Wythoff15x15 --debug=False --anneal=True --network={1} --update_every=10 --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" ::: DQN_hot1 DQN_hot2 DQN_hot3 DQN_hot4 DQN_hot5 DQN_conv1 DQN_conv2 DQN_conv3 :::: \
+		$(DATA_PATH)/wythoff/exp61/grid.csv
