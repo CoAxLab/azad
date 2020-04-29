@@ -46,6 +46,7 @@ class DQN_hot1(nn.Module):
         self.fc2 = nn.Linear(self.num_hidden1, self.num_actions)
 
     def forward(self, x):
+        x = x.view(x.size(0), -1)  # Flatten view
         x = F.relu(self.fc1(x))
         return self.fc2(x)
 
@@ -67,6 +68,7 @@ class DQN_hot2(nn.Module):
         self.fc2 = nn.Linear(self.num_hidden1, self.num_actions)
 
     def forward(self, x):
+        x = x.view(x.size(0), -1)  # Flatten view
         x = F.relu(self.fc1(x))
         return self.fc2(x)
 
