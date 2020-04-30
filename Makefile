@@ -1016,5 +1016,5 @@ wythoff_exp61:
 	parallel -j 32 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp61/exp61.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn3 --save=$(DATA_PATH)/wythoff/exp61/run_{}_{row_code} --num_episodes=5000 --learning_rate={learning_rate} --epsilon={epsilon} --anneal=True --gamma=0.5 --game=Wythoff15x15 --debug=False --network={} --update_every=10 --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" ::: DQN_hot1 DQN_hot2 DQN_hot3 DQN_hot4 DQN_hot5 DQN0_conv1 DQN_conv2 DQN_conv3 :::: \
+		"run_azad.py wythoff_dqn3 --save=$(DATA_PATH)/wythoff/exp61/run_{0}_{row_code} --num_episodes=5000 --learning_rate={learning_rate} --epsilon={epsilon} --anneal=True --gamma=0.5 --game=Wythoff15x15 --debug=False --network={0} --update_every=10 --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" ::: DQN_hot1 DQN_hot2 DQN_hot3 DQN_hot4 DQN_hot5 DQN0_conv1 DQN_conv2 DQN_conv3 :::: \
 		$(DATA_PATH)/wythoff/exp61/grid.csv
