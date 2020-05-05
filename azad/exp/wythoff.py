@@ -48,15 +48,16 @@ from azad.policy import softmax
 
 class WythoffOptimalStrategist(object):
     """Mimic an optimal Wythoffs player, while behaving like a pytorch model."""
-
     def __init__(self, m, n, hot_value=-1, cold_value=1):
         self.m = int(m)
         self.n = int(m)
         self.hot_value = float(hot_value)
         self.cold_value = float(cold_value)
 
-        self.board = create_cold_board(
-            self.m, self.n, cold_value=cold_value, default=hot_value)
+        self.board = create_cold_board(self.m,
+                                       self.n,
+                                       cold_value=cold_value,
+                                       default=hot_value)
 
     def forward(self, x):
         try:
@@ -155,8 +156,10 @@ def wythoff_stumbler_strategist(num_episodes=10,
 
     # Optimal overrides all others
     if optimal_strategist:
-        strategist = WythoffOptimalStrategist(
-            m, n, hot_value=hot_value, cold_value=cold_value)
+        strategist = WythoffOptimalStrategist(m,
+                                              n,
+                                              hot_value=hot_value,
+                                              cold_value=cold_value)
         score_b = 0.0
 
     # -----------------------------------------------------------------------
@@ -395,8 +398,9 @@ def wythoff_stumbler(num_episodes=10,
             try:
                 Qs_episode = add_bias_board(model[board], available,
                                             bias_board, influence)
-                move_i = epsilon_greedy(
-                    Qs_episode, epsilon=epsilon_e, mode='numpy')
+                move_i = epsilon_greedy(Qs_episode,
+                                        epsilon=epsilon_e,
+                                        mode='numpy')
             except KeyError:
                 model[board] = np.ones(len(available)) * default_Q
                 move_i = np.random.randint(0, len(available))
@@ -439,8 +443,9 @@ def wythoff_stumbler(num_episodes=10,
                 try:
                     Qs_episode = add_bias_board(opponent[board], available,
                                                 bias_board, influence)
-                    move_i = epsilon_greedy(
-                        Qs_episode, epsilon=epsilon_e, mode='numpy')
+                    move_i = epsilon_greedy(Qs_episode,
+                                            epsilon=epsilon_e,
+                                            mode='numpy')
                 except KeyError:
                     opponent[board] = np.ones(len(available)) * default_Q
                     move_i = np.random.randint(0, len(available))
@@ -550,24 +555,29 @@ def wythoff_stumbler(num_episodes=10,
 
             # Cold ref:
             cold = create_cold_board(m, n)
-            plot_wythoff_board(
-                cold, vmin=0, vmax=1, path=tensorboard, name='cold_board.png')
+            plot_wythoff_board(cold,
+                               vmin=0,
+                               vmax=1,
+                               path=tensorboard,
+                               name='cold_board.png')
             writer.add_image(
                 'cold_positions',
                 skimage.io.imread(os.path.join(tensorboard, 'cold_board.png')))
 
             # Agent max(Q) boards
             values = expected_value(m, n, model)
-            plot_wythoff_board(
-                values, path=tensorboard, name='player_max_values.png')
+            plot_wythoff_board(values,
+                               path=tensorboard,
+                               name='player_max_values.png')
             writer.add_image(
                 'player',
                 skimage.io.imread(
                     os.path.join(tensorboard, 'player_max_values.png')))
 
             values = expected_value(m, n, opponent)
-            plot_wythoff_board(
-                values, path=tensorboard, name='opponent_max_values.png')
+            plot_wythoff_board(values,
+                               path=tensorboard,
+                               name='opponent_max_values.png')
             writer.add_image(
                 'opponent',
                 skimage.io.imread(
@@ -724,8 +734,10 @@ def wythoff_strategist(stumbler_model,
                 reflect_cold=reflect_cold,
                 default_value=strategic_default_value)
     else:
-        strategic_value = expected_value(
-            o, p, stumbler_model, default_value=strategic_default_value)
+        strategic_value = expected_value(o,
+                                         p,
+                                         stumbler_model,
+                                         default_value=strategic_default_value)
 
     # Convert format.
     s_data = convert_ijv(strategic_value)
@@ -757,8 +769,9 @@ def wythoff_strategist(stumbler_model,
         for c, v in memory.sample(batch_size):
             coords.append(c)
             values.append(v)
-        coords = torch.tensor(
-            np.vstack(coords), requires_grad=True, dtype=torch.float)
+        coords = torch.tensor(np.vstack(coords),
+                              requires_grad=True,
+                              dtype=torch.float)
         values = torch.tensor(values, requires_grad=False, dtype=torch.float)
 
         # Making some preditions, ...
@@ -782,14 +795,13 @@ def wythoff_strategist(stumbler_model,
             writer.add_scalar('stategist_error', loss, episode)
 
             bias_board = create_bias_board(m, n, model)
-            plot_wythoff_board(
-                bias_board,
-                vmin=-1.5,
-                vmax=1.5,
-                path=tensorboard,
-                height=10,
-                width=15,
-                name='bias_board.png')
+            plot_wythoff_board(bias_board,
+                               vmin=-1.5,
+                               vmax=1.5,
+                               path=tensorboard,
+                               height=10,
+                               width=15,
+                               name='bias_board.png')
             writer.add_image(
                 'strategist',
                 skimage.io.imread(os.path.join(tensorboard, 'bias_board.png')))
@@ -908,10 +920,12 @@ def wythoff_oracular_strategy(num_episodes=1000,
                 coords.append(c)
                 values.append(v)
 
-            coords = torch.tensor(
-                np.vstack(coords), requires_grad=True, dtype=torch.float)
-            values = torch.tensor(
-                values, requires_grad=False, dtype=torch.float)
+            coords = torch.tensor(np.vstack(coords),
+                                  requires_grad=True,
+                                  dtype=torch.float)
+            values = torch.tensor(values,
+                                  requires_grad=False,
+                                  dtype=torch.float)
 
             # Making some preditions,
             predicted_values = model(coords).squeeze()
@@ -934,27 +948,25 @@ def wythoff_oracular_strategy(num_episodes=1000,
         bias_board = create_bias_board(m, n, model)
 
         if tensorboard and (int(episode) % update_every) == 0:
-            writer.add_scalar(
-                os.path.join(tensorboard, 'error'), loss, episode)
+            writer.add_scalar(os.path.join(tensorboard, 'error'), loss,
+                              episode)
 
-            plot_wythoff_board(
-                strategic_value,
-                vmin=0,
-                vmax=1,
-                path=tensorboard,
-                name='strategy_board_{}.png'.format(episode))
+            plot_wythoff_board(strategic_value,
+                               vmin=0,
+                               vmax=1,
+                               path=tensorboard,
+                               name='strategy_board_{}.png'.format(episode))
             writer.add_image(
                 'Training board',
                 skimage.io.imread(
                     os.path.join(tensorboard,
                                  'strategy_board_{}.png'.format(episode))))
 
-            plot_wythoff_board(
-                bias_board,
-                vmin=0,
-                vmax=1,
-                path=tensorboard,
-                name='bias_board_{}.png'.format(episode))
+            plot_wythoff_board(bias_board,
+                               vmin=0,
+                               vmax=1,
+                               path=tensorboard,
+                               name='bias_board_{}.png'.format(episode))
             writer.add_image(
                 'Testing board',
                 skimage.io.imread(
@@ -1123,21 +1135,19 @@ def estimate_hot_cold(m,
                       reflect_cold=True,
                       default_value=0.0):
     """Estimate hot and cold positions"""
-    hot = estimate_hot(
-        m,
-        n,
-        model,
-        hot_threshold,
-        value=hot_value,
-        default_value=default_value)
-    cold = estimate_cold(
-        m,
-        n,
-        model,
-        cold_threshold,
-        value=cold_value,
-        reflect=reflect_cold,
-        default_value=default_value)
+    hot = estimate_hot(m,
+                       n,
+                       model,
+                       hot_threshold,
+                       value=hot_value,
+                       default_value=default_value)
+    cold = estimate_cold(m,
+                         n,
+                         model,
+                         cold_threshold,
+                         value=cold_value,
+                         reflect=reflect_cold,
+                         default_value=default_value)
 
     return hot + cold
 
@@ -1172,8 +1182,9 @@ def flatten_board(board):
 def create_env(wythoff_name, monitor=True):
     env = gym.make('{}-v0'.format(wythoff_name))
     if monitor:
-        env = wrappers.Monitor(
-            env, './tmp/{}-v0-1'.format(wythoff_name), force=True)
+        env = wrappers.Monitor(env,
+                               './tmp/{}-v0-1'.format(wythoff_name),
+                               force=True)
 
     return env
 
@@ -1189,7 +1200,12 @@ def plot_wythoff_board(board,
     """Plot the board"""
 
     fig, ax = plt.subplots(figsize=(width, height))  # Sample figsize in inches
-    ax = sns.heatmap(board, linewidths=3, center=0, vmin=vmin, vmax=vmax, ax=ax)
+    ax = sns.heatmap(board,
+                     linewidths=3,
+                     center=0,
+                     vmin=vmin,
+                     vmax=vmax,
+                     ax=ax)
 
     # Save an image?
     if path is not None:
@@ -1317,8 +1333,9 @@ def evaluate_wythoff(stumbler=None,
             # STRATEGIST
             # Choose.
             hot_cold_move_values = [hot_cold_table[i, j] for i, j in available]
-            move_i = epsilon_greedy(
-                np.asarray(hot_cold_move_values), epsilon=0.0, mode='numpy')
+            move_i = epsilon_greedy(np.asarray(hot_cold_move_values),
+                                    epsilon=0.0,
+                                    mode='numpy')
             move = available[move_i]
 
             if debug:
@@ -1343,12 +1360,12 @@ def evaluate_wythoff(stumbler=None,
                                                     strategist_score))
 
     if save is not None:
-        np.savetxt(
-            save,
-            np.asarray([wins, stumbler_score, strategist_score]).reshape(1, 3),
-            fmt='%.1f,%.4f,%.4f',
-            comments="",
-            header="wins,stumbler_score,strategist_score")
+        np.savetxt(save,
+                   np.asarray([wins, stumbler_score,
+                               strategist_score]).reshape(1, 3),
+                   fmt='%.1f,%.4f,%.4f',
+                   comments="",
+                   header="wins,stumbler_score,strategist_score")
 
     result = (wins / num_episodes), stumbler_score, strategist_score
     if return_none:
