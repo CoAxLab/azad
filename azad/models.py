@@ -37,13 +37,8 @@ class DQN_hot1(nn.Module):
     """
     def __init__(self, m, n, num_actions):
         super(DQN_hot1, self).__init__()
-        self.num_actions = num_actions
-        self.num_hidden1 = 15
-        self.m = m
-        self.n = n
-
-        self.fc1 = nn.Linear(self.m * self.m, self.num_hidden1)
-        self.fc2 = nn.Linear(self.num_hidden1, self.num_actions)
+        self.fc1 = nn.Linear(m * n, 15)
+        self.fc2 = nn.Linear(15, num_actions)
 
     def forward(self, x):
         x = x.view(x.size(0), -1)  # Flatten view
@@ -59,13 +54,8 @@ class DQN_hot2(nn.Module):
     """
     def __init__(self, m, n, num_actions):
         super(DQN_hot2, self).__init__()
-        self.num_actions = num_actions
-        self.num_hidden1 = 100
-        self.m = m
-        self.n = n
-
-        self.fc1 = nn.Linear(self.m * self.m, self.num_hidden1)
-        self.fc2 = nn.Linear(self.num_hidden1, self.num_actions)
+        self.fc1 = nn.Linear(m * n, 100)
+        self.fc2 = nn.Linear(100, num_actions)
 
     def forward(self, x):
         x = x.view(x.size(0), -1)  # Flatten view
@@ -81,21 +71,14 @@ class DQN_hot3(nn.Module):
     """
     def __init__(self, m, n, num_actions):
         super(DQN_hot3, self).__init__()
-        self.num_actions = num_actions
-        self.num_hidden1 = 10
-        self.num_hidden2 = 20
-        self.m = m
-        self.n = n
-
-        self.fc1 = nn.Linear(self.m * self.n, self.num_hidden1)
-        self.fc2 = nn.Linear(self.num_hidden1, self.num_hidden2)
-        self.fc3 = nn.Linear(self.num_hidden2, self.num_actions)
+        self.fc1 = nn.Linear(m * n, 10)
+        self.fc2 = nn.Linear(10, 20)
+        self.fc3 = nn.Linear(20, num_actions)
 
     def forward(self, x):
         x = x.view(x.size(0), -1)  # Flatten view
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-
         return self.fc3(x)
 
 
@@ -107,21 +90,14 @@ class DQN_hot4(nn.Module):
     """
     def __init__(self, m, n, num_actions):
         super(DQN_hot4, self).__init__()
-        self.num_actions = num_actions
-        self.num_hidden1 = 100
-        self.num_hidden2 = 200
-        self.m = m
-        self.n = n
-
-        self.fc1 = nn.Linear(self.m * self.n, self.num_hidden1)
-        self.fc2 = nn.Linear(self.num_hidden1, self.num_hidden2)
-        self.fc3 = nn.Linear(self.num_hidden2, self.num_actions)
+        self.fc1 = nn.Linear(m * n, 100)
+        self.fc2 = nn.Linear(100, 25)
+        self.fc3 = nn.Linear(25, num_actions)
 
     def forward(self, x):
         x = x.view(x.size(0), -1)  # Flatten view
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-
         return self.fc3(x)
 
 
@@ -141,21 +117,14 @@ class DQN_hot5(nn.Module):
     """
     def __init__(self, m, n, num_actions):
         super(DQN_hot5, self).__init__()
-        self.num_actions = num_actions
-        self.num_hidden1 = 1000
-        self.num_hidden2 = 2000
-        self.m = m
-        self.n = n
-
-        self.fc1 = nn.Linear(self.m * self.n, self.num_hidden1)
-        self.fc2 = nn.Linear(self.num_hidden1, self.num_hidden2)
-        self.fc3 = nn.Linear(self.num_hidden2, self.num_actions)
+        self.fc1 = nn.Linear(m * n, 1000)
+        self.fc2 = nn.Linear(1000, 2000)
+        self.fc3 = nn.Linear(2000, num_actions)
 
     def forward(self, x):
         x = x.view(x.size(0), -1)  # Flatten view
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-
         return self.fc3(x)
 
 
@@ -167,9 +136,8 @@ class DQN_xy1(nn.Module):
     """
     def __init__(self):
         super(DQN_xy1, self).__init__()
-        self.num_hidden1 = 15
-        self.fc1 = nn.Linear(2, self.num_hidden1)
-        self.fc2 = nn.Linear(self.num_hidden1, 2)
+        self.fc1 = nn.Linear(2, 15)
+        self.fc2 = nn.Linear(15, 2)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -184,9 +152,8 @@ class DQN_xy2(nn.Module):
     """
     def __init__(self):
         super(DQN_xy2, self).__init__()
-        self.num_hidden1 = 100
-        self.fc1 = nn.Linear(2, self.num_hidden1)
-        self.fc2 = nn.Linear(self.num_hidden1, 2)
+        self.fc1 = nn.Linear(2, 100)
+        self.fc2 = nn.Linear(100, 2)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -201,12 +168,9 @@ class DQN_xy3(nn.Module):
     """
     def __init__(self):
         super(DQN_xy3, self).__init__()
-        self.num_hidden1 = 10
-        self.num_hidden2 = 20
-
-        self.fc1 = nn.Linear(2, self.num_hidden1)
-        self.fc2 = nn.Linear(self.num_hidden1, self.num_hidden2)
-        self.fc3 = nn.Linear(self.num_hidden2, 2)
+        self.fc1 = nn.Linear(2, 10)
+        self.fc2 = nn.Linear(10, 20)
+        self.fc3 = nn.Linear(20, 2)
 
     def forward(self, x):
         x = x.view(x.size(0), -1)  # Flatten view
@@ -223,12 +187,9 @@ class DQN_xy4(nn.Module):
     """
     def __init__(self):
         super(DQN_xy4, self).__init__()
-        self.num_hidden1 = 100
-        self.num_hidden2 = 200
-
-        self.fc1 = nn.Linear(2, self.num_hidden1)
-        self.fc2 = nn.Linear(self.num_hidden1, self.num_hidden2)
-        self.fc3 = nn.Linear(self.num_hidden2, 2)
+        self.fc1 = nn.Linear(2, 100)
+        self.fc2 = nn.Linear(100, 25)
+        self.fc3 = nn.Linear(25, 2)
 
     def forward(self, x):
         x = x.view(x.size(0), -1)  # Flatten view
@@ -253,11 +214,9 @@ class DQN_xy5(nn.Module):
     """
     def __init__(self):
         super(DQN_xy5, self).__init__()
-        self.num_hidden1 = 1000
-        self.num_hidden2 = 2000
-        self.fc1 = nn.Linear(2, self.num_hidden1)
-        self.fc2 = nn.Linear(self.num_hidden1, self.num_hidden2)
-        self.fc3 = nn.Linear(self.num_hidden2, 2)
+        self.fc1 = nn.Linear(2, 1000)
+        self.fc2 = nn.Linear(1000, 2000)
+        self.fc3 = nn.Linear(2000, 2)
 
     def forward(self, x):
         x = x.view(x.size(0), -1)  # Flatten view
@@ -279,17 +238,9 @@ class DQN_conv1(nn.Module):
             to action in game.
         """
         super(DQN_conv1, self).__init__()
-        self.num_actions = num_actions
-        self.num_hidden1 = 100
-        self.num_filters = 8
-        self.m = m
-        self.n = n
-
-        self.conv1 = nn.Conv2d(1, self.num_filters, kernel_size=3, stride=1)
-        self.fc1 = nn.Linear(
-            self.num_filters * (self.n - (2 * 3)) * (self.m - (2 * 3)),
-            self.num_hidden1)
-        self.fc2 = nn.Linear(self.num_hidden1, num_actions)
+        self.conv1 = nn.Conv2d(1, 16, kernel_size=3, stride=1)
+        self.fc1 = nn.Linear(16 * (n - 2) * (m - 2), 10)
+        self.fc2 = nn.Linear(10, num_actions)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
@@ -310,22 +261,18 @@ class DQN_conv2(nn.Module):
             to action in game.
         """
         super(DQN_conv2, self).__init__()
-        self.num_actions = num_actions
-        self.num_hidden1 = 100
-        self.num_filters = 32
-        self.m = m
-        self.n = n
-
-        self.conv1 = nn.Conv2d(1, self.num_filters, kernel_size=3, stride=1)
-        self.fc1 = nn.Linear(
-            self.num_filters * (self.n - (2 * 3)) * (self.m - (2 * 3)),
-            self.num_hidden1)
-        self.fc2 = nn.Linear(self.num_hidden1, num_actions)
+        self.conv1 = nn.Conv2d(1, 8, kernel_size=3, stride=1)
+        self.conv2 = nn.Conv2d(8, 16, kernel_size=3, stride=1)
+        self.conv3 = nn.Conv2d(16, 16, kernel_size=3, stride=1)
+        self.fc4 = nn.Linear(16 * (n - (2 * 3)) * (m - (2 * 3)), 20)
+        self.fc5 = nn.Linear(20, num_actions)
 
     def forward(self, x):
         x = F.relu(self.conv1(x))
-        x = F.relu(self.fc1(x.view(x.size(0), -1)))
-        return self.fc2(x)
+        x = F.relu(self.conv2(x))
+        x = F.relu(self.conv3(x))
+        x = F.relu(self.fc4(x.view(x.size(0), -1)))
+        return self.fc5(x)
 
 
 class DQN_conv3(nn.Module):
@@ -344,11 +291,6 @@ class DQN_conv3(nn.Module):
         self.conv1 = nn.Conv2d(1, 32, kernel_size=3, stride=1)
         self.conv2 = nn.Conv2d(32, 64, kernel_size=3, stride=1)
         self.conv3 = nn.Conv2d(64, 64, kernel_size=3, stride=1)
-
-        # With the above and fixed params each conv layer
-        # looses n - 2 in size,and there are three layers.
-        # So calc the final numel for the linear 'decode'
-        # at the end.
         self.fc4 = nn.Linear(64 * (n - (2 * 3)) * (m - (2 * 3)), 512)
         self.fc5 = nn.Linear(512, num_actions)
 
