@@ -1009,7 +1009,39 @@ wythoff_exp60:
 # Generate the grid to HP search. 
 # We'll share it for all these networks.
 #
-# RESULTS: 
+# RESULTS: Analyzed in `wythoff_exp61.ipynb`. The best HP were:
+#
+# DQN_hot1:
+#    row_code  device_code  epsilon  learning_rate
+# 1         1            1      0.5         0.0102
+# ---
+# DQN_hot2:
+#      row_code  device_code  epsilon  learning_rate
+# 301       301            1      0.2         0.0102
+# ---
+# DQN_hot3:
+#      row_code  device_code  epsilon  learning_rate
+# 202       202            2      0.3         0.0203
+# ---
+# DQN_hot4:
+#      row_code  device_code  epsilon  learning_rate
+# 201       201            1      0.3         0.0102
+# ---
+# DQN_hot5:
+#      row_code  device_code  epsilon  learning_rate
+# 401       401            1      0.1         0.0102
+# ---
+# DQN_conv1:
+#      row_code  device_code  epsilon  learning_rate
+# 303       303            3      0.2         0.0304
+# ---
+# DQN_conv2:
+#    row_code  device_code  epsilon  learning_rate
+# 1         1            1      0.5         0.0102
+# ---
+# DQN_conv3:
+#      row_code  device_code  epsilon  learning_rate
+# 100       100            0      0.4         0.0001
 wythoff_exp61:
 	-rm -rf $(DATA_PATH)/wythoff/exp61
 	-mkdir $(DATA_PATH)/wythoff/exp61
