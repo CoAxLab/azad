@@ -1079,57 +1079,57 @@ wythoff_exp63:
 	# DQN_hot1:
 	#    row_code  device_code  epsilon  learning_rate
 	# 1         1            1      0.5         0.0102
-	parallel -j 8 -v \
+	parallel -j 4 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp63/exp63.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0102 --game=Wythoff15x15 --epsilon=0.5 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp63/run_DQN_hot1_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:2' --double=True --network=DQN_hot1 --return_none=True" ::: {1..22}
+		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0102 --game=Wythoff15x15 --epsilon=0.5 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp63/run_DQN_hot1_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:0' --double=True --network=DQN_hot1 --return_none=True" ::: {1..22}
 	# DQN_hot2:
 	#      row_code  device_code  epsilon  learning_rate
 	# 301       301            1      0.2         0.0102
-	parallel -j 8 -v \
+	parallel -j 4 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp63/exp63.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-	"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0102 --game=Wythoff15x15 --epsilon=0.2 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp63/run_DQN_hot2_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:2' --double=True --network=DQN_hot2 --return_none=True" ::: {1..22}
+	"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0102 --game=Wythoff15x15 --epsilon=0.2 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp63/run_DQN_hot2_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:1' --double=True --network=DQN_hot2 --return_none=True" ::: {1..22}
 	# DQN_hot3:
 	#      row_code  device_code  epsilon  learning_rate
 	# 202       202            2      0.3         0.0203
-	parallel -j 8 -v \
+	parallel -j 4 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp63/exp63.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0203 --game=Wythoff15x15 --epsilon=0.3 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp63/run_DQN_hot3_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:2' --double=True --network=DQN_hot3 --return_none=True" ::: {1..22}
 	# DQN_hot4:
 	#      row_code  device_code  epsilon  learning_rate
 	# 201       201            1      0.3         0.0102
-	parallel -j 8 -v \
+	parallel -j 4 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp63/exp63.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0102 --game=Wythoff15x15 --epsilon=0.3 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp63/run_DQN_hot4_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:2' --double=True --network=DQN_hot4 --return_none=True" ::: {1..22}
+		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0102 --game=Wythoff15x15 --epsilon=0.3 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp63/run_DQN_hot4_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:3' --double=True --network=DQN_hot4 --return_none=True" ::: {1..22}
 	# DQN_hot5:
 	#      row_code  device_code  epsilon  learning_rate
 	# 401       401            1      0.1         0.0102
-	parallel -j 8 -v \
+	parallel -j 4 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp63/exp63.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0102 --game=Wythoff15x15 --epsilon=0.1 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp63/run_DQN_hot5_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:2' --double=True --network=DQN_hot5 --return_none=True" ::: {1..22}
+		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0102 --game=Wythoff15x15 --epsilon=0.1 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp63/run_DQN_hot5_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:0' --double=True --network=DQN_hot5 --return_none=True" ::: {1..22}
 	# DQN_conv1:
 	#      row_code  device_code  epsilon  learning_rate
 	# 303       303            3      0.2         0.0304
-	parallel -j 8 -v \
+	parallel -j 4 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp63/exp63.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0304 --game=Wythoff15x15 --epsilon=0.2 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp63/run_DQN_conv1_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:2' --double=True --network=DQN_conv1 --return_none=True" ::: {1..22}
+		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0304 --game=Wythoff15x15 --epsilon=0.2 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp63/run_DQN_conv1_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:1' --double=True --network=DQN_conv1 --return_none=True" ::: {1..22}
 	# DQN_conv2:
 	#    row_code  device_code  epsilon  learning_rate
 	# 1         1            1      0.5         0.0102
-	parallel -j 8 -v \
+	parallel -j 4 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp63/exp63.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0102 --game=Wythoff15x15 --epsilon=0.5 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp63/run_DQN_conv2_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:2' --double=True --network=DQN_conv2 --return_none=True" ::: {1..22}
 	# DQN_conv3:
 	#      row_code  device_code  epsilon  learning_rate
 	# 100       100            0      0.4         0.0001
-	parallel -j 8 -v \
+	parallel -j 4 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp63/exp63.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0001 --game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp63/run_DQN_conv3_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:2' --double=True --network=DQN_conv3 --return_none=True" ::: {1..22}
+		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0001 --game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp63/run_DQN_conv3_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:3' --double=True --network=DQN_conv3 --return_none=True" ::: {1..22}
 	
