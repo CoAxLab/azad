@@ -136,12 +136,12 @@ class DQN_xy1(nn.Module):
     """
     def __init__(self):
         super(DQN_xy1, self).__init__()
-        self.fc1 = nn.Linear(2, 15)
-        self.fc2 = nn.Linear(15, 2)
+        self.fc1 = nn.Linear(4, 15)
+        self.fc2 = nn.Linear(15, 1)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
-        return self.fc2(x).round()
+        return self.fc2(x)
 
 
 class DQN_xy2(nn.Module):
@@ -152,12 +152,12 @@ class DQN_xy2(nn.Module):
     """
     def __init__(self):
         super(DQN_xy2, self).__init__()
-        self.fc1 = nn.Linear(2, 100)
-        self.fc2 = nn.Linear(100, 2)
+        self.fc1 = nn.Linear(4, 100)
+        self.fc2 = nn.Linear(100, 1)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
-        return self.fc2(x).round()
+        return self.fc2(x)
 
 
 class DQN_xy3(nn.Module):
@@ -168,15 +168,15 @@ class DQN_xy3(nn.Module):
     """
     def __init__(self):
         super(DQN_xy3, self).__init__()
-        self.fc1 = nn.Linear(2, 10)
+        self.fc1 = nn.Linear(4, 10)
         self.fc2 = nn.Linear(10, 20)
-        self.fc3 = nn.Linear(20, 2)
+        self.fc3 = nn.Linear(20, 1)
 
     def forward(self, x):
         x = x.view(x.size(0), -1)  # Flatten view
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        return self.fc3(x).round()
+        return self.fc3(x)
 
 
 class DQN_xy4(nn.Module):
@@ -187,15 +187,15 @@ class DQN_xy4(nn.Module):
     """
     def __init__(self):
         super(DQN_xy4, self).__init__()
-        self.fc1 = nn.Linear(2, 100)
+        self.fc1 = nn.Linear(4, 100)
         self.fc2 = nn.Linear(100, 25)
-        self.fc3 = nn.Linear(25, 2)
+        self.fc3 = nn.Linear(25, 1)
 
     def forward(self, x):
         x = x.view(x.size(0), -1)  # Flatten view
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        return self.fc3(x).round()
+        return self.fc3(x)
 
 
 class DQN_xy5(nn.Module):
@@ -214,15 +214,15 @@ class DQN_xy5(nn.Module):
     """
     def __init__(self):
         super(DQN_xy5, self).__init__()
-        self.fc1 = nn.Linear(2, 1000)
+        self.fc1 = nn.Linear(4, 1000)
         self.fc2 = nn.Linear(1000, 2000)
-        self.fc3 = nn.Linear(2000, 2)
+        self.fc3 = nn.Linear(2000, 1)
 
     def forward(self, x):
         x = x.view(x.size(0), -1)  # Flatten view
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
-        return self.fc3(x).round()
+        return self.fc3(x)
 
 
 class DQN_conv1(nn.Module):
