@@ -75,12 +75,11 @@ def build_Qs(model, state, available, device="cpu", mode='numpy'):
             Qs[j] = model(state_action).cpu().detach().numpy().squeeze()
     elif mode == 'torch':
         Qs = torch.zeros(len(available), 1).to(device)
-        print(Qs.device)
         for j, a in enumerate(available):
             state_action = torch.tensor([x, y, *a])
             state_action = state_action.unsqueeze(0).float().to(device)
             Qs[j, 0] = model(state_action).squeeze()
-        print(Qs.device)
+
     else:
         raise ValueError("mode must be numpy or torch")
 
@@ -104,8 +103,8 @@ def train_dqn(batch_size,
     # moment. It just makes more sense to me for this odd train loop.
 
     # Building up the Q values we need.
-    Qs = torch.zeros(batch_size, 1)
-    Qs_max = torch.zeros(batch_size, 1)
+    Qs = torch.zeros(batch_size, 1).to(device)
+    Qs_max = torch.zeros(batch_size, 1).to(device)
     for i in range(batch_size):
         s = batch.state[i].flatten().numpy().astype(np.int).tolist()
         a = batch.action[i].flatten().numpy().astype(np.int).tolist()
