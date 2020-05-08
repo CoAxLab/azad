@@ -1,12 +1,11 @@
 """Learn to play Wythoff's with a DQN, using a (x,y) board representation."""
-import os, csv
+import os
+import csv
 import sys
-
 import errno
-import pudb
-
-from collections import defaultdict
 from copy import deepcopy
+from collections import namedtuple
+from collections import defaultdict
 
 import torch
 import torch.optim as optim
@@ -16,22 +15,23 @@ import torch.nn as tnn
 import torch.optim as optim
 import torchvision.transforms as T
 import torch.nn as nn
-
 from torch.autograd import Variable
 from torch.utils.tensorboard import SummaryWriter
 from torchviz import make_dot
 
 import numpy as np
 from scipy.constants import golden
-
 import matplotlib.pyplot as plt
 import seaborn as sns
-
 import skimage
 from skimage import data, io
 
 import gym
 from gym import wrappers
+
+from azad.policy import epsilon_greedy as e_greedy
+from azad.models import ReplayMemory
+
 import azad.local_gym
 from azad.local_gym.wythoff import create_moves
 from azad.local_gym.wythoff import create_all_possible_moves
@@ -43,9 +43,6 @@ from azad.local_gym.wythoff import locate_closest_cold_move
 from azad.local_gym.wythoff import locate_cold_moves
 from azad.local_gym.wythoff import locate_all_cold_moves
 
-from azad.models import ReplayMemory
-from azad.policy import epsilon_greedy as e_greedy
-
 from azad.exp.wythoff import peek
 from azad.exp.wythoff import create_env
 from azad.exp.wythoff import create_monitored
@@ -53,30 +50,39 @@ from azad.exp.wythoff import flatten_board
 from azad.exp.wythoff import plot_wythoff_board
 from azad.exp.wythoff import save_monitored
 from azad.exp.wythoff import expected_value
-from collections import namedtuple
+from azad.exp.alternatives.mcts import OptimalCount
 
 Transition = namedtuple('Transition',
                         ('state', 'action', 'next_state', 'reward'))
 
 
-class DQN_mlp(nn.Module):
-    """Layers for a Deep Q Network, based on a simple MLP."""
-    def __init__(self, num_actions, num_hidden1=1000, num_hidden2=2000):
-        super(DQN_mlp, self).__init__()
-        self.num_hidden1 = num_hidden1
-        self.num_hidden2 = num_hidden2
+def shift_player(player):
+    if player == 0:
+        return 1
+    elif player == 1:
+        return 0
+    else:
+        raise ValueError("player must be 1 or 0")
 
-        self.fc1 = nn.Linear(2, num_hidden1)
-        self.fc2 = nn.Linear(num_hidden1, num_hidden2)
-        self.fc3 = nn.Linear(num_hidden2, num_hidden2)
-        self.fc4 = nn.Linear(num_hidden2, num_actions)
 
-    def forward(self, x):
-        x = x.view(x.size(0), -1)  # Flatten view
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu(self.fc3(x))
-        return self.fc4(x)
+def build_Qs(model, state, available, device="cpu", mode='numpy'):
+    x, y = state[0], state[1]
+    if mode == 'numpy':
+        Qs = np.zeros(len(available))
+        for j, a in enumerate(available):
+            state_action = torch.tensor([x, y, *a])
+            state_action = state_action.unsqueeze(0).float()
+            Qs[j] = model(state_action).cpu().detach().numpy().squeeze()
+    elif mode == 'torch':
+        Qs = torch.zeros(len(available), 1)
+        for j, a in enumerate(available):
+            state_action = torch.tensor([x, y, *a])
+            state_action = state_action.unsqueeze(0).float()
+            Qs[j, 0] = model(state_action).squeeze()
+    else:
+        raise ValueError("mode must be numpy or torch")
+
+    return Qs
 
 
 def train_dqn(batch_size,
@@ -90,29 +96,40 @@ def train_dqn(batch_size,
     # Sample the data
     transitions = memory.sample(batch_size)
     batch = Transition(*zip(*transitions))
-    state = torch.cat(batch.state)
-    state_next = torch.cat(batch.next_state)
-    action = np.vstack(batch.action)
-    action = torch.from_numpy(action)
-    reward = torch.from_numpy(np.asarray(batch.reward)).unsqueeze(1)
 
-    # Pass it through the model
-    Qs = model(state).gather(1, action)
+    # NOTE:
+    # Unlike other main() in azad, we cast the gpu at the last
+    # moment. It just makes more sense to me for this odd train loop.
 
-    # Compute V(s_{t+1}) for all next states.
-    # Expected values of actions for non_final_next_states are computed based
-    # on the "older" target_net; selecting their best reward with max(1)[0].
-    # This is merged based on the mask, such that we'll have either the expected
-    # state value or 0 in case the state was final.
-    if target is not None:
-        Qs_next = target(state_next).max(1)[0].detach().unsqueeze(1)
-    else:
-        Qs_next = model(state_next).max(1)[0].detach().unsqueeze(1)
+    # Building up the Q values we need.
+    Qs = torch.zeros(batch_size, 1)
+    Qs_max = torch.zeros(batch_size, 1)
+    for i in range(batch_size):
+        s = batch.state[i].flatten().numpy().astype(np.int).tolist()
+        a = batch.action[i].flatten().numpy().astype(np.int).tolist()
+        ns = batch.next_state[i].flatten().numpy().astype(np.int).tolist()
 
-    J = (Qs_next * gamma) + reward
+        # Build Qs
+        Qs[i, 0] = build_Qs(model, s, [a], device="cpu",
+                            mode="torch").flatten()
 
-    # Compute Huber loss
-    loss = F.smooth_l1_loss(Qs, J)
+        # Build Qs_next (max only)
+        next_a = create_moves(ns[0], ns[1])
+        Qs_max[i, 0] = build_Qs(model, ns, next_a, device="cpu",
+                                mode="torch").max().flatten()
+
+    # Cast off?
+    Qs = Qs.to(device)
+    Qs_max = Qs_max.to(device)
+
+    # Batchify/vectorize R
+    reward = torch.cat(batch.reward).to(device)
+
+    # Max prediction
+    J = (Qs_max * gamma) + reward
+
+    # Compute Huber loss (ie simple difference) (ie prediction error)
+    loss = F.smooth_l1_loss(Qs, J).unsqueeze(0)
 
     # Optimize the model
     optimizer.zero_grad()
@@ -143,6 +160,154 @@ class MoveCount():
         self.count[move[0], move[1]] += 1
 
 
+# def evaluate_dqn3(path,
+#                   game='Wythoff15x15',
+#                   num_episodes=100,
+#                   opponent='self',
+#                   model_name="player",
+#                   network='DQN_conv3',
+#                   monitor=None,
+#                   save=None,
+#                   debug=False,
+#                   return_none=False,
+#                   seed=None):
+#     """Evaulate transfer on frozen DQN model."""
+
+#     # ------------------------------------------------------------------------
+#     # Arg sanity
+#     num_episodes = int(num_episodes)
+#     opponents = ('self', 'random', 'optimal', 'efficient')
+#     if opponent not in opponents:
+#         raise ValueError(f"opponent must be {opponents}")
+
+#     # Logs
+#     if monitor is not None:
+#         monitored = create_monitored(monitor)
+
+#     # Init
+#     score = 0
+#     score_count = 1
+#     total_reward = 0
+#     opts = OptimalCount(0)
+
+#     # Env
+#     env = create_env(game, monitor=False)
+#     env.seed(seed)
+#     np.random.seed(seed)
+
+#     m, n, board, available = peek(env)
+#     all_possible_moves = create_all_possible_moves(m, n)
+
+#     # Load the final model to evaluate
+#     result = torch.load(path, map_location=torch.device('cpu'))
+#     state_dict = result[model_name]
+
+#     Model = getattr(azad.models, network)
+#     model = Model(m, n, num_actions=len(all_possible_moves)).to("cpu")
+#     model.load_state_dict(state_dict)
+
+#     # ------------------------------------------------------------------------
+#     for episode in range(1, num_episodes + 1):
+#         # Random player moves first
+#         player = 0
+
+#         # Init this game
+#         state = env.reset()
+#         x, y, board, available = state
+#         if debug:
+#             print(f"---------------------------------------")
+#             print(f">>> NEW GAME ({episode}).")
+#             print(f">>> Initial position ({x}, {y})")
+#             print(f">>> Initial moves {available}")
+#             print(f">>> Cold available {locate_cold_moves(x, y, available)}")
+#             print(f">>> All cold {locate_all_cold_moves(x, y)}")
+
+#         # -------------------------------------------------------------------
+#         # Play a game
+#         done = False
+#         steps = 0
+#         while not done:
+#             # Optimal moves
+#             colds = locate_cold_moves(x, y, available)
+
+#             # Convert board to a model(state)
+#             state_hat = torch.from_numpy(np.array(board).reshape(m, n))
+#             state_hat = state_hat.unsqueeze(0).unsqueeze(1).float()
+
+#             # Get and filter Qs
+#             Qs = model(state_hat).detach().numpy().squeeze()
+#             mask = build_mask(available, m, n).flatten()
+#             Qs *= mask
+
+#             # Choose a move, based on the player code and the opponent type.
+#             # Player 0 is always the final model we are evaluating.
+#             if player == 0:
+#                 index = np.nonzero(mask)[0].tolist()
+#                 move_i = e_greedy(Qs, epsilon=0, index=index, mode='numpy')
+#                 move_a = index.index(move_i)
+#                 move = available[move_a]
+#             elif (player == 1) and (opponent == 'self'):
+#                 index = np.nonzero(mask)[0].tolist()
+#                 move_i = e_greedy(Qs, epsilon=0, index=index, mode='numpy')
+#                 move_a = index.index(move_i)
+#                 move = available[move_a]
+#             elif (player == 1) and (opponent == 'random'):
+#                 move = random.choice(available)
+#             elif (player == 1) and (opponent == 'optimal'):
+#                 if len(colds) > 0:
+#                     move = random.choice(colds)
+#                 else:
+#                     move = random.choice(available)
+#             elif (player == 1) and (opponent == 'efficient'):
+#                 if len(colds) > 0:
+#                     distances = [sum(c) for c in colds]
+#                     move_i = np.argmin(distances)
+#                     move = colds[move_i]
+#                 else:
+#                     move = random.choice(available)
+
+#             # Play it
+#             state_next, reward, done, _ = env.step(move)
+#             (x_next, y_next, board_next, available_next) = state_next
+
+#             # -
+#             if debug:
+#                 print(f">>> state_hat size: {state_hat.shape}")
+#                 print(f">>> state_hat: {state_hat}")
+#                 print(f">>> num available: {len(available)}")
+#                 print(f">>> available: {available}")
+#                 print(f">>> Qs (filtered): {Qs[index]}")
+#                 print(f">>> new position: ({x_next}, {y_next})")
+
+#             # Shift for next play?
+#             if not done:
+#                 # Shift states
+#                 state = deepcopy(state_next)
+#                 board = deepcopy(board_next)
+#                 available = deepcopy(available_next)
+#                 x = deepcopy(x_next)
+#                 y = deepcopy(y_next)
+#                 player = shift_player(player)
+#                 steps += 1
+
+#             # Tabulate player 0 wins
+#             if player == 0 and done:
+#                 total_reward += reward
+
+#         if monitor:
+#             all_variables = locals()
+#             for k in monitor:
+#                 monitored[k].append(float(all_variables[k]))
+
+#     if monitor and save is not None:
+#         save_monitored(save, monitored)
+
+#     if return_none:
+#         return None
+#     else:
+#         return monitored
+
+
 def wythoff_dqn2(epsilon=0.1,
                  gamma=0.5,
                  learning_rate=1e-6,
@@ -150,7 +315,7 @@ def wythoff_dqn2(epsilon=0.1,
                  batch_size=20,
                  memory_capacity=100,
                  game='Wythoff10x10',
-                 network='DQN_mlp',
+                 network='DQN_xy1',
                  anneal=False,
                  tensorboard=None,
                  update_every=5,
@@ -161,14 +326,17 @@ def wythoff_dqn2(epsilon=0.1,
                  monitor=None,
                  return_none=False,
                  debug=False,
+                 device='cpu',
                  progress=False,
                  seed=None):
-    """Learn to play Wythoff's w/ a DQN and e-greedy random exploration.
-    """
+    """Learning Wythoff's, with a DQN."""
 
     # ------------------------------------------------------------------------
     # Init
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    num_episodes = int(num_episodes)
+    batch_size = int(batch_size)
+    memory_capacity = int(memory_capacity)
+    update_every = int(update_every)
 
     # Logs...
     if tensorboard is not None:
@@ -201,11 +369,10 @@ def wythoff_dqn2(epsilon=0.1,
     m, n, board, available = peek(env)
     all_possible_moves = create_all_possible_moves(m, n)
 
-    if network == 'DQN_mlp':
-        player = DQN_mlp(num_actions=len(all_possible_moves))
-        target = DQN_mlp(num_actions=len(all_possible_moves))
-    else:
-        raise ValueError("network must be DQN_mlp")
+    Model = getattr(azad.models, network)
+    player = Model().to(device)
+    target = Model().to(device)
+
     if double:
         target.load_state_dict(player.state_dict())
         target.eval()
@@ -215,12 +382,14 @@ def wythoff_dqn2(epsilon=0.1,
     if debug:
         print(f"---------------------------------------")
         print("Setting up....")
+        print(f">>> Device: {device}")
         print(f">>> Network is {player}")
         print(f">>> Memory capacity {memory_capacity} ({batch_size})")
 
     memory = ReplayMemory(memory_capacity)
     optimizer = optim.Adam(player.parameters(), learning_rate)
     moves = MoveCount(m, n)
+    opts = OptimalCount(0)
 
     # ------------------------------------------------------------------------
     for episode in range(1, num_episodes + 1):
@@ -248,50 +417,51 @@ def wythoff_dqn2(epsilon=0.1,
         steps = 1
         done = False
         while not done:
-            # Convert board to a model(state)
-            state_hat = torch.tensor([x / m, y / n]).unsqueeze(0).float()
-
-            # Get and filter Qs
-            Qs = player(state_hat).float().detach()  # torch
-            Qs = Qs.numpy().squeeze()
-            mask = build_mask(available, m, n).flatten()
-            Qs *= mask
-
             # Choose a move
-            index = np.nonzero(mask)[0].tolist()
-            move_i = e_greedy(Qs, epsilon=epsilon_e, index=index, mode='numpy')
-
-            # Re-index move_i to match 'available' index
-            move_a = index.index(move_i)
-            move = available[move_a]
+            Qs = build_Qs(player, state, available, device)
+            move_i = e_greedy(Qs, epsilon=epsilon_e, mode='numpy')
+            move = available[move_i]
             moves.update(move)
 
-            # Analyze it...
-            if move in locate_cold_moves(x, y, available):
-                score += (1 - score) / episode
+            # Analyze it.
+            colds = locate_cold_moves(x, y, available)
+            if (len(colds) > 0):
+                if move in colds:
+                    opts.increase()
+                else:
+                    opts.decrease()
+                score = opts.score()
 
             # Play it
             state_next, reward, done, _ = env.step(move)
             (x_next, y_next, board_next, available_next) = state_next
 
-            # Save transitions, as tensors to be used at training time
+            # Track value statistics
             total_reward += reward
-            state_hat_next = torch.tensor([x_next / m,
-                                           y_next / n]).unsqueeze(0).float()
+            Q = Qs[move_i]
+            prediction_error = Qs.max() - Q
+            advantage = Q - Qs[np.nonzero(Qs)].mean()
+
+            # Save transitions, as tensors to be used at training time
+            # (onto GPU)
             transitions.append([
-                state_hat.float(),
-                torch.tensor(move_i),
-                state_hat_next.float(),
-                torch.tensor([reward]).unsqueeze(0).float()
+                # S
+                torch.tensor((x, y)).unsqueeze(0).unsqueeze(1).float(),
+                # A
+                torch.tensor(move).unsqueeze(0),
+                # S'
+                torch.tensor(
+                    (x_next, y_next)).unsqueeze(0).unsqueeze(1).float(),
+                # R
+                torch.tensor([reward]).unsqueeze(0).float(),
             ])
 
             # -
             if debug:
-                print(f">>> state_hat size: {state_hat.shape}")
-                print(f">>> state_hat: {state_hat}")
+                print(f">>> position: {(x, y)}")
                 print(f">>> num available: {len(available)}")
                 print(f">>> available: {available}")
-                print(f">>> Qs (filtered): {Qs[index]}")
+                print(f">>> Qs (filtered): {Qs}")
                 print(f">>> new position: ({x_next}, {y_next})")
 
             # Shift states
@@ -312,9 +482,7 @@ def wythoff_dqn2(epsilon=0.1,
 
         # Update the memories using the transitions from this game
         for i in range(0, len(transitions)):
-            s, a, sn, r = transitions[i]
-            memory.push(s.to(device), a.to(device), sn.to(device),
-                        r.to(device))
+            memory.push(*transitions[i])
 
         if debug:
             print(f">>> final transitions: {transitions[-2:]}")
@@ -372,9 +540,14 @@ def wythoff_dqn2(epsilon=0.1,
             # Extract all value boards, and find extrema
             values = torch.zeros((len(all_possible_moves), m, n))
             for i, a in enumerate(all_possible_moves):
-                sample_hat = torch.tensor([a[0], a[1]]).unsqueeze(0).float()
+                sample_hat = np.asarray(create_board(a[0], a[1], m, n))
+
+                sample_hat = torch.from_numpy(sample_hat)
+                sample_hat = sample_hat.unsqueeze(0).unsqueeze(1).float()
+
                 values[i, :, :] = player(sample_hat).detach().float().reshape(
                     m, n)
+
             mean_values = torch.mean(values, 0)
             max_values, _ = torch.max(values, 0)
             min_values, _ = torch.min(values, 0)
@@ -443,17 +616,17 @@ def wythoff_dqn2(epsilon=0.1,
                 monitored[k].append(float(all_variables[k]))
 
     # --------------------------------------------------------------------
-    if save_model:
-        state = {
-            'stumbler_player_dict': player,
-        }
-        torch.save(state, save + ".pytorch")
     if monitor:
         save_monitored(save, monitored)
     if tensorboard:
         writer.close()
 
-    result = (player), (score / episode, total_reward)
+    result = {"player": player.state_dict(), "score": score}
+    if target is not None:
+        result['target'] = target.state_dict()
+    if save:
+        torch.save(result, save + ".pytorch")
+
     if return_none:
         result = None
 
