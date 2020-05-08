@@ -80,9 +80,10 @@ def build_Qs(model, state, available, device="cpu", mode='numpy'):
             state_action = torch.tensor([x, y, *a])
             state_action = state_action.unsqueeze(0).float().to(device)
             Qs[j, 0] = model(state_action).squeeze()
+        print(Qs.device)
     else:
         raise ValueError("mode must be numpy or torch")
-    print(Qs.device)
+
     return Qs
 
 
