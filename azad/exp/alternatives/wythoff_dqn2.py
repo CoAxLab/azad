@@ -71,7 +71,7 @@ def build_Qs(model, state, available, device="cpu", mode='numpy'):
         Qs = np.zeros(len(available))
         for j, a in enumerate(available):
             state_action = torch.tensor([x, y, *a])
-            state_action = state_action.unsqueeze(0).float()
+            state_action = state_action.unsqueeze(0).float().to(device)
             Qs[j] = model(state_action).cpu().detach().numpy().squeeze()
     elif mode == 'torch':
         Qs = torch.zeros(len(available), 1)
