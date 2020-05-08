@@ -115,13 +115,18 @@ def train_dqn(batch_size,
                             mode="torch").flatten()
 
         # Build Qs_next (max only)
+        next_a = create_moves(ns[0], ns[1])
         if target is not None:
-                next_a = create_moves(ns[0], ns[1])
-            Qs_max[i, 0] = build_Qs(target, ns, next_a, device=device,
+            Qs_max[i, 0] = build_Qs(target,
+                                    ns,
+                                    next_a,
+                                    device=device,
                                     mode="torch").max().flatten()
         else:
-            next_a = create_moves(ns[0], ns[1])
-            Qs_max[i, 0] = build_Qs(model, ns, next_a, device=device,
+            Qs_max[i, 0] = build_Qs(model,
+                                    ns,
+                                    next_a,
+                                    device=device,
                                     mode="torch").max().flatten()
 
     # Batchify/vectorize R
