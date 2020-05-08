@@ -122,6 +122,7 @@ def train_dqn(batch_size,
     reward = torch.cat(batch.reward).to(device)
 
     # Max prediction
+    print(Qs.device)
     print(Qs_max.device)
     print(reward.device)
     J = (Qs_max * gamma) + reward
