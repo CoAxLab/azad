@@ -74,10 +74,10 @@ def build_Qs(model, state, available, device="cpu", mode='numpy'):
             state_action = state_action.unsqueeze(0).float().to(device)
             Qs[j] = model(state_action).cpu().detach().numpy().squeeze()
     elif mode == 'torch':
-        Qs = torch.zeros(len(available), 1)
+        Qs = torch.zeros(len(available), 1).to(device)
         for j, a in enumerate(available):
             state_action = torch.tensor([x, y, *a])
-            state_action = state_action.unsqueeze(0).float()
+            state_action = state_action.unsqueeze(0).float().to(device)
             Qs[j, 0] = model(state_action).squeeze()
     else:
         raise ValueError("mode must be numpy or torch")
@@ -110,17 +110,13 @@ def train_dqn(batch_size,
         ns = batch.next_state[i].flatten().numpy().astype(np.int).tolist()
 
         # Build Qs
-        Qs[i, 0] = build_Qs(model, s, [a], device="cpu",
+        Qs[i, 0] = build_Qs(model, s, [a], device=device,
                             mode="torch").flatten()
 
         # Build Qs_next (max only)
         next_a = create_moves(ns[0], ns[1])
-        Qs_max[i, 0] = build_Qs(model, ns, next_a, device="cpu",
+        Qs_max[i, 0] = build_Qs(model, ns, next_a, device=device,
                                 mode="torch").max().flatten()
-
-    # Cast off?
-    Qs = Qs.to(device)
-    Qs_max = Qs_max.to(device)
 
     # Batchify/vectorize R
     reward = torch.cat(batch.reward).to(device)
