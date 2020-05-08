@@ -122,6 +122,8 @@ def train_dqn(batch_size,
     reward = torch.cat(batch.reward).to(device)
 
     # Max prediction
+    print(Qs_max.device)
+    print(reward.device)
     J = (Qs_max * gamma) + reward
 
     # Compute Huber loss (ie simple difference) (ie prediction error)
