@@ -418,11 +418,7 @@ def wythoff_dqn2(epsilon=0.1,
         done = False
         while not done:
             # Choose a move
-            Qs = build_Qs(player,
-                          state,
-                          available,
-                          device="cpu",
-                          model="numpy")
+            Qs = build_Qs(player, state, available, device="cpu", mode="numpy")
             move_i = e_greedy(Qs, epsilon=epsilon_e, mode='numpy')
             move = available[move_i]
             moves.update(move)
