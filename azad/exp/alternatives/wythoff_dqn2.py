@@ -75,13 +75,14 @@ def build_Qs(model, state, available, device="cpu", mode='numpy'):
             Qs[j] = model(state_action).cpu().detach().numpy().squeeze()
     elif mode == 'torch':
         Qs = torch.zeros(len(available), 1).to(device)
+        print(Qs.device)
         for j, a in enumerate(available):
             state_action = torch.tensor([x, y, *a])
             state_action = state_action.unsqueeze(0).float().to(device)
             Qs[j, 0] = model(state_action).squeeze()
     else:
         raise ValueError("mode must be numpy or torch")
-
+    print(Qs.device)
     return Qs
 
 
@@ -114,17 +115,22 @@ def train_dqn(batch_size,
                             mode="torch").flatten()
 
         # Build Qs_next (max only)
-        next_a = create_moves(ns[0], ns[1])
-        Qs_max[i, 0] = build_Qs(model, ns, next_a, device=device,
-                                mode="torch").max().flatten()
+        if target is not None:
+                next_a = create_moves(ns[0], ns[1])
+            Qs_max[i, 0] = build_Qs(target, ns, next_a, device=device,
+                                    mode="torch").max().flatten()
+        else:
+            next_a = create_moves(ns[0], ns[1])
+            Qs_max[i, 0] = build_Qs(model, ns, next_a, device=device,
+                                    mode="torch").max().flatten()
 
     # Batchify/vectorize R
     reward = torch.cat(batch.reward).to(device)
 
     # Max prediction
-    print(Qs.device)
-    print(Qs_max.device)
-    print(reward.device)
+    # print(Qs.device)
+    # print(Qs_max.device)
+    # print(reward.device)
     J = (Qs_max * gamma) + reward
 
     # Compute Huber loss (ie simple difference) (ie prediction error)
