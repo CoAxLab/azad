@@ -438,13 +438,19 @@ def wythoff_dqn2(epsilon=0.1,
             moves.update(move)
 
             # Analyze it.
-            colds = locate_cold_moves(x, y, available)
-            if (len(colds) > 0):
-                if move in colds:
-                    opts.increase()
-                else:
-                    opts.decrease()
-                score = opts.score()
+            # colds = locate_cold_moves(x, y, available)
+            # if (len(colds) > 0):
+            #     if move in colds:
+            #         opts.increase()
+            #     else:
+            #         opts.decrease()
+            #     score = opts.score()
+            # Analyze it...
+            best = 0.0
+            if cold_move_available(x, y, available):
+                if move in locate_cold_moves(x, y, available):
+                    best = 1.0
+                score += (best - score) / (episode + 1)
 
             # Play it
             state_next, reward, done, _ = env.step(move)
