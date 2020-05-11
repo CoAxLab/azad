@@ -1173,6 +1173,8 @@ wythoff_exp63g:
 # DQN_xy4:
     #  row_code  device_code  epsilon  learning_rate
 # 324       324            0      0.2         0.2425
+#
+# RESULTS:  It's not scoring (wheew!)
 wythoff_exp64:
 	-rm -rf $(DATA_PATH)/wythoff/exp64
 	-mkdir $(DATA_PATH)/wythoff/exp64
