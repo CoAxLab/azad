@@ -1162,13 +1162,23 @@ wythoff_exp63g:
 # -
 # ffe1c2be88b674d1050d5658d0e196743ef57409
 # First, the way optimal is calculated uses slightly different code. In exp64
-# I use the optimal play calc code from SS. A first control. Also, DQN_xy3 and 4 showed the most promise. 
+# I use the optimal play calc code from SS. A first control. 
+# Also
+# - DQN_xy3 and 4 showed the most promise. 
+# - Pick a tune search near exp62's best for these two models. 
+# DQN_xy3:
+    #  row_code  device_code  epsilon  learning_rate
+# 459       459            3      0.1          0.596
+# ---
+# DQN_xy4:
+    #  row_code  device_code  epsilon  learning_rate
+# 324       324            0      0.2         0.2425
 wythoff_exp64:
 	-rm -rf $(DATA_PATH)/wythoff/exp64
 	-mkdir $(DATA_PATH)/wythoff/exp64
 	run_azad.py create_grid $(DATA_PATH)/wythoff/exp64/grid.csv --num_gpu=4 \
-		--learning_rate='(0.0001, 1.0, 100)' \
-		--epsilon='(0.5, 0.1, 5)'
+		--learning_rate='(0.1, 0.5, 10)' \
+		--epsilon='(0.1, 0.4, 5)'
 	parallel -j 32 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp64/exp64.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
