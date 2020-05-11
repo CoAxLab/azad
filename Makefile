@@ -1054,7 +1054,6 @@ wythoff_exp61:
 		"run_azad.py wythoff_dqn3 --save=$(DATA_PATH)/wythoff/exp61/run_{1}_{row_code} --num_episodes=5000 --learning_rate={learning_rate} --epsilon={epsilon} --anneal=True --gamma=0.5 --game=Wythoff15x15 --debug=False --network={1} --update_every=10 --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" ::: DQN_hot1 DQN_hot1 DQN_hot2 DQN_hot3 DQN_hot4 DQN_hot5 DQN_conv1 DQN_conv2 DQN_conv3 :::: \
 		$(DATA_PATH)/wythoff/exp61/grid.csv
 
-# HERE
 # xy tuning. (conv makes no sense for this)
 wythoff_exp62:
 	-rm -rf $(DATA_PATH)/wythoff/exp62
@@ -1147,3 +1146,31 @@ wythoff_exp63g:
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn3 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0001 --game=Wythoff15x15 --epsilon=0.4 --anneal=True --gamma=0.5 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp63/run_DQN_conv3_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:3' --double=True --network=DQN_conv3 --return_none=True" ::: {1..22}
 	
+# ------------------------------------------------------------------------
+# 5-11-2020
+# 
+# exp62, HP tune using the [s,a -> v] scheme shows actual progress! Last time
+# I tried this, that was not true because learning was not at all stable.
+# I have no idea what changed this time, but let's take it. 
+# 
+# BUT
+# 
+# All the [s,a -> v] are learning quickly, but all of the peak at about 30%
+# optimal play. If it can get to 30 it should go all the way? 
+# Debug time...
+
+# -
+# ffe1c2be88b674d1050d5658d0e196743ef57409
+# First, the way optimal is calculated uses slightly different code. In exp64
+# I use the optimal play calc code from SS. A first control. Also, DQN_xy3 and 4 showed the most promise. 
+wythoff_exp64:
+	-rm -rf $(DATA_PATH)/wythoff/exp64
+	-mkdir $(DATA_PATH)/wythoff/exp64
+	run_azad.py create_grid $(DATA_PATH)/wythoff/exp64/grid.csv --num_gpu=4 \
+		--learning_rate='(0.0001, 1.0, 100)' \
+		--epsilon='(0.5, 0.1, 5)'
+	parallel -j 32 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp64/exp64.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn2 --save=$(DATA_PATH)/wythoff/exp64/run_{1}_{row_code} --num_episodes=5000 --learning_rate={learning_rate} --epsilon={epsilon} --anneal=True --gamma=0.5 --game=Wythoff15x15 --debug=False --network={1} --update_every=10 --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" ::: DQN_xy3 DQN_xy4 :::: \
+		$(DATA_PATH)/wythoff/exp64/grid.csv
