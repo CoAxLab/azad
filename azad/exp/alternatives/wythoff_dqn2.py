@@ -437,14 +437,6 @@ def wythoff_dqn2(epsilon=0.1,
             move = available[move_i]
             moves.update(move)
 
-            # Analyze it.
-            # colds = locate_cold_moves(x, y, available)
-            # if (len(colds) > 0):
-            #     if move in colds:
-            #         opts.increase()
-            #     else:
-            #         opts.decrease()
-            #     score = opts.score()
             # Analyze it...
             best = 0.0
             if cold_move_available(x, y, available):
@@ -532,8 +524,9 @@ def wythoff_dqn2(epsilon=0.1,
             print(f">>> episode: {episode}")
         if debug or progress:
             print(f">>> loss {loss}")
-            print(f">>> score: {score}")
+            print(f">>> Q(last,a): {Q}")
             print(f">>> epsilon: {epsilon_e}")
+            print(f">>> score: {score}")
 
         if tensorboard and (int(episode) % update_every) == 0:
             writer.add_scalar('reward', reward, episode)
