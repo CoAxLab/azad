@@ -1186,3 +1186,24 @@ wythoff_exp64:
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn2 --save=$(DATA_PATH)/wythoff/exp64/run_{1}_{row_code} --num_episodes=5000 --learning_rate={learning_rate} --epsilon={epsilon} --anneal=True --gamma=0.5 --game=Wythoff15x15 --debug=False --network={1} --update_every=10 --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" ::: DQN_xy3 DQN_xy4 :::: \
 		$(DATA_PATH)/wythoff/exp64/grid.csv
+
+# ------------------------------------------------------------------------
+# 5-11-2020
+# It seems that despite learning optimal play to 0.3 in the best case, the xy
+# models also, and at the same time, have an exploding loss/Q value issue.
+# This seems to be fixed if gamma < 0.5 instead of 0.5. 
+#
+# Rerun all the xy tuning, adding a gamma search too.
+# Other changes: num_episodes=500, update_every=1
+wythoff_exp65:
+	-rm -rf $(DATA_PATH)/wythoff/exp65
+	-mkdir $(DATA_PATH)/wythoff/exp65
+	run_azad.py create_grid $(DATA_PATH)/wythoff/exp65/grid.csv --num_gpu=4 \
+		--learning_rate='(0.0025, 0.25, 50)' \
+		--epsilon='(0.1, 0.5, 5)' \
+		--gamma='(0.1, 0.5, 5)' 
+	parallel -j 32 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp65/exp65.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn2 --save=$(DATA_PATH)/wythoff/exp65/run_{1}_{row_code} --num_episodes=500 --learning_rate={learning_rate} --epsilon={epsilon} --anneal=True --gamma={gamma} --game=Wythoff15x15 --debug=False --network={1} --update_every=1 --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" ::: DQN_xy1 DQN_xy1 DQN_xy2 DQN_xy3 DQN_xy4 DQN_xy5 :::: \
+		$(DATA_PATH)/wythoff/exp65/grid.csv
