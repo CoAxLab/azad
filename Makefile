@@ -1194,7 +1194,11 @@ wythoff_exp64:
 # This seems to be fixed if gamma < 0.5 instead of 0.5. 
 #
 # Rerun all the xy tuning, adding a gamma search too.
+#
 # Other changes: num_episodes=500, update_every=1
+#
+# RESULTS: Loss explodes, and optimal play improves. Not quite 1:1 but certianly
+#          related. How terrible and confusing.
 wythoff_exp65:
 	-rm -rf $(DATA_PATH)/wythoff/exp65
 	-mkdir $(DATA_PATH)/wythoff/exp65
