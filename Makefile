@@ -1211,3 +1211,21 @@ wythoff_exp65:
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn2 --save=$(DATA_PATH)/wythoff/exp65/run_{1}_{row_code} --num_episodes=500 --learning_rate={learning_rate} --epsilon={epsilon} --anneal=True --gamma={gamma} --game=Wythoff15x15 --debug=False --network={1} --update_every=1 --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" ::: DQN_xy1 DQN_xy1 DQN_xy2 DQN_xy3 DQN_xy4 DQN_xy5 :::: \
 		$(DATA_PATH)/wythoff/exp65/grid.csv
+
+# -------------------------------------------------------------------------
+# 5-13-2020
+# 955de31d2361629e8b128bfa4e85dc73d7ee818e
+#
+# Is it grad explosion? I exposed grad_clip. Rerun exp65 w/ clipping.
+wythoff_exp66:
+	-rm -rf $(DATA_PATH)/wythoff/exp66
+	-mkdir $(DATA_PATH)/wythoff/exp66
+	run_azad.py create_grid $(DATA_PATH)/wythoff/exp66/grid.csv --num_gpu=4 \
+		--learning_rate='(0.0025, 0.25, 50)' \
+		--epsilon='(0.1, 0.5, 5)' \
+		--gamma='(0.1, 0.5, 5)' 
+	parallel -j 32 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp66/exp66.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn2 --save=$(DATA_PATH)/wythoff/exp66/run_{1}_{row_code} --num_episodes=250 --learning_rate={learning_rate} --epsilon={epsilon} --anneal=True --grad_clip=True --gamma={gamma} --game=Wythoff15x15 --debug=False --network={1} --update_every=1 --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" ::: DQN_xy1 DQN_xy1 DQN_xy2 DQN_xy3 DQN_xy4 DQN_xy5 :::: \
+		$(DATA_PATH)/wythoff/exp66/grid.csv
