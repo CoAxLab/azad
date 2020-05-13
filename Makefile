@@ -1198,7 +1198,7 @@ wythoff_exp64:
 # Other changes: num_episodes=500, update_every=1
 #
 # RESULTS: Loss explodes, and optimal play improves. Not quite 1:1 but certianly
-#          related. How terrible and confusing.
+#          related. How terrible and confusing. I do not know what to do...
 wythoff_exp65:
 	-rm -rf $(DATA_PATH)/wythoff/exp65
 	-mkdir $(DATA_PATH)/wythoff/exp65
