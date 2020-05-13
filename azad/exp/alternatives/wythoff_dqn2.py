@@ -337,6 +337,7 @@ def wythoff_dqn2(epsilon=0.1,
                  return_none=False,
                  debug=False,
                  device='cpu',
+                 clip_grad=False,
                  progress=False,
                  seed=None):
     """Learning Wythoff's, with a DQN."""
@@ -510,7 +511,8 @@ def wythoff_dqn2(epsilon=0.1,
                                  optimizer,
                                  device,
                                  target=target,
-                                 gamma=gamma)
+                                 gamma=gamma,
+                                 clip_grad=clip_grad)
 
         # Update target net, if in double mode and time is right.
         if double and (episode % double_update == 0):
