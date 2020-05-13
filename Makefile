@@ -1227,5 +1227,5 @@ wythoff_exp66:
 	parallel -j 32 -v \
 		--joblog '$(DATA_PATH)/wythoff/exp66/exp66.parallel.log' \
 		--nice 19 --delay 2 --header : --colsep ',' \
-		"run_azad.py wythoff_dqn2 --save=$(DATA_PATH)/wythoff/exp66/run_{1}_{row_code} --num_episodes=250 --learning_rate={learning_rate} --epsilon={epsilon} --anneal=True --grad_clip=True --gamma={gamma} --game=Wythoff15x15 --debug=False --network={1} --update_every=1 --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" ::: DQN_xy1 DQN_xy1 DQN_xy2 DQN_xy3 DQN_xy4 DQN_xy5 :::: \
+		"run_azad.py wythoff_dqn2 --save=$(DATA_PATH)/wythoff/exp66/run_{1}_{row_code} --num_episodes=250 --learning_rate={learning_rate} --epsilon={epsilon} --anneal=True --gamma={gamma} --game=Wythoff15x15 --debug=False --network={1} --update_every=1 --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" ::: DQN_xy1 DQN_xy1 DQN_xy2 DQN_xy3 DQN_xy4 DQN_xy5 :::: \
 		$(DATA_PATH)/wythoff/exp66/grid.csv
