@@ -1217,6 +1217,7 @@ wythoff_exp65:
 # 955de31d2361629e8b128bfa4e85dc73d7ee818e
 #
 # Is it grad explosion? I exposed grad_clip. Rerun exp65 w/ clipping.
+# 
 # RESULTS: A complex set of results, to make an understatement. 
 #          Much of the time optimal and explosion correltation, BUT
 #          for some params/runs/models I do see optimal 0.3-4 and 
