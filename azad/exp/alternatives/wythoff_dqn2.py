@@ -399,7 +399,8 @@ def wythoff_dqn2(epsilon=0.1,
         print(f">>> Memory capacity {memory_capacity} ({batch_size})")
 
     memory = ReplayMemory(memory_capacity)
-    optimizer = optim.Adam(player.parameters(), learning_rate)
+    # optimizer = optim.Adam(player.parameters(), learning_rate)
+    optimizer = optim.SGD(player.parameters(), learning_rate)
     moves = MoveCount(m, n)
     opts = OptimalCount(0)
 
