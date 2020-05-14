@@ -1217,6 +1217,20 @@ wythoff_exp65:
 # 955de31d2361629e8b128bfa4e85dc73d7ee818e
 #
 # Is it grad explosion? I exposed grad_clip. Rerun exp65 w/ clipping.
+# RESULTS: A complex set of results, to make an understatement. 
+#          Much of the time optimal and explosion correltation, BUT
+#          for some params/runs/models I do see optimal 0.3-4 and 
+#          a sane, that is to say downward going, loss.
+#          DQN_xy3 has the most of these. DQN_xy4 as well, but less.
+#
+#          What to do with this???
+#
+#          - Perhaps randomization of W is problem? Should I zero the output
+#          at the start? ep-greedy alone can get search start? 
+#          - Perhaps there are discontinouties in learning, and I should
+#          train on samples of games and not just transition samples?
+#          - If not these, I give up. I'll keep only 'sane' losses and report
+#          those. 
 wythoff_exp66:
 	-rm -rf $(DATA_PATH)/wythoff/exp66
 	-mkdir $(DATA_PATH)/wythoff/exp66
