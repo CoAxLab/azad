@@ -1244,3 +1244,22 @@ wythoff_exp66:
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn2 --save=$(DATA_PATH)/wythoff/exp66/run_{1}_{row_code} --num_episodes=250 --learning_rate={learning_rate} --epsilon={epsilon} --anneal=True --clip_grad=True --gamma={gamma} --game=Wythoff15x15 --debug=False --network={1} --update_every=1 --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" ::: DQN_xy1 DQN_xy1 DQN_xy2 DQN_xy3 DQN_xy4 DQN_xy5 :::: \
 		$(DATA_PATH)/wythoff/exp66/grid.csv
+
+# -------------------------------------------------------------------------
+# 5-14-2020
+# 321002a19542802f667206291fd1d36fcc76e794
+#
+# Zero out Q are the begining. An in place modification of dqn2.
+wythoff_exp67:
+	-rm -rf $(DATA_PATH)/wythoff/exp67
+	-mkdir $(DATA_PATH)/wythoff/exp67
+	run_azad.py create_grid $(DATA_PATH)/wythoff/exp67/grid.csv --num_gpu=4 \
+		--learning_rate='(0.0025, 0.25, 50)' \
+		--epsilon='(0.1, 0.5, 5)' \
+		--gamma='(0.1, 0.5, 5)' 
+	parallel -j 32 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp67/exp67.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn2 --save=$(DATA_PATH)/wythoff/exp67/run_{1}_{row_code} --num_episodes=250 --learning_rate={learning_rate} --epsilon={epsilon} --anneal=True --zero=True --clip_grad=True --gamma={gamma} --game=Wythoff15x15 --debug=False --network={1} --update_every=1 --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" ::: DQN_xy1 DQN_xy1 DQN_xy2 DQN_xy3 DQN_xy4 DQN_xy5 :::: \
+		$(DATA_PATH)/wythoff/exp67/grid.csv
+		
