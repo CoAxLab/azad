@@ -1250,6 +1250,12 @@ wythoff_exp66:
 # 321002a19542802f667206291fd1d36fcc76e794
 #
 # Zero out Q are the begining. An in place modification of dqn2.
+#
+# RESULT: Stopped early. Losses were still exploding when I peaked at progress.
+#         Given that, there is no reason to run this to the end and analyze
+#         in any depth. 
+#
+#         In short, aborted.
 wythoff_exp67:
 	-rm -rf $(DATA_PATH)/wythoff/exp67
 	-mkdir $(DATA_PATH)/wythoff/exp67
