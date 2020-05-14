@@ -1227,8 +1227,8 @@ wythoff_exp65:
 #          What to do with this???
 #
 #          - Perhaps randomization of W is problem? Should I zero the output
-#          at the start? ep-greedy alone can get search start? 
-#          - Perhaps there are discontinouties in learning, and I should
+#          at the start? ep-greedy alone can get search started? 
+#          - Perhaps there are discontinouties in learning and I should
 #          train on samples of games and not just transition samples?
 #          - If not these, I give up. I'll keep only 'sane' losses and report
 #          those. 
