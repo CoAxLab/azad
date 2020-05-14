@@ -339,6 +339,7 @@ def wythoff_dqn2(epsilon=0.1,
                  device='cpu',
                  clip_grad=False,
                  progress=False,
+                 zero=False,
                  seed=None):
     """Learning Wythoff's, with a DQN."""
 
@@ -381,8 +382,8 @@ def wythoff_dqn2(epsilon=0.1,
     all_possible_moves = create_all_possible_moves(m, n)
 
     Model = getattr(azad.models, network)
-    player = Model().to(device)
-    target = Model().to(device)
+    player = Model(zero=zero).to(device)
+    target = Model(zero=zero).to(device)
 
     if double:
         target.load_state_dict(player.state_dict())
