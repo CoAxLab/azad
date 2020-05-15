@@ -381,9 +381,15 @@ def wythoff_dqn2(epsilon=0.1,
     m, n, board, available = peek(env)
     all_possible_moves = create_all_possible_moves(m, n)
 
-    Model = getattr(azad.models, network)
-    player = Model(zero=zero).to(device)
-    target = Model(zero=zero).to(device)
+    # Is network a nn.Module?
+    if hasattr(network, "forward"):
+        Model = network
+    # Is it the name of a azad model?
+    else:
+        Model = getattr(azad.models, network)
+
+    player = Model().to(device)
+    target = Model().to(device)
 
     if double:
         target.load_state_dict(player.state_dict())
