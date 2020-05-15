@@ -1318,7 +1318,7 @@ wythoff_exp69b:
 		--num_trials=100 \
 		--save=$(DATA_PATH)/wythoff/exp69/run_1 \
 		--debug=False \
-		--device=cuda:1
+		--device=cuda:1 > $(DATA_PATH)/wythoff/exp69/run_1.log
 
 wythoff_exp69c:
 	-rm -rf $(DATA_PATH)/wythoff/exp69
@@ -1327,7 +1327,7 @@ wythoff_exp69c:
 		--num_trials=100 \
 		--save=$(DATA_PATH)/wythoff/exp69/run_2 \
 		--debug=False \
-		--device=cuda:2
+		--device=cuda:2 > $(DATA_PATH)/wythoff/exp69/run_2.log
 
 wythoff_exp69d:
 	-rm -rf $(DATA_PATH)/wythoff/exp69
@@ -1336,4 +1336,4 @@ wythoff_exp69d:
 		--num_trials=100 \
 		--save=$(DATA_PATH)/wythoff/exp69/run_3 \
 		--debug=False \
-		--device=cuda:3
+		--device=cuda:3 > $(DATA_PATH)/wythoff/exp69/run_3.log
