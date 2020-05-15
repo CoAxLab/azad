@@ -8,6 +8,7 @@ from azad.exp.wythoff import evaluate_wythoff
 from azad.exp.alternatives import wythoff_dqn1
 from azad.exp.alternatives import wythoff_dqn2
 from azad.exp.alternatives import wythoff_dqn3
+from azad.exp.alternatives import wythoff_dqn4
 from azad.exp.alternatives import evaluate_dqn3
 from azad.exp.alternatives import wythoff_mcts
 from azad.exp.alternatives import wythoff_alphazero
