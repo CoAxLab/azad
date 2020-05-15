@@ -1276,12 +1276,12 @@ wythoff_exp67:
 # This is a total long shot from a desperate and confused person....
 # Try SGD in place of ADAM.  
 # 
-# RESULTS: SGD does stabilize learning. MOdel xy3 is showing real promise. 
+# RESULTS: SGD does stabilize learning. Model xy3 is showing real promise. 
 #          Some models do still explode (xy4). This is vary wide net. As
 #          a reviewer noted this might be a problem. Too overparameterized?
 #          Finally a real path forward for DQN. Yeeesh.
 # 
-#          Use oportun to search topo similiar to xy2. Explore depth,
+#          Use oportun to search topo similiar to xy3. Explore depth,
 #          but keep width down. Explore lr, gamma. 
 wythoff_exp68:
 	-rm -rf $(DATA_PATH)/wythoff/exp68
