@@ -1308,7 +1308,7 @@ wythoff_exp69a:
 	run_azad.py optuna_dqn2 \
 		--num_trials=100 \
 		--save=$(DATA_PATH)/wythoff/exp69/run_0 \
-		--debug=False 
+		--debug=False \
 		--device=cuda:0
 
 wythoff_exp69b:
@@ -1317,7 +1317,7 @@ wythoff_exp69b:
 	run_azad.py optuna_dqn2 \
 		--num_trials=100 \
 		--save=$(DATA_PATH)/wythoff/exp69/run_1 \
-		--debug=False 
+		--debug=False \
 		--device=cuda:1
 
 wythoff_exp69c:
@@ -1326,7 +1326,7 @@ wythoff_exp69c:
 	run_azad.py optuna_dqn2 \
 		--num_trials=100 \
 		--save=$(DATA_PATH)/wythoff/exp69/run_2 \
-		--debug=False 
+		--debug=False \
 		--device=cuda:2
 
 wythoff_exp69d:
@@ -1335,5 +1335,5 @@ wythoff_exp69d:
 	run_azad.py optuna_dqn2 \
 		--num_trials=100 \
 		--save=$(DATA_PATH)/wythoff/exp69/run_3 \
-		--debug=False 
+		--debug=False \
 		--device=cuda:3
