@@ -1309,7 +1309,7 @@ wythoff_exp69a:
 		--num_trials=100 \
 		--save=$(DATA_PATH)/wythoff/exp69/run_0 \
 		--debug=False \
-		--device=cuda:0
+		--device=cuda:0 | $(DATA_PATH)/wythoff/exp69/run_0.log
 
 wythoff_exp69b:
 	-rm -rf $(DATA_PATH)/wythoff/exp69
