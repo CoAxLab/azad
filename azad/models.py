@@ -134,13 +134,10 @@ class DQN_xy1(nn.Module):
     
     Note: Uses a (x,y) coordinate board/action representation. 
     """
-    def __init__(self, zero=False):
+    def __init__(self):
         super(DQN_xy1, self).__init__()
         self.fc1 = nn.Linear(4, 15)
         self.fc2 = nn.Linear(15, 1)
-        if zero:
-            self.fc1.weight.data.uniform_(0.0, 0.0)
-            self.fc2.weight.data.uniform_(0.0, 0.0)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -153,13 +150,10 @@ class DQN_xy2(nn.Module):
     
     Note: Uses a one hot board representation
     """
-    def __init__(self, zero=False):
+    def __init__(self):
         super(DQN_xy2, self).__init__()
         self.fc1 = nn.Linear(4, 100)
         self.fc2 = nn.Linear(100, 1)
-        if zero:
-            self.fc1.weight.data.uniform_(0.0, 0.0)
-            self.fc2.weight.data.uniform_(0.0, 0.0)
 
     def forward(self, x):
         x = F.relu(self.fc1(x))
@@ -172,15 +166,11 @@ class DQN_xy3(nn.Module):
     
     Note: Uses a one hot board representation
     """
-    def __init__(self, zero=False):
+    def __init__(self):
         super(DQN_xy3, self).__init__()
         self.fc1 = nn.Linear(4, 10)
         self.fc2 = nn.Linear(10, 20)
         self.fc3 = nn.Linear(20, 1)
-        if zero:
-            self.fc1.weight.data.uniform_(0.0, 0.0)
-            self.fc2.weight.data.uniform_(0.0, 0.0)
-            self.fc3.weight.data.uniform_(0.0, 0.0)
 
     def forward(self, x):
         x = x.view(x.size(0), -1)  # Flatten view
@@ -195,15 +185,11 @@ class DQN_xy4(nn.Module):
     
     Note: Uses a one hot board representation
     """
-    def __init__(self, zero=False):
+    def __init__(self):
         super(DQN_xy4, self).__init__()
         self.fc1 = nn.Linear(4, 100)
         self.fc2 = nn.Linear(100, 25)
         self.fc3 = nn.Linear(25, 1)
-        if zero:
-            self.fc1.weight.data.uniform_(0.0, 0.0)
-            self.fc2.weight.data.uniform_(0.0, 0.0)
-            self.fc3.weight.data.uniform_(0.0, 0.0)
 
     def forward(self, x):
         x = x.view(x.size(0), -1)  # Flatten view
@@ -226,15 +212,11 @@ class DQN_xy5(nn.Module):
         Number of action-value to output, one-to-one 
         correspondence to action in game.    
     """
-    def __init__(self, zero=False):
+    def __init__(self):
         super(DQN_xy5, self).__init__()
         self.fc1 = nn.Linear(4, 1000)
         self.fc2 = nn.Linear(1000, 2000)
         self.fc3 = nn.Linear(2000, 1)
-        if zero:
-            self.fc1.weight.data.uniform_(0.0, 0.0)
-            self.fc2.weight.data.uniform_(0.0, 0.0)
-            self.fc3.weight.data.uniform_(0.0, 0.0)
 
     def forward(self, x):
         x = x.view(x.size(0), -1)  # Flatten view
