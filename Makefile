@@ -1295,3 +1295,45 @@ wythoff_exp68:
 		--nice 19 --delay 2 --header : --colsep ',' \
 		"run_azad.py wythoff_dqn2 --save=$(DATA_PATH)/wythoff/exp68/run_{1}_{row_code} --num_episodes=250 --learning_rate={learning_rate} --epsilon={epsilon} --anneal=True --clip_grad=True --gamma={gamma} --game=Wythoff15x15 --debug=False --network={1} --update_every=1 --monitor='('episode', 'loss', 'score')' --device='cuda:{device_code}'" ::: DQN_xy1 DQN_xy1 DQN_xy2 DQN_xy3 DQN_xy4 DQN_xy5 :::: \
 		$(DATA_PATH)/wythoff/exp68/grid.csv
+
+# -------------------------------------------------------------------------
+# 5-14-2020
+# 8951f65fe2e48a3bd4012f0bee9f328558cd5fb3
+#
+# Attempt 1 using optuna to tune dqn2, based on the xy3 model we've tried
+# before.
+wythoff_exp69a:
+	-rm -rf $(DATA_PATH)/wythoff/exp69
+	-mkdir $(DATA_PATH)/wythoff/exp69
+	run_azad.py optuna_dqn2 \
+		--num_trials=100 \
+		--save=$(DATA_PATH)/wythoff/exp69/run_0 \
+		--debug=False 
+		--device=cuda:0
+
+wythoff_exp69b:
+	-rm -rf $(DATA_PATH)/wythoff/exp69
+	-mkdir $(DATA_PATH)/wythoff/exp69
+	run_azad.py optuna_dqn2 \
+		--num_trials=100 \
+		--save=$(DATA_PATH)/wythoff/exp69/run_1 \
+		--debug=False 
+		--device=cuda:1
+
+wythoff_exp69c:
+	-rm -rf $(DATA_PATH)/wythoff/exp69
+	-mkdir $(DATA_PATH)/wythoff/exp69
+	run_azad.py optuna_dqn2 \
+		--num_trials=100 \
+		--save=$(DATA_PATH)/wythoff/exp69/run_2 \
+		--debug=False 
+		--device=cuda:2
+
+wythoff_exp69d:
+	-rm -rf $(DATA_PATH)/wythoff/exp69
+	-mkdir $(DATA_PATH)/wythoff/exp69
+	run_azad.py optuna_dqn2 \
+		--num_trials=100 \
+		--save=$(DATA_PATH)/wythoff/exp69/run_3 \
+		--debug=False 
+		--device=cuda:3
