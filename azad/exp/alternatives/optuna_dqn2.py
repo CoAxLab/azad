@@ -49,7 +49,7 @@ def _objective(trial):
     Model = _build(trial)
 
     # Sample new HP
-    learning_rate = trial.suggest_float("learning_rate", 0.0005, 0.5)
+    learning_rate = trial.suggest_float("learning_rate", 0.005, 0.5)
     gamma = trial.suggest_float("gamma", 0.01, 0.5)
     epsilon = trial.suggest_float("epsilon", 0.1, 0.9)
 
@@ -59,7 +59,7 @@ def _objective(trial):
                           learning_rate=learning_rate,
                           num_episodes=250,
                           batch_size=50,
-                          memory_capacity=10000,
+                          memory_capacity=1000,
                           game=GAME,
                           network=Model,
                           anneal=True,
