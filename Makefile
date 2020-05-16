@@ -1408,4 +1408,4 @@ wythoff_exp72:
 		--num_jobs=20 \
 		--save=$(DATA_PATH)/wythoff/exp72/run_0.torch \
 		--debug=False \
-		--device=cuda:0 
+		--device=cuda:1
