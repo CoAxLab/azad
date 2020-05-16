@@ -1302,8 +1302,15 @@ wythoff_exp68:
 #
 # Attempt 1 using optuna to tune dqn2, based on the xy3 model we've tried
 # before.
+# 
+# RESULT: Final values were 0.02 to 0.17. 
+#         Note: I deleted the run files on accident. Results take from 
+#               stdout. 
+#         I expected final values in the 0.4-0.5 ranger. At least that.
+#         I turned DDQN on. It was off in many of the run above, but
+#         this was an oversight. I modified optuna_dqn2 to change that.
+#         This gives us exp70.
 wythoff_exp69a:
-	-rm -rf $(DATA_PATH)/wythoff/exp69
 	-mkdir $(DATA_PATH)/wythoff/exp69
 	run_azad.py optuna_dqn2 \
 		--num_trials=100 \
@@ -1312,8 +1319,6 @@ wythoff_exp69a:
 		--device=cuda:0 > $(DATA_PATH)/wythoff/exp69/run_0.log
 
 wythoff_exp69b:
-	-rm -rf $(DATA_PATH)/wythoff/exp69
-	-mkdir $(DATA_PATH)/wythoff/exp69
 	run_azad.py optuna_dqn2 \
 		--num_trials=100 \
 		--save=$(DATA_PATH)/wythoff/exp69/run_1 \
@@ -1321,8 +1326,6 @@ wythoff_exp69b:
 		--device=cuda:1 > $(DATA_PATH)/wythoff/exp69/run_1.log
 
 wythoff_exp69c:
-	-rm -rf $(DATA_PATH)/wythoff/exp69
-	-mkdir $(DATA_PATH)/wythoff/exp69
 	run_azad.py optuna_dqn2 \
 		--num_trials=100 \
 		--save=$(DATA_PATH)/wythoff/exp69/run_2 \
@@ -1330,10 +1333,46 @@ wythoff_exp69c:
 		--device=cuda:2 > $(DATA_PATH)/wythoff/exp69/run_2.log
 
 wythoff_exp69d:
-	-rm -rf $(DATA_PATH)/wythoff/exp69
-	-mkdir $(DATA_PATH)/wythoff/exp69
 	run_azad.py optuna_dqn2 \
 		--num_trials=100 \
 		--save=$(DATA_PATH)/wythoff/exp69/run_3 \
 		--debug=False \
 		--device=cuda:3 > $(DATA_PATH)/wythoff/exp69/run_3.log
+
+# --------------------------------------------------------------
+# 5-16-2020
+# 3ec1a231f2cb6a7a41a17a658f4c2daa49ed4742
+#
+# DQN, 100 eps. Peaking at potential.
+wythoff_exp70a:
+	-mkdir $(DATA_PATH)/wythoff/exp70
+	run_azad.py optuna_dqn2 \
+		--num_trials=50 \
+		--num_job=10 \
+		--save=$(DATA_PATH)/wythoff/exp70/run_0 \
+		--debug=False \
+		--device=cuda:0 
+	
+wythoff_exp70b:
+	run_azad.py optuna_dqn2 \
+		--num_trials=50 \
+		--num_job=10 \
+		--save=$(DATA_PATH)/wythoff/exp70/run_1 \
+		--debug=False \
+		--device=cuda:1
+
+wythoff_exp70c:
+	run_azad.py optuna_dqn2 \
+		--num_trials=50 \
+		--num_job=10 \
+		--save=$(DATA_PATH)/wythoff/exp70/run_2 \
+		--debug=False \
+		--device=cuda:2
+
+wythoff_exp70c:
+	run_azad.py optuna_dqn2 \
+		--num_trials=50 \
+		--num_job=10 \
+		--save=$(DATA_PATH)/wythoff/exp70/run_3 \
+		--debug=False \
+		--device=cuda:3
