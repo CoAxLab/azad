@@ -84,6 +84,7 @@ def _objective(trial):
 def optuna_dqn2(save=None,
                 num_trials=100,
                 game='Wythoff15x15',
+                num_jobs=1,
                 device="cpu",
                 debug=True,
                 seed=None):
@@ -97,7 +98,7 @@ def optuna_dqn2(save=None,
 
     # Run the study
     study = optuna.create_study(direction="maximize")
-    study.optimize(_objective, n_trials=num_trials)
+    study.optimize(_objective, n_trials=num_trials, n_jobs=num_jobs)
     trial = study.best_trial
     if debug:
         print(f">>> Saving to {save}")
