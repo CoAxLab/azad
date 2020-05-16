@@ -57,7 +57,7 @@ def _objective(trial):
     result = wythoff_dqn2(epsilon=epsilon,
                           gamma=gamma,
                           learning_rate=learning_rate,
-                          num_episodes=100,
+                          num_episodes=NUM_EPISODES,
                           batch_size=20,
                           memory_capacity=1000,
                           game=GAME,
@@ -83,6 +83,7 @@ def _objective(trial):
 
 def optuna_dqn2(save=None,
                 num_trials=100,
+                num_episodes=100,
                 game='Wythoff15x15',
                 num_jobs=1,
                 device="cpu",
@@ -92,9 +93,11 @@ def optuna_dqn2(save=None,
     global DEVICE
     global SEED
     global GAME
+    global NUM_EPISODES
     DEVICE = device
     SEED = seed
     GAME = game
+    NUM_EPISODES = num_episodes
 
     # Run the study
     study = optuna.create_study(direction="maximize")
