@@ -1369,7 +1369,7 @@ wythoff_exp70c:
 		--debug=False \
 		--device=cuda:2
 
-wythoff_exp70c:
+wythoff_exp70d:
 	run_azad.py optuna_dqn2 \
 		--num_trials=50 \
 		--num_job=10 \
