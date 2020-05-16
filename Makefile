@@ -1344,6 +1344,10 @@ wythoff_exp69d:
 # 3ec1a231f2cb6a7a41a17a658f4c2daa49ed4742
 #
 # DQN, 100 eps. Peaking at potential.
+#
+# RESULT: Still peaking at around 0.2. Very little consistency between either
+#         the final values for a-d, nor for their paramters. Try one run,
+#         with mnay more trials?
 wythoff_exp70a:
 	-mkdir $(DATA_PATH)/wythoff/exp70
 	run_azad.py optuna_dqn2 \
@@ -1376,3 +1380,19 @@ wythoff_exp70d:
 		--save=$(DATA_PATH)/wythoff/exp70/run_3 \
 		--debug=False \
 		--device=cuda:3
+
+
+# --------------------------------------------------------------
+# 5-16-2020
+# faef37a243e68297dd76c6dcb740f94a4d6c351d
+#
+# Increase ep and trial number, by a lot.
+wythoff_exp71:
+	-mkdir $(DATA_PATH)/wythoff/exp71
+	run_azad.py optuna_dqn2 \
+		--num_trials=100 \
+		--num_episodes=1000 \
+		--num_jobs=20 \
+		--save=$(DATA_PATH)/wythoff/exp71/run_0.torch \
+		--debug=False \
+		--device=cuda:0 
