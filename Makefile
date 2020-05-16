@@ -1396,3 +1396,16 @@ wythoff_exp71:
 		--save=$(DATA_PATH)/wythoff/exp71/run_0.torch \
 		--debug=False \
 		--device=cuda:0 
+
+# Try more max_features. Hand tuning suggests this is not a good idea.
+# But to button these efforts up, let's try it.
+wythoff_exp72:
+	-mkdir $(DATA_PATH)/wythoff/exp72
+	run_azad.py optuna_dqn2 \
+		--num_trials=100 \
+		--num_episodes=1000 \
+		--max_features=100 \
+		--num_jobs=20 \
+		--save=$(DATA_PATH)/wythoff/exp72/run_0.torch \
+		--debug=False \
+		--device=cuda:0 
