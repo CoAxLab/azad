@@ -1348,7 +1348,7 @@ wythoff_exp70a:
 	-mkdir $(DATA_PATH)/wythoff/exp70
 	run_azad.py optuna_dqn2 \
 		--num_trials=50 \
-		--num_job=10 \
+		--num_jobs=10 \
 		--save=$(DATA_PATH)/wythoff/exp70/run_0 \
 		--debug=False \
 		--device=cuda:0 
@@ -1356,7 +1356,7 @@ wythoff_exp70a:
 wythoff_exp70b:
 	run_azad.py optuna_dqn2 \
 		--num_trials=50 \
-		--num_job=10 \
+		--num_jobs=10 \
 		--save=$(DATA_PATH)/wythoff/exp70/run_1 \
 		--debug=False \
 		--device=cuda:1
@@ -1364,7 +1364,7 @@ wythoff_exp70b:
 wythoff_exp70c:
 	run_azad.py optuna_dqn2 \
 		--num_trials=50 \
-		--num_job=10 \
+		--num_jobs=10 \
 		--save=$(DATA_PATH)/wythoff/exp70/run_2 \
 		--debug=False \
 		--device=cuda:2
@@ -1372,7 +1372,7 @@ wythoff_exp70c:
 wythoff_exp70d:
 	run_azad.py optuna_dqn2 \
 		--num_trials=50 \
-		--num_job=10 \
+		--num_jobs=10 \
 		--save=$(DATA_PATH)/wythoff/exp70/run_3 \
 		--debug=False \
 		--device=cuda:3
