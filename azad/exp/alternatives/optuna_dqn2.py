@@ -89,7 +89,7 @@ def optuna_dqn2(save=None,
                 device="cpu",
                 debug=True,
                 seed=None):
-    # Set globals used in _objective
+    # Set globals used in _objective. A lazy bad soln.
     global DEVICE
     global SEED
     global GAME
