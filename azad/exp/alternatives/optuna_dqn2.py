@@ -22,7 +22,7 @@ def _build(trial):
     n_layers = trial.suggest_int('n_layers', 2, 6)
     layers = []
     for l in range(n_layers):
-        out_features = trial.suggest_int(f'{l}', in_features, 20)
+        out_features = trial.suggest_int(f'{l}', in_features, MAX_FEATURES)
         layers.append(nn.Linear(in_features, out_features))
         layers.append(nn.ReLU())
         in_features = deepcopy(out_features)
@@ -84,6 +84,7 @@ def _objective(trial):
 def optuna_dqn2(save=None,
                 num_trials=100,
                 num_episodes=100,
+                max_features=20,
                 game='Wythoff15x15',
                 num_jobs=1,
                 device="cpu",
@@ -94,10 +95,12 @@ def optuna_dqn2(save=None,
     global SEED
     global GAME
     global NUM_EPISODES
+    global MAX_FEATURES
     DEVICE = device
     SEED = seed
     GAME = game
     NUM_EPISODES = num_episodes
+    MAX_FEATURES = max_features
 
     # Run the study
     study = optuna.create_study(direction="maximize")
