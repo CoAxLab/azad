@@ -57,15 +57,15 @@ def _objective(trial):
     result = wythoff_dqn2(epsilon=epsilon,
                           gamma=gamma,
                           learning_rate=learning_rate,
-                          num_episodes=250,
-                          batch_size=50,
+                          num_episodes=100,
+                          batch_size=20,
                           memory_capacity=1000,
                           game=GAME,
                           network=Model,
                           anneal=True,
                           tensorboard=None,
                           update_every=1,
-                          double=True,
+                          double=False,
                           double_update=10,
                           save=False,
                           save_model=False,
@@ -100,6 +100,7 @@ def optuna_dqn2(save=None,
     study.optimize(_objective, n_trials=num_trials)
     trial = study.best_trial
     if debug:
+        print(f">>> Saving to {save}")
         print(f">>> Number of finished trials: {study.trials}")
         print(f">>> Best trial {trial}")
         print(f">>> score: {trial.value}")
