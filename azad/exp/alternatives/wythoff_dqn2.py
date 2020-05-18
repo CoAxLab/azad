@@ -639,7 +639,7 @@ def wythoff_dqn2(epsilon=0.1,
                 monitored[k].append(float(all_variables[k]))
 
     # --------------------------------------------------------------------
-    if monitor:
+    if monitor and save:
         save_monitored(save, monitored)
     if tensorboard:
         writer.close()
@@ -649,6 +649,9 @@ def wythoff_dqn2(epsilon=0.1,
         result['target'] = target.state_dict()
     if save:
         torch.save(result, save + ".pytorch")
+
+    if monitor and not save:
+        result["monitored"] = monitored
 
     if return_none:
         result = None
