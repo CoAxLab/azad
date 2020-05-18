@@ -1417,3 +1417,17 @@ wythoff_exp72:
 		--save=$(DATA_PATH)/wythoff/exp72/run_0.torch \
 		--debug=False \
 		--device=cuda:1
+
+
+# --------------------------------------------------------------
+# 5-18-2020
+# the notebook `notebooks/wythoff_exp62_72` I compared the best model for
+# xy from grid search/hand tuning to the best optuna. The optuna was
+# not at all a stable solution, and alsway under performed the grid
+# result.
+#
+# Niether gave stable answers with optimal play above 0.2. It was often
+# much worse.
+#
+# With this, I throw the towl in the ring. Create a fig for the paper showing
+# the low lights of this search and move on.
