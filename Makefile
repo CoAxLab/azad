@@ -1386,7 +1386,12 @@ wythoff_exp70d:
 # 5-16-2020
 # faef37a243e68297dd76c6dcb740f94a4d6c351d
 #
-# Increase ep and trial number, by a lot.
+# Increase ep and trial number, by a lot. 
+#
+# RESULTS: best trial was ~0.3. This is I think le good than my grid-search
+#          and hand tune. Need to do some head to heads for the same random
+#          seeds and envs. Need to test transfer as well. But this second
+#          and wait until I pick some final best models using train alone. 
 wythoff_exp71:
 	-mkdir $(DATA_PATH)/wythoff/exp71
 	run_azad.py optuna_dqn2 \
@@ -1399,6 +1404,9 @@ wythoff_exp71:
 
 # Try more max_features. Hand tuning suggests this is not a good idea.
 # But to button these efforts up, let's try it.
+# 
+# RESULTS: best trial was ~0.2. This is worse than exp71. I expected it should
+#          be and it is. Widenets are discarded.
 wythoff_exp72:
 	-mkdir $(DATA_PATH)/wythoff/exp72
 	run_azad.py optuna_dqn2 \
