@@ -1431,3 +1431,64 @@ wythoff_exp72:
 #
 # With this, I throw the towl in the ring. Create a fig for the paper showing
 # the low lights of this search and move on.
+
+# ---------------------------------------------------------------
+# 5-19-2020
+#
+# In exp73 I ran replicates for the best models for hot and conv.
+# This will go into a new figure. I also need to run the best params
+# for xy1-5, as well as for the best optuna model. 
+wythoff_exp73a:
+	-rm -rf $(DATA_PATH)/wythoff/exp73
+	-mkdir $(DATA_PATH)/wythoff/exp73
+	# DQN_xy1 - 0.29417067320374646:
+	#      row_code  device_code  epsilon  gamma  learning_rate
+	# 189       189            1      0.1    0.4        0.19949
+	parallel -j 4 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp73/exp73.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn2 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.199 --game=Wythoff15x15 --epsilon=0.1 --anneal=True --gamma=0.4 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp73/run_DQN_xy1_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:0' --double=True --network=DQN_xy1 --return_none=True" ::: {1..22}
+
+wythoff_exp73b:
+	# DQN_xy2 - 0.22569482901968993:
+	#     row_code  device_code  epsilon  gamma  learning_rate
+	# 25        25            1      0.1    0.1       0.128776
+	parallel -j 4 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp73/exp73.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+	"run_azad.py wythoff_dqn2 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.128 --game=Wythoff15x15 --epsilon=0.1 --anneal=True --gamma=0.1 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp73/run_DQN_xy2_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:1' --double=True --network=DQN_xy2 --return_none=True" ::: {1..22}
+
+wythoff_exp73c:
+	# DQN_xy3 - 0.3995033689945446:
+	#      row_code  device_code  epsilon  gamma  learning_rate
+	# 155       155            3      0.1    0.4       0.027755
+	parallel -j 4 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp73/exp73.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn2 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.0277 --game=Wythoff15x15 --epsilon=0.1 --anneal=True --gamma=0.4 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp73/run_DQN_xy3_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:2' --double=True --network=DQN_xy3 --return_none=True" ::: {1..22}
+
+wythoff_exp73d:
+	# DQN_xy4 - 0.3035457374237523:
+	#     row_code  device_code  epsilon  gamma  learning_rate
+	# 85        85            1      0.1    0.2       0.179286
+	parallel -j 4 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp73/exp73.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn2 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.1792 --game=Wythoff15x15 --epsilon=0.1 --anneal=True --gamma=0.2 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp73/run_DQN_xy4_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:3' --double=True --network=DQN_xy4 --return_none=True" ::: {1..22}
+
+wythoff_exp73e:
+	# DQN_xy5 - 0.16227355079411332:
+	#     row_code  device_code  epsilon  gamma  learning_rate
+	# 35        35            3      0.1    0.1       0.179286
+	parallel -j 4 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp73/exp73.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn2 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.1792 --game=Wythoff15x15 --epsilon=0.1 --anneal=True --gamma=0.1 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp73/run_DQN_xy5_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:0' --double=True --network=DQN_xy5 --return_none=True" ::: {1..22}
+
+wythoff_exp73f:
+	# number	value	datetime_start	datetime_complete	duration	params_0	params_1	params_2	params_3	params_4	params_5	params_epsilon	params_gamma	params_learning_rate	params_n_layers	state
+# 97	97	0.281767	2020-05-16 22:28:48.427779	2020-05-16 22:36:20.469986	00:07:32.042207	10	11	13.0	NaN	NaN	NaN	0.333343	0.273944	0.496927	3	COMPLETE
+	parallel -j 4 -v \
+		--joblog '$(DATA_PATH)/wythoff/exp73/exp73.parallel.log' \
+		--nice 19 --delay 2 --header : --colsep ',' \
+		"run_azad.py wythoff_dqn2 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.49 --game=Wythoff15x15 --epsilon=0.33 --anneal=True --gamma=0.27 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp73/run_DQN_optuna_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:2' --double=True --network=DQN_optuna --return_none=True" ::: {1..22}
