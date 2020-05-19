@@ -3,6 +3,7 @@ import torch.optim as optim
 import torch.nn.functional as F
 import torchvision.transforms as T
 import torch.nn as nn
+from copy import deepcopy
 
 
 class ReplayMemory(object):
@@ -223,6 +224,31 @@ class DQN_xy5(nn.Module):
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         return self.fc3(x)
+
+
+class DQN_optuna(nn.Module):
+    """An A MLP for DQN learning, topology as optimized
+    by optuna"""
+    def __init__(self):
+        super(DQN_optuna, self).__init__()
+        # Build network:
+        # Params taken from wythoff_exp71 (Makefile).
+        in_features = 4  # Initial
+        out_features = [10, 11, 13]
+        layers = []
+        for out_feature in out_features:
+            layers.append(nn.Linear(in_features, out_feature))
+            layers.append(nn.ReLU())
+            in_features = deepcopy(out_feature)
+
+        # Output layer topo is fixed
+        layers.append(nn.Linear(in_features, 1))
+
+        # Net-ify
+        self.layers = nn.Sequential(*layers)
+
+    def forward(self, x):
+        return self.layers(x)
 
 
 class DQN_conv1(nn.Module):
