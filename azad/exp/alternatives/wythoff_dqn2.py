@@ -170,152 +170,147 @@ class MoveCount():
         self.count[move[0], move[1]] += 1
 
 
-# def evaluate_dqn3(path,
-#                   game='Wythoff15x15',
-#                   num_episodes=100,
-#                   opponent='self',
-#                   model_name="player",
-#                   network='DQN_conv3',
-#                   monitor=None,
-#                   save=None,
-#                   debug=False,
-#                   return_none=False,
-#                   seed=None):
-#     """Evaulate transfer on frozen DQN model."""
+def evaluate_dqn2(path,
+                  game='Wythoff15x15',
+                  num_episodes=100,
+                  opponent='self',
+                  model_name="player",
+                  network='DQN_conv3',
+                  monitor=None,
+                  save=None,
+                  debug=False,
+                  return_none=False,
+                  seed=None):
+    """Evaulate transfer on frozen DQN model."""
 
-#     # ------------------------------------------------------------------------
-#     # Arg sanity
-#     num_episodes = int(num_episodes)
-#     opponents = ('self', 'random', 'optimal', 'efficient')
-#     if opponent not in opponents:
-#         raise ValueError(f"opponent must be {opponents}")
+    # ------------------------------------------------------------------------
+    # Arg sanity
+    num_episodes = int(num_episodes)
+    opponents = ('self', 'random', 'optimal', 'efficient')
+    if opponent not in opponents:
+        raise ValueError(f"opponent must be {opponents}")
 
-#     # Logs
-#     if monitor is not None:
-#         monitored = create_monitored(monitor)
+    # Logs
+    if monitor is not None:
+        monitored = create_monitored(monitor)
 
-#     # Init
-#     score = 0
-#     score_count = 1
-#     total_reward = 0
-#     opts = OptimalCount(0)
+    # Init
+    score = 0
+    score_count = 1
+    total_reward = 0
+    opts = OptimalCount(0)
 
-#     # Env
-#     env = create_env(game, monitor=False)
-#     env.seed(seed)
-#     np.random.seed(seed)
+    # Env
+    env = create_env(game, monitor=False)
+    env.seed(seed)
+    np.random.seed(seed)
 
-#     m, n, board, available = peek(env)
-#     all_possible_moves = create_all_possible_moves(m, n)
+    m, n, board, available = peek(env)
+    all_possible_moves = create_all_possible_moves(m, n)
 
-#     # Load the final model to evaluate
-#     result = torch.load(path, map_location=torch.device('cpu'))
-#     state_dict = result[model_name]
+    # Load the final model to evaluate
+    result = torch.load(path, map_location=torch.device('cpu'))
+    state_dict = result[model_name]
 
-#     Model = getattr(azad.models, network)
-#     model = Model(m, n, num_actions=len(all_possible_moves)).to("cpu")
-#     model.load_state_dict(state_dict)
+    # Is network a nn.Module?
+    if hasattr(network, "forward"):
+        Model = network
+    # Is it the name of a azad model?
+    else:
+        Model = getattr(azad.models, network)
 
-#     # ------------------------------------------------------------------------
-#     for episode in range(1, num_episodes + 1):
-#         # Random player moves first
-#         player = 0
+    model = Model().to("cpu")
+    model.load_state_dict(state_dict)
 
-#         # Init this game
-#         state = env.reset()
-#         x, y, board, available = state
-#         if debug:
-#             print(f"---------------------------------------")
-#             print(f">>> NEW GAME ({episode}).")
-#             print(f">>> Initial position ({x}, {y})")
-#             print(f">>> Initial moves {available}")
-#             print(f">>> Cold available {locate_cold_moves(x, y, available)}")
-#             print(f">>> All cold {locate_all_cold_moves(x, y)}")
+    # ------------------------------------------------------------------------
+    for episode in range(1, num_episodes + 1):
+        # Random player moves first
+        player = 0
 
-#         # -------------------------------------------------------------------
-#         # Play a game
-#         done = False
-#         steps = 0
-#         while not done:
-#             # Optimal moves
-#             colds = locate_cold_moves(x, y, available)
+        # Init this game
+        state = env.reset()
+        x, y, board, available = state
+        if debug:
+            print(f"---------------------------------------")
+            print(f">>> NEW GAME ({episode}).")
+            print(f">>> Initial position ({x}, {y})")
+            print(f">>> Initial moves {available}")
+            print(f">>> Cold available {locate_cold_moves(x, y, available)}")
+            print(f">>> All cold {locate_all_cold_moves(x, y)}")
 
-#             # Convert board to a model(state)
-#             state_hat = torch.from_numpy(np.array(board).reshape(m, n))
-#             state_hat = state_hat.unsqueeze(0).unsqueeze(1).float()
+        # -------------------------------------------------------------------
+        # Play a game
+        done = False
+        steps = 0
+        while not done:
+            # Optimal moves
+            colds = locate_cold_moves(x, y, available)
 
-#             # Get and filter Qs
-#             Qs = model(state_hat).detach().numpy().squeeze()
-#             mask = build_mask(available, m, n).flatten()
-#             Qs *= mask
+            # Build value array
+            Qs = build_Qs(player, state, available, device="cpu", mode="numpy")
 
-#             # Choose a move, based on the player code and the opponent type.
-#             # Player 0 is always the final model we are evaluating.
-#             if player == 0:
-#                 index = np.nonzero(mask)[0].tolist()
-#                 move_i = e_greedy(Qs, epsilon=0, index=index, mode='numpy')
-#                 move_a = index.index(move_i)
-#                 move = available[move_a]
-#             elif (player == 1) and (opponent == 'self'):
-#                 index = np.nonzero(mask)[0].tolist()
-#                 move_i = e_greedy(Qs, epsilon=0, index=index, mode='numpy')
-#                 move_a = index.index(move_i)
-#                 move = available[move_a]
-#             elif (player == 1) and (opponent == 'random'):
-#                 move = random.choice(available)
-#             elif (player == 1) and (opponent == 'optimal'):
-#                 if len(colds) > 0:
-#                     move = random.choice(colds)
-#                 else:
-#                     move = random.choice(available)
-#             elif (player == 1) and (opponent == 'efficient'):
-#                 if len(colds) > 0:
-#                     distances = [sum(c) for c in colds]
-#                     move_i = np.argmin(distances)
-#                     move = colds[move_i]
-#                 else:
-#                     move = random.choice(available)
+            # Choose a move, based on the player code and the opponent type.
+            # Player 0 is always the final model we are evaluating.
+            if player == 0:
+                move_i = e_greedy(Qs, epsilon=0, mode='numpy')
+                move = available[move_i]
+            elif (player == 1) and (opponent == 'self'):
+                move_i = e_greedy(Qs, epsilon=0, mode='numpy')
+                move = available[move_i]
+            elif (player == 1) and (opponent == 'random'):
+                move = random.choice(available)
+            elif (player == 1) and (opponent == 'optimal'):
+                if len(colds) > 0:
+                    move = random.choice(colds)
+                else:
+                    move = random.choice(available)
+            elif (player == 1) and (opponent == 'efficient'):
+                if len(colds) > 0:
+                    distances = [sum(c) for c in colds]
+                    move_i = np.argmin(distances)
+                    move = colds[move_i]
+                else:
+                    move = random.choice(available)
 
-#             # Play it
-#             state_next, reward, done, _ = env.step(move)
-#             (x_next, y_next, board_next, available_next) = state_next
+            # Play it
+            state_next, reward, done, _ = env.step(move)
+            (x_next, y_next, board_next, available_next) = state_next
 
-#             # -
-#             if debug:
-#                 print(f">>> state_hat size: {state_hat.shape}")
-#                 print(f">>> state_hat: {state_hat}")
-#                 print(f">>> num available: {len(available)}")
-#                 print(f">>> available: {available}")
-#                 print(f">>> Qs (filtered): {Qs[index]}")
-#                 print(f">>> new position: ({x_next}, {y_next})")
+            # -
+            if debug:
+                print(f">>> available: {available}")
+                print(f">>> Qs: {Qs}")
+                print(f">>> new position: ({x_next}, {y_next})")
 
-#             # Shift for next play?
-#             if not done:
-#                 # Shift states
-#                 state = deepcopy(state_next)
-#                 board = deepcopy(board_next)
-#                 available = deepcopy(available_next)
-#                 x = deepcopy(x_next)
-#                 y = deepcopy(y_next)
-#                 player = shift_player(player)
-#                 steps += 1
+            # Shift for next play?
+            if not done:
+                # Shift states
+                state = deepcopy(state_next)
+                board = deepcopy(board_next)
+                available = deepcopy(available_next)
+                x = deepcopy(x_next)
+                y = deepcopy(y_next)
+                player = shift_player(player)
+                steps += 1
 
-#             # Tabulate player 0 wins
-#             if player == 0 and done:
-#                 total_reward += reward
+            # Tabulate player 0 wins
+            if player == 0 and done:
+                total_reward += reward
 
-#         if monitor:
-#             all_variables = locals()
-#             for k in monitor:
-#                 monitored[k].append(float(all_variables[k]))
+        if monitor:
+            all_variables = locals()
+            for k in monitor:
+                monitored[k].append(float(all_variables[k]))
 
-#     if monitor and save is not None:
-#         save_monitored(save, monitored)
-
-#     if return_none:
-#         return None
-#     else:
-#         return monitored
+    # Save? The end.
+    if monitor and save is not None:
+        save_monitored(save, monitored)
+    if monitor and not save:
+        result["monitored"] = monitored
+    if return_none:
+        return None
+    else:
+        return monitored
 
 
 def wythoff_dqn2(epsilon=0.1,
