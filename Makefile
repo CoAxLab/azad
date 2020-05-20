@@ -1505,15 +1505,15 @@ wythoff_exp73f:
 wythoff_eval73a:
 	parallel -j 20 -v \
 		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_{}_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=self --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_self_{}_{} --monitor='('episode', 'total_reward', 'wins')' --network={} --return_none=True" ::: DQN_optuna ::: {2..22}
+		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_{}_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=self --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_self_{}_{} --monitor='('episode', 'total_reward', 'wins')' --network={} --return_none=True" ::: DQN_optuna DQN_optuna ::: {2..22}
 
 wythoff_eval73b:
 	parallel -j 20 -v \
 		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_{}_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_random_{}_{} --monitor='('episode', 'total_reward', 'wins')' --network={} --return_none=True" ::: DQN_optuna ::: {2..22}
+		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_{}_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_random_{}_{} --monitor='('episode', 'total_reward', 'wins')' --network={} --return_none=True" ::: DQN_optuna DQN_optuna ::: {2..22}
 
 wythoff_eval73c:
 	parallel -j 20 -v \
 		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_{}_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=optimal --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_optimal_{}_{} --monitor='('episode', 'total_reward', 'wins')' --network={} --return_none=True" ::: DQN_optuna ::: {2..22}
+		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_{}_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=optimal --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_optimal_{}_{} --monitor='('episode', 'total_reward', 'wins')' --network={} --return_none=True" ::: DQN_optuna DQN_optuna ::: {2..22}
 		
