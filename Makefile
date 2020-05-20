@@ -1497,32 +1497,23 @@ wythoff_exp73f:
 # 5-19-202
 # b5eb84095bc28de8c6ff29a4dab8d8ad16a0720c 
 #
-# Eval exp63/exp73 model versus different opponents. 
+# Eval the best model, DQN_optuna (found in exp73f)
 # In xy try transfer to new boards.
-#
-# -
-# exp63
-wythoff_eval63:
-	parallel -j 40 -v \
-		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn3 $(DATA_PATH)/wythoff/exp63/run_{}_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=self --debug=False --save=$(DATA_PATH)/wythoff/exp63/eval_self_{}_{} --monitor='('episode', 'total_reward')' --network={} --return_none=True" ::: DQN_hot1 DQN_hot1 DQN_hot2 DQN_hot3 DQN_hot4 DQN_hot5 DQN_conv2 DQN_conv3 ::: {2..22}
-	parallel -j 40 -v \
-		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn3 $(DATA_PATH)/wythoff/exp63/run_{}_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp63/eval_random_{}_{} --monitor='('episode', 'total_reward')' --network={} --return_none=True" ::: DQN_hot1 DQN_hot1 DQN_hot2 DQN_hot3 DQN_hot4 DQN_hot5 DQN_conv2 DQN_conv3 ::: {2..22}
-	parallel -j 40 -v \
-		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn3 $(DATA_PATH)/wythoff/exp63/run_{}_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=optimal --debug=False --save=$(DATA_PATH)/wythoff/exp63/eval_optimal_{}_{} --monitor='('episode', 'total_reward')' --network={} --return_none=True" ::: DQN_hot1 DQN_hot1 DQN_hot2 DQN_hot3 DQN_hot4 DQN_hot5 DQN_conv2 DQN_conv3 ::: {2..22}
 
-# -
+
 # exp73
-wythoff_eval73:
-	parallel -j 40 -v \
+wythoff_eval73a:
+	parallel -j 20 -v \
 		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_{}_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=self --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_self_{}_{} --monitor='('episode', 'total_reward')' --network={} --return_none=True" ::: DQN_xy1 DQN_xy1 DQN_xy2 DQN_xy3 DQN_xy4 DQN_xy5 DQN_optuna ::: {2..22}
-	parallel -j 40 -v \
+		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_{}_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=self --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_self_{}_{} --monitor='('episode', 'total_reward')' --network={} --return_none=True" ::: DQN_optuna ::: {2..22}
+
+wythoff_eval73b:
+	parallel -j 20 -v \
 		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_{}_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_random_{}_{} --monitor='('episode', 'total_reward')' --network={} --return_none=True" ::: DQN_xy1 DQN_xy1 DQN_xy2 DQN_xy3 DQN_xy4 DQN_xy5 DQN_optuna ::: {2..22}
-	parallel -j 40 -v \
+		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_{}_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_random_{}_{} --monitor='('episode', 'total_reward')' --network={} --return_none=True" ::: DQN_optuna ::: {2..22}
+
+wythoff_eval73c:
+	parallel -j 20 -v \
 		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_{}_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=optimal --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_optimal_{}_{} --monitor='('episode', 'total_reward')' --network={} --return_none=True" ::: DQN_xy1 DQN_xy1 DQN_xy2 DQN_xy3 DQN_xy4 DQN_xy5 DQN_optuna ::: {2..22}
+		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_{}_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=optimal --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_optimal_{}_{} --monitor='('episode', 'total_reward', 'wins')' --network={} --return_none=True" ::: DQN_optuna ::: {2..22}
 		
