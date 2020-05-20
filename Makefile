@@ -1500,20 +1500,20 @@ wythoff_exp73f:
 # Eval the best model, DQN_optuna (found in exp73f)
 # In xy try transfer to new boards.
 
-
+# TODO fix naming for each opp
 # exp73
 wythoff_eval73a:
 	parallel -j 20 -v \
 		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_DQN_optuna_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=self --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_DQN_optuna_{} --monitor='('episode', 'total_reward', 'winner')' --network=DQN_optuna --return_none=True"  ::: {2..22}
+		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_DQN_optuna_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=self --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_DQN_optuna_self_{} --monitor='('episode', 'total_reward', 'winner')' --network=DQN_optuna --return_none=True"  ::: {2..22}
 
 wythoff_eval73b:
 	parallel -j 20 -v \
 		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_DQN_optuna_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_DQN_optuna_{} --monitor='('episode', 'total_reward', 'winner')' --network=DQN_optuna --return_none=True" ::: {2..22}
+		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_DQN_optuna_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_DQN_optuna_random_{} --monitor='('episode', 'total_reward', 'winner')' --network=DQN_optuna --return_none=True" ::: {2..22}
 
 wythoff_eval73c:
 	parallel -j 20 -v \
 		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_DQN_optuna_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=optimal --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_DQN_optuna_{} --monitor='('episode', 'total_reward', 'winner')' --network=DQN_optuna --return_none=True" ::: {2..22}
+		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_DQN_optuna_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=optimal --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_DQN_optuna_random_{} --monitor='('episode', 'total_reward', 'winner')' --network=DQN_optuna --return_none=True" ::: {2..22}
 		
