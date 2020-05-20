@@ -198,6 +198,7 @@ def evaluate_dqn2(path,
     score = 0
     score_count = 1
     total_reward = 0
+    wins = []
     opts = OptimalCount(0)
 
     # Env
@@ -293,7 +294,9 @@ def evaluate_dqn2(path,
                 player = shift_player(player)
                 steps += 1
 
-            # Tabulate player 0 wins
+            # Tabulate wins, and totals (p1)
+            if done:
+                wins.append(player)
             if player == 0 and done:
                 total_reward += reward
 
