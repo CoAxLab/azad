@@ -196,7 +196,6 @@ def evaluate_dqn2(path,
 
     # Init
     score = 0
-    score_count = 1
     total_reward = 0
     opts = OptimalCount(0)
 
@@ -275,6 +274,13 @@ def evaluate_dqn2(path,
             # Play it
             state_next, reward, done, _ = env.step(move)
             (x_next, y_next, board_next, available_next) = state_next
+
+            # Analyze it...
+            best = 0.0
+            if cold_move_available(x, y, available):
+                if move in locate_cold_moves(x, y, available):
+                    best = 1.0
+                score += (best - score) / (episode + 1)
 
             # -
             if debug:
