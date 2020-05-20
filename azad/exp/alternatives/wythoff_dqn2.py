@@ -195,7 +195,6 @@ def evaluate_dqn2(path,
         monitored = create_monitored(monitor)
 
     # Init
-    score = 0
     total_reward = 0
     opts = OptimalCount(0)
 
@@ -237,10 +236,11 @@ def evaluate_dqn2(path,
             print(f">>> Cold available {locate_cold_moves(x, y, available)}")
             print(f">>> All cold {locate_all_cold_moves(x, y)}")
 
-        # -------------------------------------------------------------------
+        # ---
         # Play a game
         done = False
         steps = 0
+        score = 0
         while not done:
             # Optimal moves
             colds = locate_cold_moves(x, y, available)
@@ -305,11 +305,15 @@ def evaluate_dqn2(path,
             if player == 0 and done:
                 total_reward += reward
 
+        # ---
+        # Save into monitored after each game
         if monitor:
             all_variables = locals()
             for k in monitor:
                 monitored[k].append(float(all_variables[k]))
 
+    # ---
+    # Tournament over....
     # Build a result, focused on player
     result = {}
     result["total_reward"] = total_reward
