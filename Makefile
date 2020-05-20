@@ -1520,4 +1520,4 @@ wythoff_eval73c:
 wythoff_eval73d:
 	parallel -j 20 -v \
 		--nice 19 --delay 2 \
-		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_DQN_optuna_{}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_DQN_optuna_transfer_{}_{} --monitor='('episode', 'total_reward', 'winner')' --network=DQN_optuna --return_none=True" ::: {2..22} ::: Wythoff5x5 Wythoff10x10 Wythoff15x15 Wythoff50x50 Wythoff100x100 Wythoff150x150 Wythoff200x200 Wythoff250x250 Wythoff300x300 Wythoff350x350 Wythoff400x400 Wythoff450x450 Wythoff500x500
+		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_DQN_optuna_{1}.pytorch --game={2} --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_DQN_optuna_transfer_{2}_{1} --monitor='('episode', 'total_reward', 'winner')' --network=DQN_optuna --return_none=True" ::: {2..22} ::: Wythoff5x5 Wythoff10x10 Wythoff15x15 Wythoff50x50 Wythoff100x100 Wythoff150x150 Wythoff200x200 Wythoff250x250 Wythoff300x300 Wythoff350x350 Wythoff400x400 Wythoff450x450 Wythoff500x500
