@@ -198,7 +198,6 @@ def evaluate_dqn2(path,
     score = 0
     score_count = 1
     total_reward = 0
-    wins = []
     opts = OptimalCount(0)
 
     # Env
@@ -296,7 +295,7 @@ def evaluate_dqn2(path,
 
             # Tabulate wins, and totals (p1)
             if done:
-                wins.append(player)
+                winner = player
             if player == 0 and done:
                 total_reward += reward
 
@@ -308,7 +307,6 @@ def evaluate_dqn2(path,
     # Build a result, focused on player
     result = {}
     result["total_reward"] = total_reward
-    result["win_probability"] = np.sum(np.asarray(wins) == 0) / num_episodes
 
     # Save? The end.
     if monitor and save is not None:
