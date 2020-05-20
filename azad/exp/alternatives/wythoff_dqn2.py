@@ -175,7 +175,7 @@ def evaluate_dqn2(path,
                   num_episodes=100,
                   opponent='self',
                   model_name="player",
-                  network='DQN_conv3',
+                  network='DQN_xy2',
                   monitor=None,
                   save=None,
                   debug=False,
@@ -248,7 +248,7 @@ def evaluate_dqn2(path,
             colds = locate_cold_moves(x, y, available)
 
             # Build value array
-            Qs = build_Qs(player, state, available, device="cpu", mode="numpy")
+            Qs = build_Qs(model, state, available, device="cpu", mode="numpy")
 
             # Choose a move, based on the player code and the opponent type.
             # Player 0 is always the final model we are evaluating.
@@ -305,6 +305,11 @@ def evaluate_dqn2(path,
             for k in monitor:
                 monitored[k].append(float(all_variables[k]))
 
+    # Build a result, focused on player
+    result = {}
+    result["total_reward"] = total_reward
+    result["win_probability"] = np.sum(np.asarray(wins) == 0) / num_episodes
+q
     # Save? The end.
     if monitor and save is not None:
         save_monitored(save, monitored)
@@ -313,7 +318,7 @@ def evaluate_dqn2(path,
     if return_none:
         return None
     else:
-        return monitored
+        return result
 
 
 def wythoff_dqn2(epsilon=0.1,
