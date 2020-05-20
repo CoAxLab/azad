@@ -309,7 +309,7 @@ def evaluate_dqn2(path,
     result = {}
     result["total_reward"] = total_reward
     result["win_probability"] = np.sum(np.asarray(wins) == 0) / num_episodes
-q
+
     # Save? The end.
     if monitor and save is not None:
         save_monitored(save, monitored)
