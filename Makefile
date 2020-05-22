@@ -1528,7 +1528,7 @@ wythoff_eval73d:
 wythoff_eval73e:
 	parallel -j 20 -v \
 		--nice 19 \
-		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_{2}_{1}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_{2}_random_{1} --monitor='('episode', 'total_reward', 'score')' --network={2} --return_none=True" ::: {2..22} ::: DQN_xy1 DQN_xy1 DQN_xy2 DQN_xy3 DQN_xy4 
+		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_{2}_{1}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_{2}_random_{1} --monitor='('episode', 'total_reward', 'score')' --network={2} --return_none=True" ::: {2..22} ::: DQN_xy1 DQN_xy1 DQN_xy2 DQN_xy3 DQN_xy4 DQN_xy5 
 		
 wythoff_eval63a:
 	parallel -j 20 -v \
