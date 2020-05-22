@@ -1494,7 +1494,7 @@ wythoff_exp73f:
 		"run_azad.py wythoff_dqn2 --num_episodes=1e3 --batch_size=50 --memory_capacity=10000 --learning_rate=0.49 --game=Wythoff15x15 --epsilon=0.33 --anneal=True --gamma=0.27 --debug=False --update_every=1 --save=$(DATA_PATH)/wythoff/exp73/run_DQN_optuna_{} --debug=False --monitor='('episode', 'loss', 'score', 'Q', 'prediction_error', 'advantage', 'epsilon_e')' --device='cuda:2' --double=True --network=DQN_optuna --return_none=True" ::: {1..22}
 
 # ------------------------------------------------------------------------
-# 5-19-202
+# 5-19-2020
 # b5eb84095bc28de8c6ff29a4dab8d8ad16a0720c 
 #
 # Eval the best model, DQN_optuna (found in exp73f)
@@ -1521,3 +1521,16 @@ wythoff_eval73d:
 	parallel -j 40 -v \
 		--nice 19 \
 		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_DQN_optuna_{1}.pytorch --game={2} --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_DQN_optuna_transfer_{2}_{1} --monitor='('episode', 'total_reward', 'winner', 'score')' --network=DQN_optuna --return_none=True" ::: {2..22} ::: Wythoff5x5 Wythoff10x10 Wythoff15x15 Wythoff50x50 Wythoff100x100 Wythoff150x150 Wythoff200x200 Wythoff250x250 Wythoff300x300 Wythoff350x350 Wythoff400x400 Wythoff450x450 Wythoff500x500
+
+# ------------------------------------------------------------------------
+# 5-21-2020
+# Eval all other DQNs versus a random player.
+wythoff_eval73e:
+	parallel -j 20 -v \
+		--nice 19 \
+		"run_azad.py evaluate_dqn2 $(DATA_PATH)/wythoff/exp73/run_DQN_{2}_{1}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_{2}_random_{1} --monitor='('episode', 'total_reward', 'score')' --network=DQN_optuna --return_none=True" ::: {2..22} ::: DQN_xy1 DQN_xy1 DQN_xy2 DQN_xy3 DQN_xy4 
+		
+wythoff_eval73f:
+	parallel -j 20 -v \
+		--nice 19 \
+		"run_azad.py evaluate_dqn3 $(DATA_PATH)/wythoff/exp73/run_DQN_{2}_{1}.pytorch --game=Wythoff15x15 --num_episodes=1e2 --opponent=random --debug=False --save=$(DATA_PATH)/wythoff/exp73/eval_{2}_random_{1} --monitor='('episode', 'total_reward', 'score')' --network=DQN_optuna --return_none=True" ::: {2..22} ::: DQN_hot1 DQN_hot1 DQN_hot2 DQN_hot3 DQN_hot4 DQN_hot5 DQN_conv2 DQN_conv3
